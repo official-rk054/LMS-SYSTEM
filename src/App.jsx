@@ -5,6 +5,9 @@ import { LoginPage } from './components/LoginPage';
 import { StudentDashboard } from './components/StudentDashboard';
 import { TrainerDashboard } from './components/TrainerDashboard';
 import { TpoDashboard } from './components/TpoDashboard';
+import { AuthLogin } from './components/AuthLogin';
+import { MentorDashboard } from './components/MentorDashboard';
+import { AdminDashboard } from './components/AdminDashboard';
 import { ResumeBuilder } from './components/ResumeBuilder';
 import { ResumeAnalyzer } from './components/ResumeAnalyzer';
 import { MockInterviewer } from './components/MockInterviewer';
@@ -203,12 +206,6 @@ export function App() {
               )}
 
               {activeTab === 'gd_simulator' && (
-                <ExtraFeaturesSuite
-                  userProfile={currentUser}
-                />
-              )}
-
-              {activeTab === 'extra_suite' && (
                 <ExtraFeaturesSuite
                   userProfile={currentUser}
                 />

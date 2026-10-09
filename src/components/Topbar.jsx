@@ -164,6 +164,26 @@ export const Topbar = ({
           </div>
         )}
 
+        {/* Anti-Cheating / Proctoring Status */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.3rem',
+            fontSize: '0.72rem',
+            color: isLight ? '#047857' : '#34d399',
+            padding: '0.25rem 0.6rem',
+            borderRadius: 'var(--radius-sm)',
+            background: isLight ? '#ecfdf5' : 'rgba(52, 211, 153, 0.08)',
+            border: isLight ? '1px solid #a7f3d0' : '1px solid rgba(52, 211, 153, 0.2)',
+            fontWeight: 600,
+          }}
+          title="Proctoring System Active"
+        >
+          <ShieldCheck size={14} color={isLight ? '#059669' : '#10b981'} />
+          <span>Proctor Secure</span>
+        </div>
+
         {/* Theme Toggle */}
         <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -175,14 +195,16 @@ export const Topbar = ({
         </button>
 
         {/* Sign Out Button */}
-        <button
-          onClick={onLogout}
-          className="btn btn-ghost btn-sm"
-          title="Sign out of current account"
-          style={{ color: isLight ? '#ef4444' : '#f87171', padding: '0.4rem' }}
-        >
-          <LogOut size={18} />
-        </button>
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            className="btn btn-ghost btn-sm"
+            title="Sign out of current account"
+            style={{ color: isLight ? '#ef4444' : '#f87171', padding: '0.4rem' }}
+          >
+            <LogOut size={18} />
+          </button>
+        )}
       </div>
     </header>
   );
