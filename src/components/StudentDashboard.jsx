@@ -79,185 +79,310 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-      {/* Welcome Hero Banner */}
+    <div
+      className="dashboard-container"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.85rem',
+        width: '100%',
+      }}
+    >
+      {/* ============================================================== */}
+      {/* 1. COMPACT EXECUTIVE COMMAND BAR & METRIC RIBBON              */}
+      {/* ============================================================== */}
       <div
         className="card"
         style={{
-          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(6, 182, 212, 0.1) 100%)',
-          borderColor: 'rgba(99, 102, 241, 0.3)',
-          padding: '2rem',
+          padding: '0.85rem 1.25rem',
+          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(6, 182, 212, 0.08) 100%)',
+          borderColor: 'rgba(99, 102, 241, 0.25)',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.5rem' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
-              <span className="badge badge-primary">
-                🎓 2026 Graduating Batch
-              </span>
-              <span className="badge badge-success">
-                Active Placement Cycle
-              </span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.85rem' }}>
+          {/* Left: User Greet & Academic Context */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.15rem' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0, lineHeight: 1.2 }}>
+                  Welcome back, {userProfile.name}! 👋
+                </h2>
+                <span className="badge badge-primary" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
+                  🎓 2026 Batch
+                </span>
+                <span className="badge badge-success" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
+                  Active Drives
+                </span>
+              </div>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.3 }}>
+                {userProfile.degree} at <strong>{userProfile.college}</strong> • Readiness:{' '}
+                <strong style={{ color: '#10b981' }}>{userProfile.placementReadinessScore}%</strong>. Amazon & TCS campus drives start this month!
+              </p>
             </div>
-            <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem', color: '#ffffff' }}>
-              Welcome back, {userProfile.name}! 👋
-            </h1>
-            <p style={{ maxWidth: '650px', fontSize: '0.95rem' }}>
-              {userProfile.degree} at <strong>{userProfile.college}</strong>. Your placement readiness index is currently at{' '}
-              <strong style={{ color: '#10b981' }}>{userProfile.placementReadinessScore}%</strong>. Amazon and TCS campus drives start this month!
-            </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          {/* Center: 4 Compact Stat Pills */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {/* Readiness */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                background: 'rgba(16, 185, 129, 0.1)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                padding: '0.35rem 0.65rem',
+                borderRadius: 'var(--radius-md)',
+              }}
+              title="Overall Placement Readiness Index"
+            >
+              <Award size={16} color="#10b981" />
+              <div>
+                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#10b981', lineHeight: 1 }}>
+                  {userProfile.placementReadinessScore}%
+                </div>
+                <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 600 }}>
+                  {t.readinessScore}
+                </div>
+              </div>
+            </div>
+
+            {/* Streak */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                background: 'rgba(245, 158, 11, 0.1)',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+                padding: '0.35rem 0.65rem',
+                borderRadius: 'var(--radius-md)',
+              }}
+              title="Consecutive Day Practice Streak"
+            >
+              <Flame size={16} color="#f59e0b" fill="#f59e0b" />
+              <div>
+                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#fbbf24', lineHeight: 1 }}>
+                  {userProfile.streakDays} Days
+                </div>
+                <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 600 }}>
+                  Daily Streak
+                </div>
+              </div>
+            </div>
+
+            {/* Rank */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                background: 'rgba(99, 102, 241, 0.1)',
+                border: '1px solid rgba(99, 102, 241, 0.3)',
+                padding: '0.35rem 0.65rem',
+                borderRadius: 'var(--radius-md)',
+              }}
+              title="Official Campus Cohort Rank"
+            >
+              <TrendingUp size={16} color="#6366f1" />
+              <div>
+                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#818cf8', lineHeight: 1 }}>
+                  #{userProfile.batchRank} <span style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--text-dim)' }}>/{userProfile.totalBatchStudents}</span>
+                </div>
+                <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 600 }}>
+                  Batch Rank
+                </div>
+              </div>
+            </div>
+
+            {/* Karma XP */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                background: 'rgba(168, 85, 247, 0.1)',
+                border: '1px solid rgba(168, 85, 247, 0.3)',
+                padding: '0.35rem 0.65rem',
+                borderRadius: 'var(--radius-md)',
+              }}
+              title="Preparation Karma XP Points"
+            >
+              <Zap size={16} color="#a855f7" fill="#a855f7" />
+              <div>
+                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#c084fc', lineHeight: 1 }}>
+                  {userProfile.xpPoints}
+                </div>
+                <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 600 }}>
+                  Karma XP
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Quick Launch CTAs */}
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button
               onClick={() => setActiveTab('mcq_engine')}
-              className="btn btn-primary"
+              className="btn btn-primary btn-sm"
+              style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', fontWeight: 700 }}
             >
-              <CheckCircle2 size={16} /> Take Diagnostic Test
+              <CheckCircle2 size={14} /> Diagnostic Test
             </button>
             <button
               onClick={() => setActiveTab('mock_interview')}
-              className="btn btn-outline"
+              className="btn btn-outline btn-sm"
+              style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}
             >
-              <Mic size={16} /> Start AI Interview
+              <Mic size={14} /> AI Interview
             </button>
           </div>
         </div>
       </div>
 
-      {/* Key Metric Highlights */}
-      <div className="grid-4">
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
-            <Award size={24} />
-          </div>
+      {/* ============================================================== */}
+      {/* 2. MAIN ERGONOMIC 3-COLUMN BENTO GRID                         */}
+      {/* ============================================================== */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1.05fr 1.15fr 1.2fr',
+          gap: '0.85rem',
+          alignItems: 'stretch',
+        }}
+      >
+        {/* ------------------------------------------------------------ */}
+        {/* COLUMN 1: PLACEMENT READINESS BREAKDOWN                      */}
+        {/* ------------------------------------------------------------ */}
+        <div
+          className="card"
+          style={{
+            padding: '1rem 1.15rem',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+          }}
+        >
           <div>
-            <div className="stat-val">{userProfile.placementReadinessScore}%</div>
-            <div className="stat-label">{t.readinessScore}</div>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' }}>
-            <Flame size={24} />
-          </div>
-          <div>
-            <div className="stat-val">{userProfile.streakDays} Days</div>
-            <div className="stat-label">Daily Practice Streak</div>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#6366f1' }}>
-            <TrendingUp size={24} />
-          </div>
-          <div>
-            <div className="stat-val">#{userProfile.batchRank} <span style={{ fontSize: '0.9rem', color: 'var(--text-dim)', fontWeight: 500 }}>of {userProfile.totalBatchStudents}</span></div>
-            <div className="stat-label">Batch College Ranking</div>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#a855f7' }}>
-            <Zap size={24} />
-          </div>
-          <div>
-            <div className="stat-val">{userProfile.xpPoints}</div>
-            <div className="stat-label">Karma XP Points</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Readiness Breakdown & Competency Radar Grid */}
-      <div className="grid-2">
-        {/* Placement Readiness Breakdown */}
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">
-              <Target size={20} color="var(--primary)" />
-              Placement Readiness Index Breakdown
-            </h3>
-            <span className="badge badge-success">84/100 Total</span>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
-                <span style={{ fontWeight: 600 }}>Quantitative & Logical Aptitude</span>
-                <strong style={{ color: '#38bdf8' }}>{breakdown.aptitude}%</strong>
-              </div>
-              <div className="progress-container">
-                <div className="progress-fill" style={{ width: `${breakdown.aptitude}%`, background: 'var(--cyan-gradient)' }}></div>
-              </div>
+            <div className="card-header" style={{ marginBottom: '0.75rem' }}>
+              <h3 className="card-title" style={{ fontSize: '0.98rem' }}>
+                <Target size={17} color="var(--primary)" />
+                Readiness Index Breakdown
+              </h3>
+              <span className="badge badge-success" style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem' }}>
+                84/100 Total
+              </span>
             </div>
 
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
-                <span style={{ fontWeight: 600 }}>Coding & Problem Solving (DSA)</span>
-                <strong style={{ color: '#818cf8' }}>{breakdown.coding}%</strong>
+            {/* 5 Progress Bars */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', fontSize: '0.76rem' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>Quantitative & Logical Aptitude</span>
+                  <strong style={{ color: '#38bdf8' }}>{breakdown.aptitude}%</strong>
+                </div>
+                <div className="progress-container" style={{ height: '6px' }}>
+                  <div className="progress-fill" style={{ width: `${breakdown.aptitude}%`, background: 'var(--cyan-gradient)' }}></div>
+                </div>
               </div>
-              <div className="progress-container">
-                <div className="progress-fill" style={{ width: `${breakdown.coding}%`, background: 'var(--accent-gradient)' }}></div>
-              </div>
-            </div>
 
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
-                <span style={{ fontWeight: 600 }}>Core Computer Science (OS / DBMS / Networks)</span>
-                <strong style={{ color: '#34d399' }}>{breakdown.coreCS}%</strong>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', fontSize: '0.76rem' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>Coding & Problem Solving (DSA)</span>
+                  <strong style={{ color: '#818cf8' }}>{breakdown.coding}%</strong>
+                </div>
+                <div className="progress-container" style={{ height: '6px' }}>
+                  <div className="progress-fill" style={{ width: `${breakdown.coding}%`, background: 'var(--accent-gradient)' }}></div>
+                </div>
               </div>
-              <div className="progress-container">
-                <div className="progress-fill" style={{ width: `${breakdown.coreCS}%`, background: 'var(--emerald-gradient)' }}></div>
-              </div>
-            </div>
 
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
-                <span style={{ fontWeight: 600 }}>AI Mock Interview & Communication (HR/Tech)</span>
-                <strong style={{ color: '#fbbf24' }}>{breakdown.interviewHR}%</strong>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', fontSize: '0.76rem' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>Core CS (OS / DBMS / Networks)</span>
+                  <strong style={{ color: '#34d399' }}>{breakdown.coreCS}%</strong>
+                </div>
+                <div className="progress-container" style={{ height: '6px' }}>
+                  <div className="progress-fill" style={{ width: `${breakdown.coreCS}%`, background: 'var(--emerald-gradient)' }}></div>
+                </div>
               </div>
-              <div className="progress-container">
-                <div className="progress-fill" style={{ width: `${breakdown.interviewHR}%`, background: 'var(--gold-gradient)' }}></div>
-              </div>
-            </div>
 
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
-                <span style={{ fontWeight: 600 }}>ATS Resume Score & Impact Metrics</span>
-                <strong style={{ color: '#ec4899' }}>{breakdown.resumeATS}%</strong>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', fontSize: '0.76rem' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>AI Mock Interview & Communication</span>
+                  <strong style={{ color: '#fbbf24' }}>{breakdown.interviewHR}%</strong>
+                </div>
+                <div className="progress-container" style={{ height: '6px' }}>
+                  <div className="progress-fill" style={{ width: `${breakdown.interviewHR}%`, background: 'var(--gold-gradient)' }}></div>
+                </div>
               </div>
-              <div className="progress-container">
-                <div className="progress-fill" style={{ width: `${breakdown.resumeATS}%`, background: 'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)' }}></div>
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', fontSize: '0.76rem' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>ATS Resume Score & Impact</span>
+                  <strong style={{ color: '#ec4899' }}>{breakdown.resumeATS}%</strong>
+                </div>
+                <div className="progress-container" style={{ height: '6px' }}>
+                  <div className="progress-fill" style={{ width: `${breakdown.resumeATS}%`, background: 'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)' }}></div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div style={{ marginTop: '1.25rem', padding: '0.75rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <AlertCircle size={18} color="var(--warning)" />
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Detected Weak Spots: <strong>Dynamic Programming</strong>, <strong>OS Deadlocks</strong>.
-            </span>
+          {/* Detected Weak Spots Box */}
+          <div
+            style={{
+              marginTop: '0.85rem',
+              padding: '0.55rem 0.75rem',
+              background: 'rgba(245, 158, 11, 0.08)',
+              border: '1px solid rgba(245, 158, 11, 0.25)',
+              borderRadius: 'var(--radius-md)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+            }}
+          >
+            <AlertCircle size={15} color="var(--warning)" style={{ flexShrink: 0 }} />
+            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', lineHeight: 1.25, flex: 1 }}>
+              Weak Spots: <strong style={{ color: 'var(--text-main)' }}>DP, OS Deadlocks</strong>
+            </div>
             <button
               onClick={() => setActiveTab('extra_suite')}
               className="btn btn-ghost btn-sm"
-              style={{ marginLeft: 'auto', color: 'var(--primary)', padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
+              style={{
+                color: 'var(--primary)',
+                padding: '0.15rem 0.45rem',
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+              }}
             >
-              View 30-Day Plan →
+              30-Day Plan →
             </button>
           </div>
         </div>
 
-        {/* Recommended Next Actions */}
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">
-              <Sparkles size={20} color="#a855f7" />
+        {/* ------------------------------------------------------------ */}
+        {/* COLUMN 2: AI RECOMMENDED NEXT ACTIONS                        */}
+        {/* ------------------------------------------------------------ */}
+        <div
+          className="card"
+          style={{
+            padding: '1rem 1.15rem',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <div className="card-header" style={{ marginBottom: '0.65rem' }}>
+            <h3 className="card-title" style={{ fontSize: '0.98rem' }}>
+              <Sparkles size={17} color="#a855f7" />
               AI Recommended Next Actions
             </h3>
-            <span className="badge badge-primary">Personalized</span>
+            <span className="badge badge-primary" style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem' }}>
+              Personalized
+            </span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
             {recommendedActions.map((action) => {
               const ActionIcon = action.icon;
               return (
@@ -267,37 +392,49 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '0.85rem 1rem',
-                    background: 'rgba(255, 255, 255, 0.03)',
+                    padding: '0.55rem 0.75rem',
+                    background: 'rgba(255, 255, 255, 0.02)',
                     borderRadius: 'var(--radius-md)',
                     border: '1px solid var(--border-subtle)',
-                    transition: 'var(--transition)',
+                    gap: '0.65rem',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0 }}>
                     <div
                       style={{
-                        width: '36px',
-                        height: '36px',
+                        width: '32px',
+                        height: '32px',
                         borderRadius: 'var(--radius-sm)',
                         background: 'rgba(99, 102, 241, 0.15)',
                         color: 'var(--primary)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
+                        flexShrink: 0,
                       }}
                     >
-                      <ActionIcon size={18} />
+                      <ActionIcon size={16} />
                     </div>
-                    <div>
-                      <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          color: 'var(--text-main)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          maxWidth: '190px',
+                        }}
+                        title={action.title}
+                      >
                         {action.title}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
-                        <span className={`badge ${action.badgeColor}`} style={{ fontSize: '0.68rem', padding: '0.1rem 0.4rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.15rem', flexWrap: 'wrap' }}>
+                        <span className={`badge ${action.badgeColor}`} style={{ fontSize: '0.65rem', padding: '0.08rem 0.35rem' }}>
                           {action.badge}
                         </span>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>
                           ⏱️ {action.duration}
                         </span>
                       </div>
@@ -307,60 +444,75 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
                   <button
                     onClick={() => setActiveTab(action.targetTab)}
                     className="btn btn-outline btn-sm"
-                    style={{ whiteSpace: 'nowrap' }}
+                    style={{
+                      whiteSpace: 'nowrap',
+                      fontSize: '0.72rem',
+                      padding: '0.25rem 0.55rem',
+                      fontWeight: 600,
+                      flexShrink: 0,
+                    }}
                   >
-                    Start <ArrowRight size={13} />
+                    Start <ArrowRight size={12} />
                   </button>
                 </div>
               );
             })}
           </div>
         </div>
-      </div>
 
-      {/* Upcoming Campus Placement Drives */}
-      <div className="card">
-        <div className="card-header">
-          <div>
-            <h3 className="card-title">
-              <Building size={20} color="var(--primary)" />
-              {t.upcomingDrives}
-            </h3>
-            <p style={{ fontSize: '0.82rem', marginTop: '0.2rem' }}>
-              Campus on-boarding for 2026 pass-outs. Check eligibility and round roadmaps.
-            </p>
-          </div>
-          <button
-            onClick={() => setActiveTab('job_board')}
-            className="btn btn-ghost btn-sm"
-            style={{ color: 'var(--primary)' }}
-          >
-            {t.viewAll} (5 Drives) →
-          </button>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.25rem' }}>
-          {UPCOMING_DRIVES.slice(0, 3).map((drive) => (
-            <div
-              key={drive.id}
-              style={{
-                padding: '1.25rem',
-                borderRadius: 'var(--radius-md)',
-                background: 'rgba(255, 255, 255, 0.02)',
-                border: '1px solid var(--border-subtle)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: '1rem',
-              }}
+        {/* ------------------------------------------------------------ */}
+        {/* COLUMN 3: UPCOMING CAMPUS PLACEMENT DRIVES                   */}
+        {/* ------------------------------------------------------------ */}
+        <div
+          className="card"
+          style={{
+            padding: '1rem 1.15rem',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <div className="card-header" style={{ marginBottom: '0.65rem' }}>
+            <div>
+              <h3 className="card-title" style={{ fontSize: '0.98rem', marginBottom: '0.1rem' }}>
+                <Building size={17} color="var(--primary)" />
+                {t.upcomingDrives}
+              </h3>
+              <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)', margin: 0 }}>
+                2026 Batch on-boarding roadmaps
+              </p>
+            </div>
+            <button
+              onClick={() => setActiveTab('job_board')}
+              className="btn btn-ghost btn-sm"
+              style={{ color: 'var(--primary)', fontSize: '0.72rem', padding: '0.2rem 0.45rem' }}
             >
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.6rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                    <span style={{ fontSize: '1.6rem' }}>{drive.logo}</span>
+              View All (5) →
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+            {UPCOMING_DRIVES.slice(0, 3).map((drive) => (
+              <div
+                key={drive.id}
+                style={{
+                  padding: '0.6rem 0.75rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid var(--border-subtle)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.35rem',
+                }}
+              >
+                {/* Company Name & CTC Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <span style={{ fontSize: '1.25rem', lineHeight: 1 }}>{drive.logo}</span>
                     <div>
-                      <h4 style={{ fontSize: '1rem', color: 'var(--text-main)', margin: 0 }}>{drive.company}</h4>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>{drive.tier}</span>
+                      <h4 style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)', margin: 0, lineHeight: 1.1 }}>
+                        {drive.company}
+                      </h4>
+                      <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>{drive.tier}</span>
                     </div>
                   </div>
                   <span
@@ -369,40 +521,56 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
                       background: 'rgba(16, 185, 129, 0.15)',
                       color: '#34d399',
                       fontWeight: 700,
-                      fontSize: '0.82rem',
+                      fontSize: '0.76rem',
+                      padding: '0.15rem 0.45rem',
                     }}
                   >
                     {drive.packageCTC}
                   </span>
                 </div>
 
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
+                {/* Role & Requirements Metadata */}
+                <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-main)', marginTop: '0.1rem' }}>
                   {drive.role}
                 </div>
 
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                   <span>📍 {drive.location}</span>
                   <span>•</span>
-                  <span>Min CGPA: <strong>{drive.minCGPA}</strong></span>
+                  <span>CGPA: <strong>{drive.minCGPA}</strong></span>
                   <span>•</span>
                   <span>📅 {drive.date}</span>
                 </div>
-              </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)' }}>
-                <span className={`badge ${drive.applied ? 'badge-success' : 'badge-primary'}`}>
-                  {drive.applied ? `Status: ${drive.applicationStage}` : 'Eligible to Apply'}
-                </span>
-
-                <button
-                  onClick={() => setActiveTab('company_prep')}
-                  className="btn btn-outline btn-sm"
+                {/* Action & Status Row */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingTop: '0.35rem',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                    marginTop: '0.15rem',
+                  }}
                 >
-                  View Rounds Prep →
-                </button>
+                  <span
+                    className={`badge ${drive.applied ? 'badge-success' : 'badge-primary'}`}
+                    style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}
+                  >
+                    {drive.applied ? drive.applicationStage : 'Eligible'}
+                  </span>
+
+                  <button
+                    onClick={() => setActiveTab('company_prep')}
+                    className="btn btn-outline btn-sm"
+                    style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', fontWeight: 600 }}
+                  >
+                    Rounds Prep →
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </div>
