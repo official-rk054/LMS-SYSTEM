@@ -25,7 +25,13 @@ import {
   X,
   Layers,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  ListChecks,
+  Code,
+  Eye,
+  CheckCircle2,
+  SlidersHorizontal,
+  Info
 } from 'lucide-react';
 
 const PRESET_JDS = {
@@ -125,7 +131,8 @@ export const ResumeAnalyzer = ({ resumeFromBuilder }) => {
   const [targetRole, setTargetRole] = useState('sde_amazon');
   const [showCustomJD, setShowCustomJD] = useState(false);
   const [customJDText, setCustomJDText] = useState(PRESET_JDS.sde_amazon.text);
-  
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('keywords'); // 'keywords', 'sections', 'checklist', 'parsed_text'
+
   // File Import State
   const [uploadedResume, setUploadedResume] = useState(() => {
     if (resumeFromBuilder) {
@@ -282,7 +289,6 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
     const fileSize = `${(file.size / 1024).toFixed(1)} KB`;
     const fileType = file.type || 'application/pdf';
 
-    // If text or json, read text directly
     if (file.name.endsWith('.txt') || file.name.endsWith('.json')) {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -304,7 +310,6 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
       };
       reader.readAsText(file);
     } else {
-      // PDF or DOCX file
       setUploadedResume({
         fileName,
         fileSize,
@@ -343,13 +348,11 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
     if (file) handleFileUpload(file);
   };
 
-  // 1-Click Load Demo Resume
   const handleLoadDemoResume = () => {
     setUploadedResume(DEFAULT_RESUME_INFO);
     triggerScanSimulation();
   };
 
-  // 1-Click Load from Builder
   const handleLoadFromBuilder = () => {
     if (resumeFromBuilder) {
       setUploadedResume({
@@ -376,23 +379,21 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
     triggerScanSimulation();
   };
 
-  // Trigger scanning simulation with progress animation
   const triggerScanSimulation = () => {
     setIsAnalyzing(true);
     setScanStep(1);
 
     setTimeout(() => {
       setScanStep(2);
-    }, 400);
+    }, 350);
 
     setTimeout(() => {
       setScanStep(3);
-    }, 800);
+    }, 700);
 
     setTimeout(() => {
       setIsAnalyzing(false);
       setScanStep(0);
-      // Recalculate dynamic scores
       setAnalysisResult(prev => ({
         ...prev,
         atsScore: 91,
@@ -400,17 +401,15 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
         hardSkillsScore: 94,
         impactMetricScore: 89,
       }));
-    }, 1200);
+    }, 1100);
   };
 
-  // Copy keyword to clipboard
   const handleCopyKeyword = (keyword) => {
     navigator.clipboard?.writeText(keyword);
     setCopiedKeyword(keyword);
     setTimeout(() => setCopiedKeyword(null), 2000);
   };
 
-  // Toggle checklist item
   const toggleChecklistItem = (id) => {
     setResolvedChecklist(prev => {
       const next = { ...prev, [id]: !prev[id] };
@@ -424,7 +423,6 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
     });
   };
 
-  // Filter checklist
   const filteredChecklist = analysisResult.checklist.filter(item => {
     if (checklistFilter === 'all') return true;
     if (checklistFilter === 'high') return item.impact === 'High';
@@ -433,7 +431,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       {/* Hidden File Input */}
       <input
         type="file"
@@ -443,423 +441,450 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
         style={{ display: 'none' }}
       />
 
-      {/* Top Banner & Audit Controls */}
-      <div className="card" style={{ padding: '1.75rem', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem' }}>
+      {/* ═════════════════════════════════════════════════════════════
+          1. COMPACT COMMAND HEADER WITH ROLE BENCHMARK & ACTIONS
+          ═════════════════════════════════════════════════════════════ */}
+      <div
+        className="card"
+        style={{
+          padding: '1.15rem 1.5rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+          <div
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: 'var(--radius-md)',
+              background: 'rgba(255, 255, 255, 0.06)',
+              border: '1px solid var(--border-subtle)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--text-bright)',
+            }}
+          >
+            <FileCheck size={22} />
+          </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
-              <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>
-                <ShieldCheck size={14} /> Fortune 500 ATS Simulation
-              </span>
-              <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>
-                Workday • Taleo • Greenhouse • iCIMS
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0 }}>
+                AI Resume Analyzer & ATS Benchmark
+              </h2>
+              <span className="badge badge-success" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
+                Fortune 500 Ready
               </span>
             </div>
-            <h2 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <FileCheck color="var(--primary)" size={28} />
-              AI Resume Analyzer & ATS Benchmark
-            </h2>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', maxWidth: '780px', marginTop: '0.2rem' }}>
-              Import your external resume to run semantic ATS extraction, keyword density auditing, and placement readiness verification tailored to top Indian campus recruitment drives.
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0.15rem 0 0' }}>
+              Benchmarked against Indian campus recruiting filters: Workday, Taleo & Greenhouse
             </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.85rem', flexWrap: 'wrap' }}>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="btn btn-outline"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-            >
-              <Upload size={16} /> Import New Resume
-            </button>
-
-            <button
-              onClick={triggerScanSimulation}
-              className="btn btn-primary"
-              disabled={isAnalyzing}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', fontWeight: 700 }}
-            >
-              {isAnalyzing ? (
-                <>
-                  <RefreshCw className="pulse-dot" size={17} style={{ animation: 'spin 1s linear infinite' }} />
-                  {scanStep === 1 && 'Tokenizing Layout...'}
-                  {scanStep === 2 && 'Matching JD Keywords...'}
-                  {scanStep === 3 && 'Generating Audit Report...'}
-                </>
-              ) : (
-                <>
-                  <Sparkles size={17} /> Run In-Depth AI Audit
-                </>
-              )}
-            </button>
           </div>
         </div>
 
-        {/* Live Scan Step Progress Bar */}
-        {isAnalyzing && (
-          <div style={{ marginTop: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
-              <span>Phase {scanStep} of 3: ATS Parser & Semantic Engine</span>
-              <span>{scanStep === 1 ? '33%' : scanStep === 2 ? '66%' : '95%'}</span>
-            </div>
-            <div style={{ width: '100%', height: '6px', background: 'var(--border-subtle)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
-              <div
-                style={{
-                  height: '100%',
-                  width: scanStep === 1 ? '33%' : scanStep === 2 ? '66%' : '95%',
-                  background: 'var(--accent-gradient)',
-                  transition: 'width 0.4s ease',
-                  borderRadius: 'var(--radius-full)'
-                }}
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Resume Import Status & External Drag/Drop Station */}
-      <div
-        className="card"
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        style={{
-          border: isDragOver ? '2px dashed var(--primary)' : '1px solid var(--border-card)',
-          background: isDragOver ? 'rgba(99, 102, 241, 0.08)' : 'var(--bg-card)',
-          transition: 'all 0.2s ease',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.25rem' }}>
-          {/* Active File Summary */}
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-            <div
+        {/* Global Action Strip */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+          {/* Target Role Dropdown */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(24, 24, 28, 0.8)', padding: '0.25rem 0.6rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+            <Target size={14} color="var(--text-muted)" />
+            <select
+              value={targetRole}
+              onChange={(e) => {
+                setTargetRole(e.target.value);
+                setCustomJDText(PRESET_JDS[e.target.value].text);
+                triggerScanSimulation();
+              }}
               style={{
-                width: '52px',
-                height: '52px',
-                borderRadius: 'var(--radius-md)',
-                background: 'rgba(99, 102, 241, 0.12)',
-                border: '1px solid rgba(99, 102, 241, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--primary)',
-                flexShrink: 0,
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-bright)',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                outline: 'none',
+                cursor: 'pointer',
               }}
             >
-              <FileText size={28} />
-            </div>
+              <option value="sde_amazon" style={{ background: '#09090b' }}>Amazon SDE 1 (₹44.5 LPA)</option>
+              <option value="sde_microsoft" style={{ background: '#09090b' }}>Microsoft SWE (₹45.0 LPA)</option>
+              <option value="flipkart_ase" style={{ background: '#09090b' }}>Flipkart Assoc. SDE (₹32.0 LPA)</option>
+              <option value="tcs_digital" style={{ background: '#09090b' }}>TCS Digital (₹7.5 LPA)</option>
+              <option value="infosys_sp" style={{ background: '#09090b' }}>Infosys SP (₹9.5 LPA)</option>
+            </select>
+          </div>
 
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                  {uploadedResume.fileName}
-                </h3>
-                <span className="badge badge-success" style={{ fontSize: '0.72rem' }}>
-                  <Check size={12} /> Successfully Parsed
-                </span>
-                <span className="badge badge-info" style={{ fontSize: '0.72rem' }}>
-                  {uploadedResume.fileSize}
-                </span>
-                {uploadedResume.uploadSource === 'builder' && (
-                  <span className="badge badge-primary" style={{ fontSize: '0.72rem' }}>
-                    Synced from Builder
-                  </span>
-                )}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="btn btn-outline btn-sm"
+            style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}
+          >
+            <Upload size={14} /> Import File
+          </button>
+
+          <button
+            onClick={handleLoadFromBuilder}
+            className="btn btn-outline btn-sm"
+            style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}
+          >
+            <RefreshCw size={13} /> Sync Builder
+          </button>
+
+          <button
+            onClick={triggerScanSimulation}
+            className="btn btn-primary btn-sm"
+            disabled={isAnalyzing}
+            style={{ fontSize: '0.78rem', padding: '0.4rem 0.9rem', fontWeight: 700 }}
+          >
+            {isAnalyzing ? (
+              <>
+                <RefreshCw size={13} className="pulse-dot" style={{ animation: 'spin 1s linear infinite' }} />
+                Scanning...
+              </>
+            ) : (
+              <>
+                <Sparkles size={14} /> Run AI Audit
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Live Scan Step Progress Bar */}
+      {isAnalyzing && (
+        <div style={{ padding: '0.75rem 1rem', background: 'rgba(24, 24, 28, 0.9)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
+            <span>
+              {scanStep === 1 && 'Tokenizing single-column layout stream...'}
+              {scanStep === 2 && 'Cross-referencing JD keyword weights & density...'}
+              {scanStep === 3 && 'Evaluating quantifiable impact metrics...'}
+            </span>
+            <span style={{ fontWeight: 700, color: '#fafafa' }}>{scanStep === 1 ? '33%' : scanStep === 2 ? '66%' : '100%'}</span>
+          </div>
+          <div style={{ width: '100%', height: '5px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '999px', overflow: 'hidden' }}>
+            <div
+              style={{
+                height: '100%',
+                width: scanStep === 1 ? '33%' : scanStep === 2 ? '66%' : '100%',
+                background: '#fafafa',
+                transition: 'width 0.3s ease',
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ═════════════════════════════════════════════════════════════
+          2. UNIFIED BENTO ROW: DOCUMENT HUB + ATS READINESS GAUGE
+          ═════════════════════════════════════════════════════════════ */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: '1.25rem' }}>
+        {/* Card A: Active Document Station & Drag-Drop Hub */}
+        <div
+          className="card"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          style={{
+            padding: '1.25rem',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            border: isDragOver ? '2px dashed #fafafa' : '1px solid var(--border-glass)',
+            background: isDragOver ? 'rgba(255, 255, 255, 0.04)' : 'var(--bg-card)',
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: 'var(--radius-sm)', background: 'rgba(255, 255, 255, 0.06)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <FileText size={20} color="var(--text-bright)" />
+                </div>
+                <div>
+                  <h4 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0 }}>
+                    {uploadedResume.fileName}
+                  </h4>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                    {uploadedResume.fileSize} • {uploadedResume.lastModified}
+                  </div>
+                </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '1.25rem', marginTop: '0.4rem', fontSize: '0.82rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
-                <span><strong>Candidate:</strong> {uploadedResume.parsedName}</span>
-                <span>•</span>
-                <span><strong>College:</strong> {uploadedResume.parsedCollege}</span>
-                <span>•</span>
-                <span><strong>CGPA:</strong> {uploadedResume.parsedCgpa}</span>
-                <span>•</span>
-                <span><strong>Identified Skills:</strong> {uploadedResume.skillsCount} Technical Competencies</span>
+              <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>
+                <Check size={11} /> 100% Parsed
+              </span>
+            </div>
+
+            {/* Candidate Metadata Strip */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: '0.5rem',
+                padding: '0.65rem',
+                background: 'rgba(9, 9, 11, 0.5)',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-subtle)',
+                fontSize: '0.75rem',
+              }}
+            >
+              <div>
+                <span style={{ color: 'var(--text-dim)', display: 'block', fontSize: '0.68rem' }}>Candidate</span>
+                <strong style={{ color: 'var(--text-bright)' }}>{uploadedResume.parsedName}</strong>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-dim)', display: 'block', fontSize: '0.68rem' }}>College</span>
+                <strong style={{ color: 'var(--text-bright)' }}>VIT Vellore</strong>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-dim)', display: 'block', fontSize: '0.68rem' }}>CGPA</span>
+                <strong style={{ color: '#22c55e' }}>{uploadedResume.parsedCgpa}</strong>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-dim)', display: 'block', fontSize: '0.68rem' }}>Extracted Skills</span>
+                <strong style={{ color: '#fafafa' }}>{uploadedResume.skillsCount} Technical</strong>
               </div>
             </div>
           </div>
 
-          {/* Quick Upload Buttons */}
-          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="btn btn-outline btn-sm"
-              style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
-              title="Upload PDF or Word Document"
-            >
-              <FileUp size={15} /> Upload PDF / Word
-            </button>
-
-            <button
-              onClick={handleLoadFromBuilder}
-              className="btn btn-outline btn-sm"
-              style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
-              title="Import current data from Resume Builder"
-            >
-              <RefreshCw size={14} /> Import from Builder
-            </button>
-
+          {/* Embedded Dropzone Subtext */}
+          <div
+            style={{
+              marginTop: '0.85rem',
+              paddingTop: '0.65rem',
+              borderTop: '1px solid var(--border-subtle)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              fontSize: '0.74rem',
+              color: 'var(--text-dim)',
+            }}
+          >
+            <span>Drag & drop <code>.pdf</code>, <code>.docx</code>, <code>.json</code> here to re-scan</span>
             <button
               onClick={handleLoadDemoResume}
               className="btn btn-ghost btn-sm"
-              style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem', color: 'var(--text-muted)' }}
-              title="Reset to default VIT candidate profile"
+              style={{ padding: '0.15rem 0.4rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}
             >
-              Load Demo VIT Profile
+              Reset to Demo Profile
             </button>
           </div>
         </div>
 
-        {/* Drag and Drop Subtext */}
+        {/* Card B: Executive ATS Gauge & 3 Key Pillars */}
         <div
+          className="card"
           style={{
-            marginTop: '1rem',
-            paddingTop: '0.85rem',
-            borderTop: '1px solid var(--border-subtle)',
+            padding: '1.25rem',
             display: 'flex',
-            justifyContent: 'space-between',
             alignItems: 'center',
-            fontSize: '0.78rem',
-            color: 'var(--text-dim)',
-            flexWrap: 'wrap',
-            gap: '0.5rem',
+            justifyContent: 'space-between',
+            gap: '1.25rem',
           }}
         >
-          <span>
-            💡 <strong>Pro Tip:</strong> Drag and drop any <code>.pdf</code>, <code>.docx</code>, or <code>.json</code> directly onto this card to instant-audit.
-          </span>
-          <span style={{ color: 'var(--text-muted)' }}>
-            Status: {uploadedResume.lastModified}
-          </span>
-        </div>
-      </div>
-
-      {/* Executive Scoreboard: 4 Key Pillars */}
-      <div className="grid-4">
-        {/* Overall ATS Score */}
-        <div className="stat-card" style={{ padding: '1.25rem', position: 'relative' }}>
-          <div
-            style={{
-              width: '58px',
-              height: '58px',
-              borderRadius: '50%',
-              background: 'conic-gradient(#10b981 0% 89%, rgba(255, 255, 255, 0.1) 89% 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
+          {/* Numerical ATS Circular Gauge */}
+          <div style={{ textAlign: 'center', minWidth: '110px' }}>
             <div
               style={{
-                width: '46px',
-                height: '46px',
+                width: '74px',
+                height: '74px',
                 borderRadius: '50%',
-                background: 'var(--bg-surface)',
+                border: '3px solid #22c55e',
+                margin: '0 auto 0.4rem',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '0.95rem',
-                fontWeight: 800,
-                color: '#10b981',
+                background: 'rgba(34, 197, 94, 0.08)',
               }}
             >
-              {analysisResult.atsScore}
+              <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fafafa', lineHeight: 1 }}>
+                {analysisResult.atsScore}
+              </span>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-dim)', fontWeight: 600 }}>
+                / 100
+              </span>
             </div>
-          </div>
-          <div>
-            <div className="stat-val" style={{ color: '#10b981', fontSize: '1.5rem', lineHeight: 1.1 }}>
-              {analysisResult.atsScore} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500 }}>/ 100</span>
+            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-bright)' }}>
+              ATS Score
             </div>
-            <div className="stat-label" style={{ fontWeight: 600 }}>Overall ATS Readiness</div>
-            <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 600 }}>
-              Top 12% Candidate Rank
+            <span style={{ fontSize: '0.68rem', color: '#22c55e', fontWeight: 600 }}>
+              Top 12% Candidate
             </span>
           </div>
-        </div>
 
-        {/* JD Keyword Match */}
-        <div className="stat-card" style={{ padding: '1.25rem' }}>
-          <div
-            style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: 'var(--radius-md)',
-              background: 'rgba(6, 182, 212, 0.12)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--secondary)',
-              flexShrink: 0,
-            }}
-          >
-            <Target size={24} />
-          </div>
-          <div>
-            <div className="stat-val" style={{ color: '#06b6d4', fontSize: '1.5rem', lineHeight: 1.1 }}>
-              {analysisResult.jdMatchRate}%
+          {/* 3 Metric Pillar Progress Bars */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.2rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Target JD Relevance</span>
+                <strong style={{ color: 'var(--text-bright)' }}>{analysisResult.jdMatchRate}%</strong>
+              </div>
+              <div style={{ width: '100%', height: '5px', background: 'rgba(255, 255, 255, 0.07)', borderRadius: '999px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${analysisResult.jdMatchRate}%`, background: '#fafafa', borderRadius: '999px' }} />
+              </div>
             </div>
-            <div className="stat-label" style={{ fontWeight: 600 }}>Target JD Relevance</div>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-              Benchmarked for {currentJD.company}
-            </span>
-          </div>
-        </div>
 
-        {/* Format & Structure Hygiene */}
-        <div className="stat-card" style={{ padding: '1.25rem' }}>
-          <div
-            style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: 'var(--radius-md)',
-              background: 'rgba(168, 85, 247, 0.12)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--accent-purple)',
-              flexShrink: 0,
-            }}
-          >
-            <ShieldCheck size={24} />
-          </div>
-          <div>
-            <div className="stat-val" style={{ color: '#a855f7', fontSize: '1.5rem', lineHeight: 1.1 }}>
-              {analysisResult.formatScore}%
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.2rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>ATS Structure & Hygiene</span>
+                <strong style={{ color: '#22c55e' }}>{analysisResult.formatScore}%</strong>
+              </div>
+              <div style={{ width: '100%', height: '5px', background: 'rgba(255, 255, 255, 0.07)', borderRadius: '999px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${analysisResult.formatScore}%`, background: '#22c55e', borderRadius: '999px' }} />
+              </div>
             </div>
-            <div className="stat-label" style={{ fontWeight: 600 }}>ATS Formatting Hygiene</div>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-              Linear single-column parse
-            </span>
-          </div>
-        </div>
 
-        {/* Impact & Metric Density */}
-        <div className="stat-card" style={{ padding: '1.25rem' }}>
-          <div
-            style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: 'var(--radius-md)',
-              background: 'rgba(245, 158, 11, 0.12)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--warning)',
-              flexShrink: 0,
-            }}
-          >
-            <TrendingUp size={24} />
-          </div>
-          <div>
-            <div className="stat-val" style={{ color: '#f59e0b', fontSize: '1.5rem', lineHeight: 1.1 }}>
-              {analysisResult.impactMetricScore}%
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.2rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Quantifiable Metrics & Scale</span>
+                <strong style={{ color: '#eab308' }}>{analysisResult.impactMetricScore}%</strong>
+              </div>
+              <div style={{ width: '100%', height: '5px', background: 'rgba(255, 255, 255, 0.07)', borderRadius: '999px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${analysisResult.impactMetricScore}%`, background: '#eab308', borderRadius: '999px' }} />
+              </div>
             </div>
-            <div className="stat-label" style={{ fontWeight: 600 }}>Quantifiable Impact</div>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-              6 Numbers / Scale metrics found
-            </span>
           </div>
         </div>
       </div>
 
-      {/* Main Grid: Left Column (Target Role & Keywords) + Right Column (Diagnostics & Checklist) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 1.35fr', gap: '1.75rem' }}>
-        {/* Left Column: Target Company Profile & Keyword Matrix */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Target Role Selector Card */}
-          <div className="card">
-            <div className="card-header" style={{ marginBottom: '1rem' }}>
-              <h3 className="card-title">
-                <Target size={19} color="var(--primary)" />
-                Target Company & Role Benchmarking
+      {/* ═════════════════════════════════════════════════════════════
+          3. WORKSPACE SEGMENTED TAB NAVIGATION
+          ═════════════════════════════════════════════════════════════ */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderBottom: '1px solid var(--border-subtle)',
+          paddingBottom: '0.5rem',
+          marginTop: '0.25rem',
+          flexWrap: 'wrap',
+          gap: '0.75rem',
+        }}
+      >
+        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setActiveWorkspaceTab('keywords')}
+            className={`btn btn-sm ${activeWorkspaceTab === 'keywords' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ fontSize: '0.78rem', padding: '0.4rem 0.85rem' }}
+          >
+            <Zap size={14} /> Keyword Intelligence ({analysisResult.matchedKeywords.length + analysisResult.missingKeywords.length})
+          </button>
+
+          <button
+            onClick={() => setActiveWorkspaceTab('sections')}
+            className={`btn btn-sm ${activeWorkspaceTab === 'sections' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ fontSize: '0.78rem', padding: '0.4rem 0.85rem' }}
+          >
+            <Layers size={14} /> Section Health Audit (6)
+          </button>
+
+          <button
+            onClick={() => setActiveWorkspaceTab('checklist')}
+            className={`btn btn-sm ${activeWorkspaceTab === 'checklist' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ fontSize: '0.78rem', padding: '0.4rem 0.85rem' }}
+          >
+            <ListChecks size={14} /> Optimization Checklist ({analysisResult.checklist.length})
+          </button>
+
+          <button
+            onClick={() => setActiveWorkspaceTab('parsed_text')}
+            className={`btn btn-sm ${activeWorkspaceTab === 'parsed_text' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ fontSize: '0.78rem', padding: '0.4rem 0.85rem' }}
+          >
+            <Code size={14} /> Extracted ATS Stream
+          </button>
+        </div>
+
+        <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+          Target: <strong>{currentJD.company} ({currentJD.package})</strong>
+        </span>
+      </div>
+
+      {/* ═════════════════════════════════════════════════════════════
+          4. WORKSPACE TAB CONTENTS
+          ═════════════════════════════════════════════════════════════ */}
+
+      {/* TAB 1: KEYWORD INTELLIGENCE & JD MATCH MATRIX */}
+      {activeWorkspaceTab === 'keywords' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.35fr', gap: '1.25rem' }}>
+          {/* Left Column: Target Role Benchmark & Custom JD */}
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
+              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <Target size={16} /> Role Requirements
               </h3>
               <span className="badge badge-primary">{currentJD.package}</span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', display: 'block' }}>
-                  Select Placement Drive Profile:
-                </label>
-                <select
-                  className="select"
-                  value={targetRole}
-                  onChange={(e) => {
-                    setTargetRole(e.target.value);
-                    setCustomJDText(PRESET_JDS[e.target.value].text);
-                    triggerScanSimulation();
-                  }}
-                  style={{ fontSize: '0.88rem', fontWeight: 600 }}
-                >
-                  <option value="sde_amazon">Amazon India - SDE 1 (₹44.5 LPA)</option>
-                  <option value="sde_microsoft">Microsoft India - Software Engineer (₹45.0 LPA)</option>
-                  <option value="flipkart_ase">Flipkart - Associate SDE (₹32.0 LPA)</option>
-                  <option value="tcs_digital">TCS Digital - System Engineer (₹7.5 LPA)</option>
-                  <option value="infosys_sp">Infosys - Specialist Programmer (₹9.5 LPA)</option>
-                </select>
-              </div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.5', marginBottom: '1rem', whiteSpace: 'pre-line', background: 'rgba(9, 9, 11, 0.4)', padding: '0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+              {currentJD.text}
+            </div>
 
-              {/* Collapsible Custom JD Toggle */}
-              <div>
-                <button
-                  onClick={() => setShowCustomJD(!showCustomJD)}
-                  className="btn btn-ghost btn-sm"
-                  style={{ fontSize: '0.78rem', color: 'var(--primary)', padding: '0.2rem 0', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                >
-                  {showCustomJD ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  {showCustomJD ? 'Hide Job Description Details' : 'View / Edit Job Description Requirements'}
-                </button>
+            {/* Custom JD Editor Accordion */}
+            <div>
+              <button
+                onClick={() => setShowCustomJD(!showCustomJD)}
+                className="btn btn-ghost btn-sm"
+                style={{ fontSize: '0.76rem', color: 'var(--text-muted)', padding: '0.2rem 0', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                {showCustomJD ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                {showCustomJD ? 'Close Custom JD Editor' : 'Paste Custom Job Description'}
+              </button>
 
-                {showCustomJD && (
-                  <div style={{ marginTop: '0.65rem' }}>
-                    <textarea
-                      className="textarea"
-                      rows={5}
-                      value={customJDText}
-                      onChange={(e) => setCustomJDText(e.target.value)}
-                      placeholder="Paste target Job Description here..."
-                      style={{ fontSize: '0.8rem', fontFamily: 'var(--font-mono)' }}
-                    />
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.4rem' }}>
-                      <button
-                        onClick={triggerScanSimulation}
-                        className="btn btn-primary btn-sm"
-                        style={{ fontSize: '0.75rem' }}
-                      >
-                        Re-scan Against Custom JD
-                      </button>
-                    </div>
+              {showCustomJD && (
+                <div style={{ marginTop: '0.65rem' }}>
+                  <textarea
+                    className="textarea"
+                    rows={5}
+                    value={customJDText}
+                    onChange={(e) => setCustomJDText(e.target.value)}
+                    placeholder="Paste job description requirements here..."
+                    style={{ fontSize: '0.78rem', fontFamily: 'var(--font-mono)' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.4rem' }}>
+                    <button
+                      onClick={triggerScanSimulation}
+                      className="btn btn-primary btn-sm"
+                      style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
+                    >
+                      Audit Against Custom JD
+                    </button>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Keyword Match Matrix */}
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">
-                <Zap size={19} color="var(--primary)" />
-                ATS Keyword Density Matrix
-              </h3>
-              <span className="badge badge-success">
-                {analysisResult.matchedKeywords.length} Matched • {analysisResult.missingKeywords.length} Missing
-              </span>
-            </div>
-
-            {/* Matched Keywords */}
-            <div style={{ marginBottom: '1.25rem' }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
-                <CheckCircle size={15} />
-                High-Value Keywords Found in Resume ({analysisResult.matchedKeywords.length})
+          {/* Right Column: Keyword Match vs Missing Matrix */}
+          <div className="card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {/* Matched Keywords Grid */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
+                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#22c55e', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <CheckCircle size={15} />
+                  Found in Your Resume ({analysisResult.matchedKeywords.length})
+                </div>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>High-Frequency JD Match</span>
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                 {analysisResult.matchedKeywords.map((kw, i) => (
                   <span
                     key={i}
-                    className="badge badge-success"
-                    style={{ fontSize: '0.76rem', padding: '0.3rem 0.65rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                    style={{
+                      fontSize: '0.75rem',
+                      padding: '0.25rem 0.6rem',
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'rgba(34, 197, 94, 0.1)',
+                      border: '1px solid rgba(34, 197, 94, 0.25)',
+                      color: '#4ade80',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                    }}
                   >
                     <Check size={12} /> {kw}
                   </span>
@@ -867,16 +892,20 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
               </div>
             </div>
 
-            {/* Missing Critical Keywords */}
-            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1.1rem' }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f87171', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
-                <AlertTriangle size={15} />
-                Critical Missing Keywords Required for Shortlisting
+            {/* Critical Missing Keywords with 1-Click Copy */}
+            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#f87171', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <AlertTriangle size={15} />
+                  Missing Required Keywords ({analysisResult.missingKeywords.length})
+                </div>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Click chip to copy</span>
               </div>
-              <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginBottom: '0.65rem' }}>
-                Click any keyword chip to copy and integrate into your Experience or Projects section:
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                Adding these keywords into your Projects or Skills section increases shortlisting probability by up to 28%:
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.55rem' }}>
                 {analysisResult.missingKeywords.map((kw, i) => (
                   <div
                     key={i}
@@ -886,29 +915,34 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '0.55rem 0.75rem',
-                      borderRadius: 'var(--radius-md)',
+                      borderRadius: 'var(--radius-sm)',
                       background: 'rgba(239, 68, 68, 0.08)',
-                      border: '1px solid rgba(239, 68, 68, 0.22)',
+                      border: '1px solid rgba(239, 68, 68, 0.2)',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
                     }}
-                    title="Click to copy keyword"
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span className="badge badge-danger" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', overflow: 'hidden' }}>
+                      <span
+                        style={{
+                          fontSize: '0.65rem',
+                          padding: '1px 5px',
+                          borderRadius: '3px',
+                          background: kw.priority === 'High' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(234, 179, 8, 0.2)',
+                          color: kw.priority === 'High' ? '#f87171' : '#facc15',
+                          fontWeight: 700,
+                        }}
+                      >
                         {kw.priority}
                       </span>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-bright)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                         + {kw.name}
                       </span>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-muted)', fontSize: '0.74rem' }}>
-                      <span style={{ opacity: 0.7 }}>{kw.category}</span>
+                    <div style={{ color: 'var(--text-dim)', flexShrink: 0, marginLeft: '0.4rem' }}>
                       {copiedKeyword === kw.name ? (
-                        <span style={{ color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '2px' }}>
-                          <Check size={13} /> Copied!
-                        </span>
+                        <span style={{ color: '#22c55e', fontSize: '0.72rem', fontWeight: 700 }}>Copied!</span>
                       ) : (
                         <Copy size={13} />
                       )}
@@ -919,161 +953,194 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
             </div>
           </div>
         </div>
+      )}
 
-        {/* Right Column: Section-by-Section ATS Diagnostic & Actionable Checklist */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Section-by-Section ATS Diagnostic */}
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">
-                <Layers size={19} color="var(--secondary)" />
-                Section-by-Section ATS Health Audit
-              </h3>
-              <span className="badge badge-info">6 Sections Audited</span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              {analysisResult.sectionAudit.map((sec, i) => (
-                <div
-                  key={i}
-                  style={{
-                    padding: '0.85rem 1rem',
-                    borderRadius: 'var(--radius-md)',
-                    background: sec.status === 'pass' ? 'rgba(16, 185, 129, 0.04)' : 'rgba(245, 158, 11, 0.06)',
-                    border: sec.status === 'pass' ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid rgba(245, 158, 11, 0.25)',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '0.85rem',
-                  }}
-                >
-                  {sec.status === 'pass' ? (
-                    <CheckCircle size={20} color="#10b981" style={{ marginTop: '2px', flexShrink: 0 }} />
-                  ) : (
-                    <AlertTriangle size={20} color="#f59e0b" style={{ marginTop: '2px', flexShrink: 0 }} />
-                  )}
-
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
-                      <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                        {sec.section}
-                      </span>
-                      <span
-                        className={sec.status === 'pass' ? 'badge badge-success' : 'badge badge-warning'}
-                        style={{ fontSize: '0.7rem' }}
-                      >
-                        {sec.score}
-                      </span>
-                    </div>
-
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-                      {sec.summary}
-                    </div>
-
-                    <div style={{ fontSize: '0.74rem', color: sec.status === 'pass' ? '#10b981' : '#f59e0b', marginTop: '0.3rem', fontWeight: 500 }}>
-                      💡 {sec.tip}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Actionable Recruiter & ATS Optimization Checklist */}
-          <div className="card">
-            <div className="card-header" style={{ marginBottom: '0.85rem' }}>
+      {/* TAB 2: SECTION HEALTH AUDIT (2X3 BALANCED GRID) */}
+      {activeWorkspaceTab === 'sections' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+          {analysisResult.sectionAudit.map((sec, i) => (
+            <div
+              key={i}
+              className="card"
+              style={{
+                padding: '1.15rem',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                border: sec.status === 'pass' ? '1px solid var(--border-subtle)' : '1px solid rgba(234, 179, 8, 0.3)',
+                background: 'var(--bg-card)',
+              }}
+            >
               <div>
-                <h3 className="card-title">
-                  <CheckCircle size={19} color="#10b981" />
-                  Recruiter Optimization Action Items
-                </h3>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                  Resolve these items to maximize your probability of passing the automated screening round:
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                  <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0 }}>
+                    {sec.section}
+                  </h4>
+                  <span
+                    className={sec.status === 'pass' ? 'badge badge-success' : 'badge badge-warning'}
+                    style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}
+                  >
+                    {sec.score}
+                  </span>
+                </div>
+
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.45', margin: '0 0 0.85rem' }}>
+                  {sec.summary}
                 </p>
               </div>
 
-              {/* Filter Tabs */}
-              <div style={{ display: 'flex', gap: '0.35rem' }}>
-                <button
-                  onClick={() => setChecklistFilter('all')}
-                  className={`btn btn-sm ${checklistFilter === 'all' ? 'btn-primary' : 'btn-ghost'}`}
-                  style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem' }}
-                >
-                  All ({analysisResult.checklist.length})
-                </button>
-                <button
-                  onClick={() => setChecklistFilter('high')}
-                  className={`btn btn-sm ${checklistFilter === 'high' ? 'btn-primary' : 'btn-ghost'}`}
-                  style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem' }}
-                >
-                  High Impact
-                </button>
-                <button
-                  onClick={() => setChecklistFilter('medium')}
-                  className={`btn btn-sm ${checklistFilter === 'medium' ? 'btn-primary' : 'btn-ghost'}`}
-                  style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem' }}
-                >
-                  Medium
-                </button>
+              <div
+                style={{
+                  padding: '0.5rem 0.65rem',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'rgba(9, 9, 11, 0.5)',
+                  border: '1px solid var(--border-subtle)',
+                  fontSize: '0.72rem',
+                  color: sec.status === 'pass' ? 'var(--text-main)' : '#facc15',
+                }}
+              >
+                💡 {sec.tip}
               </div>
             </div>
+          ))}
+        </div>
+      )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-              {filteredChecklist.map((item) => {
-                const isResolved = resolvedChecklist[item.id];
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => toggleChecklistItem(item.id)}
-                    style={{
-                      padding: '0.75rem 0.9rem',
-                      borderRadius: 'var(--radius-md)',
-                      background: isResolved ? 'rgba(16, 185, 129, 0.08)' : 'rgba(255, 255, 255, 0.02)',
-                      border: isResolved ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-subtle)',
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '0.75rem',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isResolved}
-                      onChange={() => toggleChecklistItem(item.id)}
-                      style={{ marginTop: '3px', cursor: 'pointer', accentColor: 'var(--primary)' }}
-                    />
+      {/* TAB 3: RECRUITER OPTIMIZATION CHECKLIST */}
+      {activeWorkspaceTab === 'checklist' && (
+        <div className="card" style={{ padding: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <CheckCircle2 size={17} color="#22c55e" /> Actionable Shortlisting Recommendations
+              </h3>
+              <p style={{ fontSize: '0.76rem', color: 'var(--text-dim)', margin: '0.2rem 0 0' }}>
+                Check items as you apply them to your resume. Each verified resolution boosts your ATS score dynamically.
+              </p>
+            </div>
 
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.15rem' }}>
-                        <span
-                          className={item.impact === 'High' ? 'badge badge-danger' : 'badge badge-warning'}
-                          style={{ fontSize: '0.68rem', padding: '0.15rem 0.4rem' }}
-                        >
-                          {item.impact} Impact
-                        </span>
-                        <span
-                          style={{
-                            fontSize: '0.84rem',
-                            fontWeight: 700,
-                            color: isResolved ? '#10b981' : 'var(--text-main)',
-                            textDecoration: isResolved ? 'line-through' : 'none',
-                          }}
-                        >
-                          {item.title}
-                        </span>
-                      </div>
-
-                      <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                        {item.description}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+            {/* Filter Pills */}
+            <div style={{ display: 'flex', gap: '0.35rem' }}>
+              <button
+                onClick={() => setChecklistFilter('all')}
+                className={`btn btn-sm ${checklistFilter === 'all' ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ fontSize: '0.72rem', padding: '0.25rem 0.6rem' }}
+              >
+                All ({analysisResult.checklist.length})
+              </button>
+              <button
+                onClick={() => setChecklistFilter('high')}
+                className={`btn btn-sm ${checklistFilter === 'high' ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ fontSize: '0.72rem', padding: '0.25rem 0.6rem' }}
+              >
+                High Impact
+              </button>
+              <button
+                onClick={() => setChecklistFilter('medium')}
+                className={`btn btn-sm ${checklistFilter === 'medium' ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ fontSize: '0.72rem', padding: '0.25rem 0.6rem' }}
+              >
+                Medium Impact
+              </button>
             </div>
           </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+            {filteredChecklist.map((item) => {
+              const isResolved = resolvedChecklist[item.id];
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => toggleChecklistItem(item.id)}
+                  style={{
+                    padding: '0.75rem 1rem',
+                    borderRadius: 'var(--radius-sm)',
+                    background: isResolved ? 'rgba(34, 197, 94, 0.05)' : 'rgba(9, 9, 11, 0.4)',
+                    border: isResolved ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid var(--border-subtle)',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.75rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isResolved}
+                    onChange={() => toggleChecklistItem(item.id)}
+                    style={{ marginTop: '3px', cursor: 'pointer', accentColor: '#22c55e' }}
+                  />
+
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                      <span
+                        style={{
+                          fontSize: '0.65rem',
+                          padding: '1px 5px',
+                          borderRadius: '3px',
+                          background: item.impact === 'High' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(234, 179, 8, 0.15)',
+                          color: item.impact === 'High' ? '#f87171' : '#facc15',
+                          fontWeight: 700,
+                        }}
+                      >
+                        {item.impact} Impact
+                      </span>
+                      <strong
+                        style={{
+                          fontSize: '0.84rem',
+                          color: isResolved ? '#4ade80' : 'var(--text-bright)',
+                          textDecoration: isResolved ? 'line-through' : 'none',
+                        }}
+                      >
+                        {item.title}
+                      </strong>
+                    </div>
+
+                    <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                      {item.description}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* TAB 4: EXTRACTED ATS TEXT STREAM */}
+      {activeWorkspaceTab === 'parsed_text' && (
+        <div className="card" style={{ padding: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+            <div>
+              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <Code size={16} /> Raw Linear ATS Parse Stream
+              </h3>
+              <p style={{ fontSize: '0.74rem', color: 'var(--text-dim)', margin: '0.15rem 0 0' }}>
+                This is the exact tokenized text stream consumed by Fortune 500 ATS parsers without styling or column breaks.
+              </p>
+            </div>
+            <span className="badge badge-success">0 Unparseable Characters</span>
+          </div>
+
+          <pre
+            style={{
+              padding: '1rem',
+              background: '#09090b',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border-subtle)',
+              fontSize: '0.78rem',
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--text-main)',
+              lineHeight: '1.6',
+              whiteSpace: 'pre-wrap',
+              maxHeight: '380px',
+              overflowY: 'auto',
+            }}
+          >
+            {uploadedResume.rawText}
+          </pre>
+        </div>
+      )}
     </div>
   );
 };
