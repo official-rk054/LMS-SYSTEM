@@ -489,7 +489,7 @@ export const AdminDashboard = ({ userProfile, setActiveTab }) => {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {auditLogs.map((log) => (
-              <div key={log.id} style={{ padding: '0.85rem 1rem', background: 'rgba(15, 23, 42, 0.5)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div key={log.id} style={{ padding: '0.85rem 1rem', background: 'rgba(24, 24, 28, 0.75)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#ffffff' }}>{log.action}</div>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{log.detail}</div>

@@ -179,7 +179,7 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
         justifyContent: 'center',
         position: 'relative',
         overflow: 'hidden',
-        background: '#070b14',
+        background: '#09090b',
         padding: '2rem 1.5rem',
       }}
     >
@@ -192,7 +192,7 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
           width: '420px',
           height: '420px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(99, 102, 241, 0.45) 0%, rgba(99, 102, 241, 0) 70%)',
+          background: 'radial-gradient(circle, rgba(255, 255, 255, 0.035) 0%, rgba(0, 0, 0, 0) 70%)',
           filter: 'blur(60px)',
           pointerEvents: 'none',
         }}
@@ -205,7 +205,7 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
           width: '460px',
           height: '460px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(6, 182, 212, 0.35) 0%, rgba(6, 182, 212, 0) 70%)',
+          background: 'radial-gradient(circle, rgba(180, 180, 200, 0.025) 0%, rgba(0, 0, 0, 0) 70%)',
           filter: 'blur(70px)',
           pointerEvents: 'none',
         }}
@@ -218,7 +218,7 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
           width: '340px',
           height: '340px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(168, 85, 247, 0.3) 0%, rgba(168, 85, 247, 0) 70%)',
+          background: 'radial-gradient(circle, rgba(255, 255, 255, 0.02) 0%, rgba(0, 0, 0, 0) 70%)',
           filter: 'blur(65px)',
           pointerEvents: 'none',
         }}
@@ -231,13 +231,13 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
           maxWidth: authMode === 'signup' ? '560px' : '490px',
           position: 'relative',
           zIndex: 10,
-          background: 'rgba(15, 23, 42, 0.72)',
+          background: 'rgba(18, 18, 22, 0.82)',
           backdropFilter: 'blur(32px)',
           WebkitBackdropFilter: 'blur(32px)',
           border: '1px solid rgba(255, 255, 255, 0.12)',
           borderRadius: '24px',
           padding: '2.5rem 2.25rem',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.85), 0 0 50px rgba(99, 102, 241, 0.25)',
+          boxShadow: '0 25px 60px -12px rgba(0, 0, 0, 0.95), 0 0 35px rgba(255, 255, 255, 0.03)',
           transition: 'max-width 0.3s ease',
         }}
       >
@@ -249,15 +249,15 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
                 width: '48px',
                 height: '48px',
                 borderRadius: '14px',
-                background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)',
+                background: 'linear-gradient(135deg, #ffffff 0%, #71717a 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 0 20px rgba(99, 102, 241, 0.5)',
+                boxShadow: '0 0 20px rgba(255, 255, 255, 0.15)',
                 flexShrink: 0,
               }}
             >
-              <GraduationCap size={28} color="#ffffff" />
+              <GraduationCap size={28} color="#09090b" />
             </div>
             <div>
               <h1
@@ -270,9 +270,9 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
                   lineHeight: 1.1,
                 }}
               >
-                Place<span style={{ color: '#06b6d4' }}>IQ</span>
+                Place<span style={{ color: 'var(--text-muted)' }}>IQ</span>
               </h1>
-              <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+              <span style={{ fontSize: '0.78rem', color: '#a1a1aa' }}>
                 Campus-to-Career Placement LMS
               </span>
             </div>
@@ -307,7 +307,7 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
         <div
           style={{
             display: 'flex',
-            background: 'rgba(30, 41, 59, 0.75)',
+            background: 'rgba(28, 28, 34, 0.85)',
             padding: '4px',
             borderRadius: '12px',
             marginBottom: '1.5rem',
@@ -326,10 +326,10 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
               borderRadius: '9px',
               fontSize: '0.85rem',
               fontWeight: 700,
-              color: authMode === 'login' ? '#ffffff' : '#94a3b8',
-              background: authMode === 'login' ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' : 'transparent',
+              color: authMode === 'login' ? '#09090b' : '#a1a1aa',
+              background: authMode === 'login' ? 'linear-gradient(135deg, #ffffff 0%, #d4d4d8 100%)' : 'transparent',
               transition: 'all 0.2s ease',
-              boxShadow: authMode === 'login' ? '0 2px 8px rgba(99, 102, 241, 0.4)' : 'none',
+              boxShadow: authMode === 'login' ? '0 2px 10px rgba(0, 0, 0, 0.5)' : 'none',
             }}
           >
             Sign In to Portal
@@ -347,10 +347,10 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
               borderRadius: '9px',
               fontSize: '0.85rem',
               fontWeight: 700,
-              color: authMode === 'signup' ? '#ffffff' : '#94a3b8',
-              background: authMode === 'signup' ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' : 'transparent',
+              color: authMode === 'signup' ? '#09090b' : '#a1a1aa',
+              background: authMode === 'signup' ? 'linear-gradient(135deg, #ffffff 0%, #d4d4d8 100%)' : 'transparent',
               transition: 'all 0.2s ease',
-              boxShadow: authMode === 'signup' ? '0 2px 8px rgba(99, 102, 241, 0.4)' : 'none',
+              boxShadow: authMode === 'signup' ? '0 2px 10px rgba(0, 0, 0, 0.5)' : 'none',
             }}
           >
             Create New Account
@@ -425,7 +425,7 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
                     style={{
                       paddingLeft: '42px',
                       height: '46px',
-                      background: 'rgba(30, 41, 59, 0.65)',
+                      background: 'rgba(24, 24, 28, 0.75)',
                       border: '1px solid rgba(255, 255, 255, 0.12)',
                       fontSize: '0.9rem',
                     }}
@@ -454,7 +454,7 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
                       paddingLeft: '42px',
                       paddingRight: '42px',
                       height: '46px',
-                      background: 'rgba(30, 41, 59, 0.65)',
+                      background: 'rgba(24, 24, 28, 0.75)',
                       border: '1px solid rgba(255, 255, 255, 0.12)',
                       fontSize: '0.9rem',
                     }}
@@ -493,8 +493,10 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
                   height: '48px',
                   fontSize: '0.95rem',
                   fontWeight: 700,
-                  background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-                  border: 'none',
+                  background: 'linear-gradient(135deg, #ffffff 0%, #d4d4d8 100%)',
+                  color: '#09090b',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
+                  boxShadow: '0 2px 12px rgba(0, 0, 0, 0.4)',
                   marginTop: '0.35rem',
                 }}
               >
@@ -647,9 +649,9 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
                         borderRadius: '9px',
                         fontSize: '0.78rem',
                         fontWeight: 700,
-                        background: signupRole === r.key ? 'rgba(99, 102, 241, 0.25)' : 'rgba(30, 41, 59, 0.65)',
-                        border: signupRole === r.key ? '1px solid #6366f1' : '1px solid rgba(255, 255, 255, 0.1)',
-                        color: signupRole === r.key ? '#ffffff' : '#94a3b8',
+                        background: signupRole === r.key ? 'rgba(255, 255, 255, 0.12)' : 'rgba(24, 24, 28, 0.75)',
+                        border: signupRole === r.key ? '1px solid #ffffff' : '1px solid rgba(255, 255, 255, 0.1)',
+                        color: signupRole === r.key ? '#ffffff' : '#a1a1aa',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -681,7 +683,7 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
                     style={{
                       paddingLeft: '40px',
                       height: '42px',
-                      background: 'rgba(30, 41, 59, 0.65)',
+                      background: 'rgba(24, 24, 28, 0.75)',
                       border: '1px solid rgba(255, 255, 255, 0.12)',
                       fontSize: '0.86rem',
                     }}
@@ -708,7 +710,7 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
                     style={{
                       paddingLeft: '40px',
                       height: '42px',
-                      background: 'rgba(30, 41, 59, 0.65)',
+                      background: 'rgba(24, 24, 28, 0.75)',
                       border: '1px solid rgba(255, 255, 255, 0.12)',
                       fontSize: '0.86rem',
                     }}
@@ -735,7 +737,7 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
                     style={{
                       paddingLeft: '40px',
                       height: '42px',
-                      background: 'rgba(30, 41, 59, 0.65)',
+                      background: 'rgba(24, 24, 28, 0.75)',
                       border: '1px solid rgba(255, 255, 255, 0.12)',
                       fontSize: '0.86rem',
                     }}
@@ -756,7 +758,7 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
                     <input
                       type="text"
                       className="input"
-                      style={{ height: '40px', fontSize: '0.82rem', background: 'rgba(30, 41, 59, 0.65)' }}
+                      style={{ height: '40px', fontSize: '0.82rem', background: 'rgba(24, 24, 28, 0.75)' }}
                       placeholder="B.Tech CSE"
                       value={signupDegree}
                       onChange={(e) => setSignupDegree(e.target.value)}
@@ -770,7 +772,7 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
                     <input
                       type="number"
                       className="input"
-                      style={{ height: '40px', fontSize: '0.82rem', background: 'rgba(30, 41, 59, 0.65)' }}
+                      style={{ height: '40px', fontSize: '0.82rem', background: 'rgba(24, 24, 28, 0.75)' }}
                       placeholder="2026"
                       value={signupGradYear}
                       onChange={(e) => setSignupGradYear(e.target.value)}
@@ -785,7 +787,7 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
                       type="number"
                       step="0.01"
                       className="input"
-                      style={{ height: '40px', fontSize: '0.82rem', background: 'rgba(30, 41, 59, 0.65)' }}
+                      style={{ height: '40px', fontSize: '0.82rem', background: 'rgba(24, 24, 28, 0.75)' }}
                       placeholder="8.65"
                       value={signupCgpa}
                       onChange={(e) => setSignupCgpa(e.target.value)}
@@ -807,7 +809,7 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
                       className="input"
                       style={{
                         height: '42px',
-                        background: 'rgba(30, 41, 59, 0.65)',
+                        background: 'rgba(24, 24, 28, 0.75)',
                         border: '1px solid rgba(255, 255, 255, 0.12)',
                         fontSize: '0.86rem',
                         paddingRight: '36px',
@@ -847,7 +849,7 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
                       className="input"
                       style={{
                         height: '42px',
-                        background: 'rgba(30, 41, 59, 0.65)',
+                        background: 'rgba(24, 24, 28, 0.75)',
                         border: passwordsMatch
                           ? '1px solid #10b981'
                           : signupConfirmPassword
@@ -1013,7 +1015,7 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
               maxWidth: '680px',
               maxHeight: '85vh',
               overflowY: 'auto',
-              background: '#0f172a',
+              background: '#121216',
               border: '1px solid rgba(255, 255, 255, 0.15)',
               borderRadius: '20px',
               padding: '2rem',

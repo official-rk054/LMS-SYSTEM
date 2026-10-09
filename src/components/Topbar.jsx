@@ -47,9 +47,9 @@ export const Topbar = ({
             className="badge"
             style={{
               fontSize: '0.7rem',
-              background: isLight ? '#eef2ff' : 'rgba(99, 102, 241, 0.15)',
-              color: isLight ? '#4f46e5' : '#818cf8',
-              border: isLight ? '1px solid #c7d2fe' : '1px solid rgba(99, 102, 241, 0.3)',
+              background: isLight ? '#f1f5f9' : 'rgba(255, 255, 255, 0.08)',
+              color: isLight ? '#0f172a' : '#f4f4f5',
+              border: isLight ? '1px solid #cbd5e1' : '1px solid rgba(255, 255, 255, 0.15)',
               fontWeight: 600,
             }}
           >

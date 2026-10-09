@@ -88,7 +88,7 @@ export const AuthLogin = ({ onLogin }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'radial-gradient(ellipse at top left, rgba(129, 140, 248, 0.15), transparent 50%), radial-gradient(ellipse at bottom right, rgba(34, 211, 238, 0.12), transparent 50%), var(--bg-app)',
+        background: 'radial-gradient(ellipse at top left, rgba(255, 255, 255, 0.03), transparent 50%), var(--bg-app)',
         padding: '1.5rem',
         position: 'relative',
         overflow: 'hidden',
@@ -103,7 +103,7 @@ export const AuthLogin = ({ onLogin }) => {
           width: '500px',
           height: '500px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(129, 140, 248, 0.25) 0%, rgba(0, 0, 0, 0) 70%)',
+          background: 'radial-gradient(circle, rgba(255, 255, 255, 0.035) 0%, rgba(0, 0, 0, 0) 70%)',
           filter: 'blur(60px)',
           pointerEvents: 'none',
         }}
@@ -116,7 +116,7 @@ export const AuthLogin = ({ onLogin }) => {
           width: '550px',
           height: '550px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(34, 211, 238, 0.2) 0%, rgba(0, 0, 0, 0) 70%)',
+          background: 'radial-gradient(circle, rgba(180, 180, 200, 0.025) 0%, rgba(0, 0, 0, 0) 70%)',
           filter: 'blur(70px)',
           pointerEvents: 'none',
         }}
@@ -131,11 +131,11 @@ export const AuthLogin = ({ onLogin }) => {
           gap: '0',
           borderRadius: 'var(--radius-xl)',
           overflow: 'hidden',
-          background: 'rgba(15, 23, 42, 0.65)',
+          background: 'rgba(18, 18, 22, 0.85)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
           border: '1px solid rgba(255, 255, 255, 0.12)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)',
         }}
         className="auth-container-grid"
       >
@@ -143,11 +143,11 @@ export const AuthLogin = ({ onLogin }) => {
         <div
           style={{
             padding: '2.75rem 2.5rem',
-            background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.9) 100%)',
+            background: 'linear-gradient(145deg, rgba(24, 24, 28, 0.95) 0%, rgba(14, 14, 17, 0.98) 100%)',
             borderRight: '1px solid rgba(255, 255, 255, 0.08)',
             display: 'flex',
             flexDirection: 'column',
-            justify: 'space-between',
+            justifyContent: 'space-between',
           }}
         >
           <div>
@@ -158,18 +158,18 @@ export const AuthLogin = ({ onLogin }) => {
                   width: '44px',
                   height: '44px',
                   borderRadius: 'var(--radius-md)',
-                  background: 'linear-gradient(135deg, #818cf8 0%, #22d3ee 100%)',
+                  background: 'linear-gradient(135deg, #ffffff 0%, #71717a 100%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 0 24px rgba(129, 140, 248, 0.45)',
+                  boxShadow: '0 0 20px rgba(255, 255, 255, 0.15)',
                 }}
               >
-                <GraduationCap size={24} color="#ffffff" />
+                <GraduationCap size={24} color="#09090b" />
               </div>
               <div>
                 <h1 style={{ fontSize: '1.45rem', fontWeight: 800, margin: 0, color: '#ffffff', letterSpacing: '-0.02em' }}>
-                  Place<span style={{ color: '#22d3ee' }}>IQ</span>
+                  Place<span style={{ color: 'var(--text-muted)' }}>IQ</span>
                 </h1>
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                   Campus-to-Career LMS Security Auth
@@ -180,8 +180,8 @@ export const AuthLogin = ({ onLogin }) => {
             {/* Portal Info Card */}
             <div
               style={{
-                background: 'linear-gradient(135deg, rgba(129, 140, 248, 0.12) 0%, rgba(34, 211, 238, 0.08) 100%)',
-                border: '1px solid rgba(129, 140, 248, 0.25)',
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
                 borderRadius: 'var(--radius-lg)',
                 padding: '1.25rem',
                 marginBottom: '1.75rem',
@@ -468,10 +468,11 @@ export const AuthLogin = ({ onLogin }) => {
                 padding: '0.8rem 1.5rem',
                 fontSize: '0.92rem',
                 fontWeight: 600,
-                background: 'linear-gradient(135deg, #818cf8 0%, #6366f1 100%)',
-                color: '#ffffff',
+                background: 'linear-gradient(135deg, #ffffff 0%, #d4d4d8 100%)',
+                color: '#09090b',
                 justifyContent: 'center',
-                boxShadow: '0 4px 20px rgba(129, 140, 248, 0.4)',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
               }}
             >
               {isLoading ? (

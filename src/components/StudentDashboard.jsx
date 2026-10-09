@@ -95,8 +95,8 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
         className="card"
         style={{
           padding: '0.85rem 1.25rem',
-          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(6, 182, 212, 0.08) 100%)',
-          borderColor: 'rgba(99, 102, 241, 0.25)',
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)',
+          borderColor: 'var(--border-glass)',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.85rem' }}>
@@ -104,7 +104,7 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.15rem' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0, lineHeight: 1.2 }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-bright)', margin: 0, lineHeight: 1.2 }}>
                   Welcome back, {userProfile.name}! 👋
                 </h2>
                 <span className="badge badge-primary" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
@@ -116,7 +116,7 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
               </div>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.3 }}>
                 {userProfile.degree} at <strong>{userProfile.college}</strong> • Readiness:{' '}
-                <strong style={{ color: '#10b981' }}>{userProfile.placementReadinessScore}%</strong>. Amazon & TCS campus drives start this month!
+                <strong style={{ color: '#34d399' }}>{userProfile.placementReadinessScore}%</strong>. Amazon & TCS campus drives start this month!
               </p>
             </div>
           </div>
@@ -129,16 +129,16 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                background: 'rgba(16, 185, 129, 0.1)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
+                background: 'rgba(52, 211, 153, 0.08)',
+                border: '1px solid rgba(52, 211, 153, 0.25)',
                 padding: '0.35rem 0.65rem',
                 borderRadius: 'var(--radius-md)',
               }}
               title="Overall Placement Readiness Index"
             >
-              <Award size={16} color="#10b981" />
+              <Award size={16} color="#34d399" />
               <div>
-                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#10b981', lineHeight: 1 }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#34d399', lineHeight: 1 }}>
                   {userProfile.placementReadinessScore}%
                 </div>
                 <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 600 }}>
@@ -153,8 +153,8 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                background: 'rgba(245, 158, 11, 0.1)',
-                border: '1px solid rgba(245, 158, 11, 0.3)',
+                background: 'rgba(245, 158, 11, 0.08)',
+                border: '1px solid rgba(245, 158, 11, 0.25)',
                 padding: '0.35rem 0.65rem',
                 borderRadius: 'var(--radius-md)',
               }}
@@ -177,16 +177,16 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                background: 'rgba(99, 102, 241, 0.1)',
-                border: '1px solid rgba(99, 102, 241, 0.3)',
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
                 padding: '0.35rem 0.65rem',
                 borderRadius: 'var(--radius-md)',
               }}
               title="Official Campus Cohort Rank"
             >
-              <TrendingUp size={16} color="#6366f1" />
+              <TrendingUp size={16} color="#d4d4d8" />
               <div>
-                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#818cf8', lineHeight: 1 }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#fafafa', lineHeight: 1 }}>
                   #{userProfile.batchRank} <span style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--text-dim)' }}>/{userProfile.totalBatchStudents}</span>
                 </div>
                 <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 600 }}>
@@ -201,16 +201,16 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                background: 'rgba(168, 85, 247, 0.1)',
-                border: '1px solid rgba(168, 85, 247, 0.3)',
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
                 padding: '0.35rem 0.65rem',
                 borderRadius: 'var(--radius-md)',
               }}
               title="Preparation Karma XP Points"
             >
-              <Zap size={16} color="#a855f7" fill="#a855f7" />
+              <Zap size={16} color="#d4d4d8" fill="#d4d4d8" />
               <div>
-                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#c084fc', lineHeight: 1 }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#fafafa', lineHeight: 1 }}>
                   {userProfile.xpPoints}
                 </div>
                 <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 600 }}>
@@ -279,7 +279,7 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', fontSize: '0.76rem' }}>
                   <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>Quantitative & Logical Aptitude</span>
-                  <strong style={{ color: '#38bdf8' }}>{breakdown.aptitude}%</strong>
+                  <strong style={{ color: 'var(--text-bright)' }}>{breakdown.aptitude}%</strong>
                 </div>
                 <div className="progress-container" style={{ height: '6px' }}>
                   <div className="progress-fill" style={{ width: `${breakdown.aptitude}%`, background: 'var(--cyan-gradient)' }}></div>
@@ -289,7 +289,7 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', fontSize: '0.76rem' }}>
                   <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>Coding & Problem Solving (DSA)</span>
-                  <strong style={{ color: '#818cf8' }}>{breakdown.coding}%</strong>
+                  <strong style={{ color: 'var(--text-bright)' }}>{breakdown.coding}%</strong>
                 </div>
                 <div className="progress-container" style={{ height: '6px' }}>
                   <div className="progress-fill" style={{ width: `${breakdown.coding}%`, background: 'var(--accent-gradient)' }}></div>
@@ -374,7 +374,7 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
         >
           <div className="card-header" style={{ marginBottom: '0.65rem' }}>
             <h3 className="card-title" style={{ fontSize: '0.98rem' }}>
-              <Sparkles size={17} color="#a855f7" />
+              <Sparkles size={17} color="#d4d4d8" />
               AI Recommended Next Actions
             </h3>
             <span className="badge badge-primary" style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem' }}>
@@ -405,8 +405,8 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
                         width: '32px',
                         height: '32px',
                         borderRadius: 'var(--radius-sm)',
-                        background: 'rgba(99, 102, 241, 0.15)',
-                        color: 'var(--primary)',
+                        background: 'rgba(255, 255, 255, 0.06)',
+                        color: 'var(--text-bright)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',

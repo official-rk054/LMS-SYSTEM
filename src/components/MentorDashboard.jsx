@@ -285,7 +285,7 @@ export const MentorDashboard = ({ userProfile, setActiveTab }) => {
                   style={{
                     padding: '1rem',
                     borderRadius: 'var(--radius-md)',
-                    background: 'rgba(15, 23, 42, 0.5)',
+                    background: 'rgba(24, 24, 28, 0.75)',
                     border: `1px solid ${doubt.status === 'pending' ? 'rgba(251, 191, 36, 0.4)' : 'var(--border-subtle)'}`,
                   }}
                 >

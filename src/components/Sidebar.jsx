@@ -81,7 +81,7 @@ export const Sidebar = ({
   };
 
   const roleColors = {
-    student: '#38bdf8',
+    student: '#e4e4e7',
     trainer: '#34d399',
     admin: '#fbbf24',
   };
@@ -91,10 +91,10 @@ export const Sidebar = ({
       <div className="sidebar-header">
         <div className="brand-badge">
           <div className="brand-icon">
-            <GraduationCap size={22} color="#ffffff" />
+            <GraduationCap size={22} color="#09090b" />
           </div>
           <div>
-            <span>Place</span><span style={{ color: '#22d3ee' }}>IQ</span>
+            <span>Place</span><span style={{ color: 'var(--text-muted)' }}>IQ</span>
           </div>
         </div>
 

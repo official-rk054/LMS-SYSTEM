@@ -56,7 +56,7 @@ export const Leaderboard = ({ userProfile }) => {
               textAlign: 'center',
               padding: '1.75rem',
               borderColor: idx === 0 ? 'rgba(245, 158, 11, 0.5)' : idx === 1 ? 'rgba(148, 163, 184, 0.5)' : 'rgba(180, 83, 9, 0.5)',
-              background: idx === 0 ? 'linear-gradient(180deg, rgba(245, 158, 11, 0.1) 0%, rgba(15, 23, 42, 0.8) 100%)' : 'var(--bg-card)',
+              background: idx === 0 ? 'linear-gradient(180deg, rgba(245, 158, 11, 0.1) 0%, rgba(22, 22, 26, 0.95) 100%)' : 'var(--bg-card)',
             }}
           >
             <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>
