@@ -91,6 +91,14 @@
   padding: 0;
 }
 
+button {
+  font-family: inherit;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+}
+
 html, body {
   width: 100%;
   min-height: 100vh;
@@ -238,7 +246,7 @@ a:hover {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.65rem 0.85rem;
+  padding: 0.7rem 0.85rem;
   border-radius: var(--radius-md);
   color: var(--text-muted);
   font-weight: 500;
@@ -246,17 +254,21 @@ a:hover {
   cursor: pointer;
   transition: var(--transition);
   border: 1px solid transparent;
+  background: transparent;
+  width: 100%;
+  text-align: left;
 }
 
 .nav-item:hover {
-  background-color: rgba(255, 255, 255, 0.04);
+  background-color: rgba(255, 255, 255, 0.05);
   color: var(--text-main);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .nav-item.active {
   background: var(--primary-light);
   color: #a5b4fc;
-  border-color: rgba(99, 102, 241, 0.3);
+  border-color: rgba(99, 102, 241, 0.35);
   font-weight: 600;
 }
 
