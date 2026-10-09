@@ -39,10 +39,19 @@ export const Topbar = ({
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-            Institute: <strong style={{ color: 'var(--text-main)' }}>{userProfile.college}</strong>
+          <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+            Institute: <strong style={{ color: '#0f172a' }}>{userProfile.college}</strong>
           </span>
-          <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>
+          <span
+            className="badge"
+            style={{
+              fontSize: '0.7rem',
+              background: '#eef2ff',
+              color: '#4f46e5',
+              border: '1px solid #c7d2fe',
+              fontWeight: 600,
+            }}
+          >
             <span className="pulse-dot" style={{ display: 'inline-block', marginRight: '4px' }}></span>
             2026 Batch Active
           </span>
@@ -58,17 +67,17 @@ export const Topbar = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                background: 'rgba(245, 158, 11, 0.12)',
-                border: '1px solid rgba(245, 158, 11, 0.3)',
+                background: '#fffbeb',
+                border: '1px solid #fde68a',
                 padding: '0.35rem 0.75rem',
                 borderRadius: 'var(--radius-full)',
-                color: '#fbbf24',
+                color: '#b45309',
                 fontSize: '0.82rem',
                 fontWeight: 700,
               }}
               title="Daily Practice Streak"
             >
-              <Flame size={16} color="#f59e0b" fill="#f59e0b" />
+              <Flame size={16} color="#d97706" fill="#f59e0b" />
               <span>{userProfile.streakDays || 14} {t.streak}</span>
             </div>
 
@@ -78,17 +87,17 @@ export const Topbar = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                background: 'rgba(168, 85, 247, 0.12)',
-                border: '1px solid rgba(168, 85, 247, 0.3)',
+                background: '#faf5ff',
+                border: '1px solid #e9d5ff',
                 padding: '0.35rem 0.75rem',
                 borderRadius: 'var(--radius-full)',
-                color: '#c084fc',
+                color: '#7e22ce',
                 fontSize: '0.82rem',
                 fontWeight: 700,
               }}
               title="Preparation Karma XP"
             >
-              <Zap size={15} color="#c084fc" fill="#c084fc" />
+              <Zap size={15} color="#9333ea" fill="#a855f7" />
               <span>{userProfile.xpPoints || 3420} XP</span>
             </div>
 
@@ -98,17 +107,17 @@ export const Topbar = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.45rem',
-                background: 'rgba(16, 185, 129, 0.12)',
-                border: '1px solid rgba(16, 185, 129, 0.35)',
+                background: '#ecfdf5',
+                border: '1px solid #a7f3d0',
                 padding: '0.35rem 0.85rem',
                 borderRadius: 'var(--radius-full)',
-                color: '#34d399',
+                color: '#047857',
                 fontSize: '0.82rem',
                 fontWeight: 700,
               }}
               title="Overall Placement Readiness Index (0-100)"
             >
-              <Award size={15} color="#10b981" />
+              <Award size={15} color="#059669" />
               <span>Readiness: {userProfile.placementReadinessScore || 84}%</span>
             </div>
           </>
@@ -120,16 +129,16 @@ export const Topbar = ({
               display: 'flex',
               alignItems: 'center',
               gap: '0.45rem',
-              background: 'rgba(16, 185, 129, 0.12)',
-              border: '1px solid rgba(16, 185, 129, 0.35)',
+              background: '#ecfdf5',
+              border: '1px solid #a7f3d0',
               padding: '0.35rem 0.85rem',
               borderRadius: 'var(--radius-full)',
-              color: '#34d399',
+              color: '#047857',
               fontSize: '0.82rem',
               fontWeight: 700,
             }}
           >
-            <Users size={15} color="#10b981" />
+            <Users size={15} color="#059669" />
             <span>Assigned: 3 Batches (384 Students)</span>
           </div>
         )}
@@ -140,16 +149,16 @@ export const Topbar = ({
               display: 'flex',
               alignItems: 'center',
               gap: '0.45rem',
-              background: 'rgba(245, 158, 11, 0.12)',
-              border: '1px solid rgba(245, 158, 11, 0.35)',
+              background: '#fffbeb',
+              border: '1px solid #fde68a',
               padding: '0.35rem 0.85rem',
               borderRadius: 'var(--radius-full)',
-              color: '#fbbf24',
+              color: '#b45309',
               fontSize: '0.82rem',
               fontWeight: 700,
             }}
           >
-            <Building size={15} color="#f59e0b" />
+            <Building size={15} color="#d97706" />
             <span>Placement Rate: 71.4% (1,320 Placed)</span>
           </div>
         )}
@@ -159,7 +168,7 @@ export const Topbar = ({
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           className="btn btn-ghost btn-sm"
           title="Toggle Light / Dark Mode"
-          style={{ padding: '0.4rem' }}
+          style={{ padding: '0.4rem', color: '#475569' }}
         >
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
         </button>
@@ -169,7 +178,7 @@ export const Topbar = ({
           onClick={onLogout}
           className="btn btn-ghost btn-sm"
           title="Sign out of current account"
-          style={{ color: '#f87171', padding: '0.4rem' }}
+          style={{ color: '#ef4444', padding: '0.4rem' }}
         >
           <LogOut size={18} />
         </button>
