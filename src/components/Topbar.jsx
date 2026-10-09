@@ -9,17 +9,20 @@ import {
   ShieldCheck,
   Search,
   Sparkles,
-  Award
+  Award,
+  LogOut,
+  Users,
+  Building
 } from 'lucide-react';
 import { TRANSLATIONS } from '../data/translations';
 
 export const Topbar = ({
   userProfile,
+  onLogout,
   theme,
   setTheme,
   lang,
-  onToggleMobile,
-  antiCheatingAlert
+  onToggleMobile
 }) => {
   const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
 
@@ -37,11 +40,11 @@ export const Topbar = ({
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-            Batch: <strong style={{ color: 'var(--text-main)' }}>2026 Campus Recruitment Drive</strong>
+            Institute: <strong style={{ color: 'var(--text-main)' }}>{userProfile.college}</strong>
           </span>
           <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>
             <span className="pulse-dot" style={{ display: 'inline-block', marginRight: '4px' }}></span>
-            Drives Live
+            2026 Batch Active
           </span>
         </div>
       </div>
@@ -111,6 +114,46 @@ export const Topbar = ({
           </>
         )}
 
+        {userProfile.role === 'trainer' && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              background: 'rgba(16, 185, 129, 0.12)',
+              border: '1px solid rgba(16, 185, 129, 0.35)',
+              padding: '0.35rem 0.85rem',
+              borderRadius: 'var(--radius-full)',
+              color: '#34d399',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+            }}
+          >
+            <Users size={15} color="#10b981" />
+            <span>Assigned: 3 Batches (384 Students)</span>
+          </div>
+        )}
+
+        {userProfile.role === 'admin' && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              background: 'rgba(245, 158, 11, 0.12)',
+              border: '1px solid rgba(245, 158, 11, 0.35)',
+              padding: '0.35rem 0.85rem',
+              borderRadius: 'var(--radius-full)',
+              color: '#fbbf24',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+            }}
+          >
+            <Building size={15} color="#f59e0b" />
+            <span>Placement Rate: 71.4% (1,320 Placed)</span>
+          </div>
+        )}
+
         {/* Theme Toggle */}
         <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -121,24 +164,15 @@ export const Topbar = ({
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
-        {/* Anti-Cheating indicator */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.3rem',
-            fontSize: '0.72rem',
-            color: 'var(--text-dim)',
-            padding: '0.25rem 0.5rem',
-            borderRadius: 'var(--radius-sm)',
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid var(--border-subtle)',
-          }}
-          title="Proctoring System Active"
+        {/* Sign Out Button */}
+        <button
+          onClick={onLogout}
+          className="btn btn-ghost btn-sm"
+          title="Sign out of current account"
+          style={{ color: '#f87171', padding: '0.4rem' }}
         >
-          <ShieldCheck size={14} color="#10b981" />
-          <span>Proctor Secure</span>
-        </div>
+          <LogOut size={18} />
+        </button>
       </div>
     </header>
   );

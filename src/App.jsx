@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
+import { LoginPage } from './components/LoginPage';
 import { StudentDashboard } from './components/StudentDashboard';
+import { TrainerDashboard } from './components/TrainerDashboard';
+import { TpoDashboard } from './components/TpoDashboard';
 import { ResumeBuilder } from './components/ResumeBuilder';
 import { ResumeAnalyzer } from './components/ResumeAnalyzer';
 import { MockInterviewer } from './components/MockInterviewer';
@@ -13,32 +16,50 @@ import { Leaderboard } from './components/Leaderboard';
 import { AdminPanel } from './components/AdminPanel';
 import { ExtraFeaturesSuite } from './components/ExtraFeaturesSuite';
 import { JobBoard } from './components/JobBoard';
-import { USERS_PROFILES } from './data/mockData';
+import {
+  getActiveUserSession,
+  logoutUserSession,
+  initUserDatabase
+} from './services/authDatabase';
 
 export function App() {
+  const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [userRole, setUserRole] = useState('student');
   const [theme, setTheme] = useState('dark');
   const [lang, setLang] = useState('en');
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [resumeDataForAudit, setResumeDataForAudit] = useState(null);
 
-  // Active user profile state based on selected role
-  const [studentProfile, setStudentProfile] = useState(USERS_PROFILES[0]);
-  const trainerProfile = USERS_PROFILES[1];
-  const adminProfile = USERS_PROFILES[2];
-
-  const currentProfile =
-    userRole === 'student'
-      ? studentProfile
-      : userRole === 'trainer'
-      ? trainerProfile
-      : adminProfile;
+  // Initialize DB and load session on mount
+  useEffect(() => {
+    initUserDatabase();
+    const active = getActiveUserSession();
+    if (active) {
+      setCurrentUser(active);
+      setDefaultTabForRole(active.role);
+    }
+  }, []);
 
   // Apply theme to document element
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  const setDefaultTabForRole = (role) => {
+    if (role === 'student') setActiveTab('dashboard');
+    else if (role === 'trainer') setActiveTab('trainer_dashboard');
+    else setActiveTab('tpo_dashboard');
+  };
+
+  const handleLoginSuccess = (user) => {
+    setCurrentUser(user);
+    setDefaultTabForRole(user.role);
+  };
+
+  const handleLogout = () => {
+    logoutUserSession();
+    setCurrentUser(null);
+  };
 
   // Handler when Resume Builder sends data to Analyzer
   const handleSendToAnalyzer = (resumeData) => {
@@ -46,32 +67,63 @@ export function App() {
     setActiveTab('resume_analyzer');
   };
 
-  // Handler when MCQ test is completed
+  // Handler when MCQ test is completed (for student)
   const handleTestCompleted = () => {
-    setStudentProfile(prev => ({
-      ...prev,
-      xpPoints: prev.xpPoints + 150,
-      placementReadinessScore: Math.min(prev.placementReadinessScore + 2, 98),
-    }));
+    setCurrentUser(prev => {
+      if (!prev || prev.role !== 'student') return prev;
+      return {
+        ...prev,
+        xpPoints: prev.xpPoints + 150,
+        placementReadinessScore: Math.min(prev.placementReadinessScore + 2, 98),
+      };
+    });
   };
 
-  // Handler when a coding problem is solved
+  // Handler when a coding problem is solved (for student)
   const handleProblemSolved = () => {
-    setStudentProfile(prev => ({
-      ...prev,
-      xpPoints: prev.xpPoints + 100,
-      placementReadinessScore: Math.min(prev.placementReadinessScore + 1, 98),
-    }));
+    setCurrentUser(prev => {
+      if (!prev || prev.role !== 'student') return prev;
+      return {
+        ...prev,
+        xpPoints: prev.xpPoints + 100,
+        placementReadinessScore: Math.min(prev.placementReadinessScore + 1, 98),
+      };
+    });
   };
+
+  const handleExportPlacementReport = () => {
+    const csvContent = "RegNo,Name,Branch,CGPA,ReadinessScore,PlacementStatus,OfferCTC\n" +
+      "22BCE1042,Aarav Sharma,CSE,8.85,84%,Amazon OA Shortlisted,44.5 LPA\n" +
+      "22BIT1015,Priya Patel,IT,9.15,96%,Google L3 Interview,38.0 LPA\n" +
+      "22BCE1180,Tanmay Saxena,CSE,8.92,94%,Flipkart Offer Received,32.0 LPA\n" +
+      "22BAD1008,Rohan Deshmukh,AI-DS,7.95,80%,TCS Digital Shortlisted,7.5 LPA\n" +
+      "22BEC1099,Ananya Iyer,ECE,8.60,91%,Qualcomm Hardware OA,26.0 LPA\n";
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `PlaceIQ_College_Placement_Roster_2026.csv`;
+    a.click();
+  };
+
+  // If not logged in, render the Glassmorphism Login Page
+  if (!currentUser) {
+    return (
+      <LoginPage
+        onLoginSuccess={handleLoginSuccess}
+        lang={lang}
+      />
+    );
+  }
 
   return (
     <div className="app-container">
-      {/* Sidebar Navigation */}
+      {/* Sidebar Navigation customized by User Role */}
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        userProfile={currentProfile}
-        setUserRole={setUserRole}
+        userProfile={currentUser}
+        onLogout={handleLogout}
         lang={lang}
         setLang={setLang}
         isMobileOpen={isMobileOpen}
@@ -81,7 +133,8 @@ export function App() {
       {/* Main Content Area */}
       <div className="main-wrapper">
         <Topbar
-          userProfile={currentProfile}
+          userProfile={currentUser}
+          onLogout={handleLogout}
           theme={theme}
           setTheme={setTheme}
           lang={lang}
@@ -89,85 +142,157 @@ export function App() {
         />
 
         <main className="content-body">
-          {activeTab === 'dashboard' && (
-            <StudentDashboard
-              userProfile={studentProfile}
-              setActiveTab={setActiveTab}
-              lang={lang}
-            />
+          {/* ==================== 1. STUDENT AREA ==================== */}
+          {currentUser.role === 'student' && (
+            <>
+              {activeTab === 'dashboard' && (
+                <StudentDashboard
+                  userProfile={currentUser}
+                  setActiveTab={setActiveTab}
+                  lang={lang}
+                />
+              )}
+
+              {activeTab === 'resume_builder' && (
+                <ResumeBuilder
+                  userProfile={currentUser}
+                  onSendToAnalyzer={handleSendToAnalyzer}
+                />
+              )}
+
+              {activeTab === 'resume_analyzer' && (
+                <ResumeAnalyzer
+                  resumeFromBuilder={resumeDataForAudit}
+                />
+              )}
+
+              {activeTab === 'mock_interview' && (
+                <MockInterviewer
+                  userProfile={currentUser}
+                />
+              )}
+
+              {activeTab === 'mcq_engine' && (
+                <MCQEngine
+                  userProfile={currentUser}
+                  onTestCompleted={handleTestCompleted}
+                />
+              )}
+
+              {activeTab === 'coding_arena' && (
+                <CodingArena
+                  userProfile={currentUser}
+                  onProblemSolved={handleProblemSolved}
+                />
+              )}
+
+              {activeTab === 'learning_modules' && (
+                <LearningModules
+                  userProfile={currentUser}
+                />
+              )}
+
+              {activeTab === 'company_prep' && (
+                <CompanyPrep />
+              )}
+
+              {activeTab === 'leaderboard' && (
+                <Leaderboard
+                  userProfile={currentUser}
+                />
+              )}
+
+              {activeTab === 'gd_simulator' && (
+                <ExtraFeaturesSuite
+                  userProfile={currentUser}
+                />
+              )}
+
+              {activeTab === 'extra_suite' && (
+                <ExtraFeaturesSuite
+                  userProfile={currentUser}
+                />
+              )}
+
+              {activeTab === 'job_board' && (
+                <JobBoard
+                  onApplyDrive={() => {}}
+                />
+              )}
+            </>
           )}
 
-          {activeTab === 'resume_builder' && (
-            <ResumeBuilder
-              userProfile={studentProfile}
-              onSendToAnalyzer={handleSendToAnalyzer}
-            />
+          {/* ==================== 2. TRAINER / FACULTY AREA ==================== */}
+          {currentUser.role === 'trainer' && (
+            <>
+              {activeTab === 'trainer_dashboard' && (
+                <TrainerDashboard
+                  userProfile={currentUser}
+                  setActiveTab={setActiveTab}
+                />
+              )}
+
+              {activeTab === 'trainer_tests' && (
+                <AdminPanel
+                  userRole="trainer"
+                />
+              )}
+
+              {activeTab === 'trainer_roster' && (
+                <AdminPanel
+                  userRole="trainer"
+                />
+              )}
+
+              {activeTab === 'trainer_curriculum' && (
+                <LearningModules
+                  userProfile={currentUser}
+                />
+              )}
+
+              {activeTab === 'trainer_leaderboard' && (
+                <Leaderboard
+                  userProfile={currentUser}
+                />
+              )}
+            </>
           )}
 
-          {activeTab === 'resume_analyzer' && (
-            <ResumeAnalyzer
-              resumeFromBuilder={resumeDataForAudit}
-            />
-          )}
+          {/* ==================== 3. PLACEMENT OFFICER / ADMIN AREA ==================== */}
+          {currentUser.role === 'admin' && (
+            <>
+              {activeTab === 'tpo_dashboard' && (
+                <TpoDashboard
+                  userProfile={currentUser}
+                  setActiveTab={setActiveTab}
+                  onExportReport={handleExportPlacementReport}
+                />
+              )}
 
-          {activeTab === 'mock_interview' && (
-            <MockInterviewer
-              userProfile={studentProfile}
-            />
-          )}
+              {activeTab === 'tpo_shortlist' && (
+                <AdminPanel
+                  userRole="admin"
+                />
+              )}
 
-          {activeTab === 'mcq_engine' && (
-            <MCQEngine
-              userProfile={studentProfile}
-              onTestCompleted={handleTestCompleted}
-            />
-          )}
+              {activeTab === 'tpo_drives' && (
+                <JobBoard
+                  onApplyDrive={() => {}}
+                />
+              )}
 
-          {activeTab === 'coding_arena' && (
-            <CodingArena
-              userProfile={studentProfile}
-              onProblemSolved={handleProblemSolved}
-            />
-          )}
+              {activeTab === 'tpo_tests' && (
+                <AdminPanel
+                  userRole="admin"
+                />
+              )}
 
-          {activeTab === 'learning_modules' && (
-            <LearningModules
-              userProfile={studentProfile}
-            />
-          )}
-
-          {activeTab === 'company_prep' && (
-            <CompanyPrep />
-          )}
-
-          {activeTab === 'leaderboard' && (
-            <Leaderboard
-              userProfile={studentProfile}
-            />
-          )}
-
-          {activeTab === 'gd_simulator' && (
-            <ExtraFeaturesSuite
-              userProfile={studentProfile}
-            />
-          )}
-
-          {activeTab === 'extra_suite' && (
-            <ExtraFeaturesSuite
-              userProfile={studentProfile}
-            />
-          )}
-
-          {activeTab === 'job_board' && (
-            <JobBoard
-              onApplyDrive={() => {}}
-            />
-          )}
-
-          {activeTab === 'admin_panel' && (
-            <AdminPanel
-              userRole={userRole}
-            />
+              {activeTab === 'tpo_leaderboard' && (
+                <Leaderboard
+                  userProfile={currentUser}
+                />
+              )}
+            </>
           )}
         </main>
       </div>

@@ -17,11 +17,30 @@ College placement season in India is high-stakes and multifaceted. A student mus
 
 ---
 
-## 👥 User Roles & Personas
+## 👥 User Roles & 3 Distinct Institutional Areas
 
-1. **Student** (*Aarav Sharma - B.Tech CSE, VIT Vellore*): Learns through structured roadmaps, solves coding challenges, takes timed tests, rehearses with AI mock interviewers, builds ATS resumes, and tracks personal placement readiness.
-2. **Trainer / Faculty** (*Prof. Rajesh K. Sundaram - Head of Competitive Coding*): Creates custom tests, assigns assessments to specific student batches, reviews submissions, and diagnoses batch weak areas.
-3. **Placement Officer / Admin (TPO)** (*Dr. Meenakshi Ramanathan - Chief TPO*): Oversees college-wide placement statistics (placed ratio, average & highest CTCs), filters candidate shortlists by CGPA and readiness index, and exports verified placement rosters.
+The platform is strictly segmented into 3 dedicated areas accessible via a unified **Glassmorphism Login Portal**:
+
+1. **Student Area** (*student@vit.ac.in / password123*):
+   - **Persona**: Aarav Sharma (B.Tech CSE, VIT Vellore)
+   - **Access Scope**: Full candidate suite including the Placement Readiness Dashboard, 4-Template ATS Resume Builder, AI Resume Analyzer & JD Matcher, Web Speech API Mock Interviewer, Timed MCQ Engine with Tab-Switch Proctoring, Online Coding Arena with Hidden Test Cases, Learning Tracks & Digital Certificate, Company Roadmaps (Amazon/TCS), Leaderboard, AI Group Discussion (GD), and the Bonus Hub (Fluency, 30-Day Plan, Flashcards, and Campus Placement Board).
+
+2. **Faculty / Trainer Area** (*trainer@vit.ac.in / password123*):
+   - **Persona**: Prof. Rajesh K. Sundaram (Head of Technical Training)
+   - **Access Scope**: Faculty command dashboard supervising 384 students across 3 batches (`2026 CSE Batch A`, `Batch B`, `AI-DS`), Cohort Diagnostic Roster, Test Creator with Bulk JSON/CSV Question Importer, Curriculum Progress Inspector, and Batch Standings.
+
+3. **Placement Officer / Admin (TPO) Area** (*admin@vit.ac.in / password123*):
+   - **Persona**: Dr. Meenakshi Ramanathan (Chief TPO)
+   - **Access Scope**: Institutional Executive Command Suite tracking college-wide KPIs (1,850 registered, 1,320 placed, ₹44.5 LPA highest CTC, ₹9.2 LPA average CTC, 74 visiting companies), Candidate Shortlisting Engine (filter by CGPA & Readiness), Corporate Drives Management, and 1-Click Placement Roster CSV Exporter.
+
+---
+
+## 🔐 Authentication & Database Architecture
+
+- **Persistent Client Database (`src/services/authDatabase.js`)**: Backed by `localStorage` with pre-seeded accounts for Student, Trainer, and Admin.
+- **Glassmorphic Login Interface (`src/components/LoginPage.jsx`)**: Designed with multi-layered frosted glass (`backdrop-filter: blur(28px)`), radial ambient glow orbs, specular highlights, and clean typography.
+- **Strict Two-Field Security**: Features only **Email** and **Password** inputs with password visibility toggle and 1-click Demo credential autofill chips.
+- **Session Lifecycle**: Authenticates credentials, persists active tokens, and provides 1-click logout across topbar and sidebar.
 
 ---
 
