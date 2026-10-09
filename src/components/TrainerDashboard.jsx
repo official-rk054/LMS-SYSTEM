@@ -39,7 +39,7 @@ export const TrainerDashboard = ({ userProfile, setActiveTab }) => {
               <span className="badge badge-success">👨‍🏫 Faculty & Technical Trainer Portal</span>
               <span className="badge badge-primary">{userProfile.college}</span>
             </div>
-            <h1 style={{ fontSize: '2rem', color: '#ffffff', marginBottom: '0.35rem' }}>
+            <h1 style={{ fontSize: '2rem', color: 'var(--text-bright)', marginBottom: '0.35rem' }}>
               Welcome, {userProfile.name}!
             </h1>
             <p style={{ fontSize: '0.92rem', maxWidth: '650px' }}>

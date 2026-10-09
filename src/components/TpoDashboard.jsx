@@ -33,7 +33,7 @@ export const TpoDashboard = ({ userProfile, setActiveTab, onExportReport }) => {
               <span className="badge badge-warning">🏛️ Chief Placement Officer (TPO) Command Suite</span>
               <span className="badge badge-primary">{userProfile.college}</span>
             </div>
-            <h1 style={{ fontSize: '2rem', color: '#ffffff', marginBottom: '0.35rem' }}>
+            <h1 style={{ fontSize: '2rem', color: 'var(--text-bright)', marginBottom: '0.35rem' }}>
               Welcome, {userProfile.name}!
             </h1>
             <p style={{ fontSize: '0.92rem', maxWidth: '680px' }}>

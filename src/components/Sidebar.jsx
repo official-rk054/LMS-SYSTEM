@@ -53,7 +53,6 @@ export const Sidebar = ({
       { id: 'company_prep', label: t.companyRoadmaps, icon: Building2, badge: 'TCS/Amazon' },
       { id: 'leaderboard', label: t.leaderboard, icon: Trophy, badge: '#4' },
       { id: 'gd_simulator', label: t.gdSimulator, icon: Users, badge: 'Multi-AI' },
-      { id: 'extra_suite', label: 'Extra Bonus Hub', icon: Sparkles, badge: '6 Tools' },
       { id: 'job_board', label: t.jobBoard, icon: Briefcase, badge: '5 Drives' },
     ];
   } else if (userProfile.role === 'trainer') {
@@ -95,7 +94,7 @@ export const Sidebar = ({
             <GraduationCap size={22} color="#ffffff" />
           </div>
           <div>
-            <span>Place</span><span style={{ color: '#06b6d4' }}>IQ</span>
+            <span>Place</span><span style={{ color: '#22d3ee' }}>IQ</span>
           </div>
         </div>
 
@@ -116,22 +115,22 @@ export const Sidebar = ({
             padding: '0.45rem 0.75rem',
             borderRadius: 'var(--radius-md)',
             background: 'rgba(255, 255, 255, 0.03)',
-            border: `1px solid ${roleColors[userProfile.role]}44`,
+            border: `1px solid ${roleColors[userProfile.role] || '#38bdf8'}44`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             fontSize: '0.75rem',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: roleColors[userProfile.role], fontWeight: 700 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: roleColors[userProfile.role] || '#38bdf8', fontWeight: 700 }}>
             <Layers size={14} />
-            <span>{roleLabels[userProfile.role]}</span>
+            <span>{roleLabels[userProfile.role] || 'User Portal'}</span>
           </div>
           <span
             className="badge"
             style={{
-              background: `${roleColors[userProfile.role]}22`,
-              color: roleColors[userProfile.role],
+              background: `${roleColors[userProfile.role] || '#38bdf8'}22`,
+              color: roleColors[userProfile.role] || '#38bdf8',
               fontSize: '0.65rem',
               padding: '0.1rem 0.4rem',
             }}
@@ -161,6 +160,7 @@ export const Sidebar = ({
             >
               <Icon size={18} />
               <span>{item.label}</span>
+              {item.badge && <span className="nav-badge">{item.badge}</span>}
             </button>
           );
         })}
@@ -168,14 +168,27 @@ export const Sidebar = ({
 
       {/* Sidebar Footer with User Details & Logout */}
       <div className="sidebar-footer">
-        <div className="user-profile-widget">
-          <div className="user-avatar">
-            {userProfile.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+        <div className="user-profile-widget" style={{ justifyContent: 'space-between', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <div className="user-avatar">
+              {userProfile.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+            </div>
+            <div className="user-details">
+              <div className="user-name">{userProfile.name}</div>
+              <div className="user-college">{userProfile.role.toUpperCase()} • {userProfile.college}</div>
+            </div>
           </div>
-          <div className="user-details">
-            <div className="user-name">{userProfile.name}</div>
-            <div className="user-college">{userProfile.college}</div>
-          </div>
+
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="btn btn-ghost btn-sm"
+              title="Sign Out / Change Role"
+              style={{ color: '#fb7185', padding: '0.4rem', borderRadius: '50%' }}
+            >
+              <LogOut size={16} />
+            </button>
+          )}
         </div>
 
         <button
