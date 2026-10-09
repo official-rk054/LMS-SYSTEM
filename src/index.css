@@ -349,10 +349,10 @@ a:hover {
 /* Header Navbar */
 .topbar {
   height: 64px;
-  background: #ffffff;
+  background: rgba(11, 17, 32, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -360,6 +360,13 @@ a:hover {
   position: sticky;
   top: 0;
   z-index: 30;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2);
+  transition: var(--transition);
+}
+
+[data-theme="light"] .topbar {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
 }
 
@@ -376,10 +383,19 @@ a:hover {
 }
 
 .topbar .btn-ghost {
-  color: #475569;
+  color: var(--text-muted);
 }
 
 .topbar .btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+}
+
+[data-theme="light"] .topbar .btn-ghost {
+  color: #475569;
+}
+
+[data-theme="light"] .topbar .btn-ghost:hover {
   background: #f1f5f9;
   color: #0f172a;
 }

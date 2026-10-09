@@ -25,6 +25,7 @@ export const Topbar = ({
   onToggleMobile
 }) => {
   const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+  const isLight = theme === 'light';
 
   return (
     <header className="topbar">
@@ -32,23 +33,23 @@ export const Topbar = ({
         <button
           onClick={onToggleMobile}
           className="btn btn-ghost btn-sm"
-          style={{ display: 'none', padding: '0.4rem' }}
+          style={{ display: 'none', padding: '0.4rem', color: isLight ? '#334155' : 'var(--text-main)' }}
           id="mobile-menu-toggle"
         >
           <Menu size={20} />
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
-            Institute: <strong style={{ color: '#0f172a' }}>{userProfile.college}</strong>
+          <span style={{ fontSize: '0.85rem', color: isLight ? '#64748b' : 'var(--text-muted)' }}>
+            Institute: <strong style={{ color: isLight ? '#0f172a' : 'var(--text-main)' }}>{userProfile.college}</strong>
           </span>
           <span
             className="badge"
             style={{
               fontSize: '0.7rem',
-              background: '#eef2ff',
-              color: '#4f46e5',
-              border: '1px solid #c7d2fe',
+              background: isLight ? '#eef2ff' : 'rgba(99, 102, 241, 0.15)',
+              color: isLight ? '#4f46e5' : '#818cf8',
+              border: isLight ? '1px solid #c7d2fe' : '1px solid rgba(99, 102, 241, 0.3)',
               fontWeight: 600,
             }}
           >
@@ -67,17 +68,17 @@ export const Topbar = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                background: '#fffbeb',
-                border: '1px solid #fde68a',
+                background: isLight ? '#fffbeb' : 'rgba(245, 158, 11, 0.12)',
+                border: isLight ? '1px solid #fde68a' : '1px solid rgba(245, 158, 11, 0.3)',
                 padding: '0.35rem 0.75rem',
                 borderRadius: 'var(--radius-full)',
-                color: '#b45309',
+                color: isLight ? '#b45309' : '#fbbf24',
                 fontSize: '0.82rem',
                 fontWeight: 700,
               }}
               title="Daily Practice Streak"
             >
-              <Flame size={16} color="#d97706" fill="#f59e0b" />
+              <Flame size={16} color={isLight ? '#d97706' : '#f59e0b'} fill="#f59e0b" />
               <span>{userProfile.streakDays || 14} {t.streak}</span>
             </div>
 
@@ -87,17 +88,17 @@ export const Topbar = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                background: '#faf5ff',
-                border: '1px solid #e9d5ff',
+                background: isLight ? '#faf5ff' : 'rgba(168, 85, 247, 0.12)',
+                border: isLight ? '1px solid #e9d5ff' : '1px solid rgba(168, 85, 247, 0.3)',
                 padding: '0.35rem 0.75rem',
                 borderRadius: 'var(--radius-full)',
-                color: '#7e22ce',
+                color: isLight ? '#7e22ce' : '#c084fc',
                 fontSize: '0.82rem',
                 fontWeight: 700,
               }}
               title="Preparation Karma XP"
             >
-              <Zap size={15} color="#9333ea" fill="#a855f7" />
+              <Zap size={15} color={isLight ? '#9333ea' : '#c084fc'} fill={isLight ? '#a855f7' : '#c084fc'} />
               <span>{userProfile.xpPoints || 3420} XP</span>
             </div>
 
@@ -107,17 +108,17 @@ export const Topbar = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.45rem',
-                background: '#ecfdf5',
-                border: '1px solid #a7f3d0',
+                background: isLight ? '#ecfdf5' : 'rgba(16, 185, 129, 0.12)',
+                border: isLight ? '1px solid #a7f3d0' : '1px solid rgba(16, 185, 129, 0.35)',
                 padding: '0.35rem 0.85rem',
                 borderRadius: 'var(--radius-full)',
-                color: '#047857',
+                color: isLight ? '#047857' : '#34d399',
                 fontSize: '0.82rem',
                 fontWeight: 700,
               }}
               title="Overall Placement Readiness Index (0-100)"
             >
-              <Award size={15} color="#059669" />
+              <Award size={15} color={isLight ? '#059669' : '#10b981'} />
               <span>Readiness: {userProfile.placementReadinessScore || 84}%</span>
             </div>
           </>
@@ -129,16 +130,16 @@ export const Topbar = ({
               display: 'flex',
               alignItems: 'center',
               gap: '0.45rem',
-              background: '#ecfdf5',
-              border: '1px solid #a7f3d0',
+              background: isLight ? '#ecfdf5' : 'rgba(16, 185, 129, 0.12)',
+              border: isLight ? '1px solid #a7f3d0' : '1px solid rgba(16, 185, 129, 0.35)',
               padding: '0.35rem 0.85rem',
               borderRadius: 'var(--radius-full)',
-              color: '#047857',
+              color: isLight ? '#047857' : '#34d399',
               fontSize: '0.82rem',
               fontWeight: 700,
             }}
           >
-            <Users size={15} color="#059669" />
+            <Users size={15} color={isLight ? '#059669' : '#10b981'} />
             <span>Assigned: 3 Batches (384 Students)</span>
           </div>
         )}
@@ -149,16 +150,16 @@ export const Topbar = ({
               display: 'flex',
               alignItems: 'center',
               gap: '0.45rem',
-              background: '#fffbeb',
-              border: '1px solid #fde68a',
+              background: isLight ? '#fffbeb' : 'rgba(245, 158, 11, 0.12)',
+              border: isLight ? '1px solid #fde68a' : '1px solid rgba(245, 158, 11, 0.35)',
               padding: '0.35rem 0.85rem',
               borderRadius: 'var(--radius-full)',
-              color: '#b45309',
+              color: isLight ? '#b45309' : '#fbbf24',
               fontSize: '0.82rem',
               fontWeight: 700,
             }}
           >
-            <Building size={15} color="#d97706" />
+            <Building size={15} color={isLight ? '#d97706' : '#f59e0b'} />
             <span>Placement Rate: 71.4% (1,320 Placed)</span>
           </div>
         )}
@@ -168,7 +169,7 @@ export const Topbar = ({
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           className="btn btn-ghost btn-sm"
           title="Toggle Light / Dark Mode"
-          style={{ padding: '0.4rem', color: '#475569' }}
+          style={{ padding: '0.4rem', color: isLight ? '#475569' : 'var(--text-muted)' }}
         >
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
         </button>
@@ -178,7 +179,7 @@ export const Topbar = ({
           onClick={onLogout}
           className="btn btn-ghost btn-sm"
           title="Sign out of current account"
-          style={{ color: '#ef4444', padding: '0.4rem' }}
+          style={{ color: isLight ? '#ef4444' : '#f87171', padding: '0.4rem' }}
         >
           <LogOut size={18} />
         </button>
