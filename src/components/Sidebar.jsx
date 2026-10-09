@@ -161,9 +161,6 @@ export const Sidebar = ({
             >
               <Icon size={18} />
               <span>{item.label}</span>
-              {item.badge && (
-                <span className="nav-badge">{item.badge}</span>
-              )}
             </button>
           );
         })}
