@@ -12,15 +12,15 @@ import {
   CheckCircle,
   Eye,
   RefreshCw,
-  Printer
+  Printer,
+  ShieldCheck,
+  ExternalLink
 } from 'lucide-react';
-import { RESUME_TEMPLATES } from '../data/mockData';
 
 export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
-  const [selectedTemplate, setSelectedTemplate] = useState('tmpl_tech');
   const [activeSection, setActiveSection] = useState('personal');
 
-  // Initial resume data with authentic Indian context
+  // Initial resume data with authentic Indian placement context
   const [resumeData, setResumeData] = useState({
     personal: {
       fullName: 'Aarav Sharma',
@@ -77,7 +77,7 @@ export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
         ],
       },
       {
-        name: 'Distributed Distributed KV Store (Mini-Raft)',
+        name: 'Distributed KV Store (Mini-Raft)',
         tech: 'C++, Socket Programming, Multi-threading, Posix Threads',
         link: 'github.com/aarav-sharma/mini-raft-kv',
         bullets: [
@@ -100,8 +100,15 @@ export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
     }));
   };
 
+  // High-fidelity print / PDF download handler with automated clean filename
   const handlePrint = () => {
+    const originalTitle = document.title;
+    const cleanFileName = `${resumeData.personal.fullName.replace(/\s+/g, '_')}_Resume_Placement`;
+    document.title = cleanFileName;
     window.print();
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 500);
   };
 
   const loadFresherTemplate = () => {
@@ -116,16 +123,24 @@ export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* Header bar */}
-      <div className="card" style={{ padding: '1.25rem 1.75rem' }}>
+      {/* Header bar (Hidden in Print/PDF export) */}
+      <div className="card resume-header-bar no-print" style={{ padding: '1.25rem 1.75rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem' }}>
+              <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>
+                <CheckCircle size={13} /> 100% Single-Column ATS Standard
+              </span>
+              <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>
+                <ShieldCheck size={13} /> Campus Placement & Product SDE Approved
+              </span>
+            </div>
+            <h2 style={{ fontSize: '1.55rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <FileText color="var(--primary)" />
               Professional ATS Resume Builder
             </h2>
-            <p style={{ fontSize: '0.85rem' }}>
-              Craft an Indian placement-ready resume. 100% ATS-parseable, formatted for Campus Drives & Product Giants.
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              Industry-standard single-column layout optimized for Fortune 500 ATS parsers (Amazon, Google, TCS, Infosys) and campus placement drives.
             </p>
           </div>
 
@@ -133,37 +148,26 @@ export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
             <button
               onClick={() => onSendToAnalyzer(resumeData)}
               className="btn btn-outline"
+              title="Audit this resume in AI Resume Analyzer"
             >
               <Sparkles size={16} color="var(--primary)" /> Run AI ATS Audit
             </button>
             <button
               onClick={handlePrint}
               className="btn btn-primary"
+              style={{ fontWeight: 700 }}
+              title="Export formatted A4 PDF document"
             >
               <Download size={16} /> Download PDF / Print
             </button>
           </div>
         </div>
-
-        {/* Template Selector Bar */}
-        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem', overflowX: 'auto', paddingBottom: '0.35rem' }}>
-          {RESUME_TEMPLATES.map(tmpl => (
-            <button
-              key={tmpl.id}
-              onClick={() => setSelectedTemplate(tmpl.id)}
-              className={`btn btn-sm ${selectedTemplate === tmpl.id ? 'btn-primary' : 'btn-outline'}`}
-              style={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }}
-            >
-              {tmpl.name}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Split-screen Layout: Form on Left, Live Preview on Right */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(350px, 1fr) minmax(420px, 1.2fr)', gap: '1.5rem' }}>
-        {/* Left Column: Form Editor */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <div className="resume-builder-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(350px, 1fr) minmax(420px, 1.25fr)', gap: '1.5rem' }}>
+        {/* Left Column: Form Editor (Hidden in Print/PDF export) */}
+        <div className="card resume-editor-col no-print" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           {/* Section Navigation Tabs */}
           <div className="tabs-nav" style={{ marginBottom: '0.5rem' }}>
             <button
@@ -207,7 +211,7 @@ export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>Email Address</label>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>Email</label>
                   <input
                     type="email"
                     className="input"
@@ -216,7 +220,7 @@ export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>Phone Number</label>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>Phone</label>
                   <input
                     type="text"
                     className="input"
@@ -227,7 +231,7 @@ export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
               </div>
 
               <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>Location (City, State, Country)</label>
+                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>Location</label>
                 <input
                   type="text"
                   className="input"
@@ -238,7 +242,7 @@ export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>LinkedIn Handle</label>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>LinkedIn</label>
                   <input
                     type="text"
                     className="input"
@@ -247,7 +251,7 @@ export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>GitHub Profile</label>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>GitHub</label>
                   <input
                     type="text"
                     className="input"
@@ -258,7 +262,7 @@ export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
               </div>
 
               <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>Professional Career Summary</label>
+                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>Professional Summary</label>
                 <textarea
                   className="textarea"
                   rows={4}
@@ -277,49 +281,46 @@ export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
                   type="text"
                   className="input"
                   value={resumeData.skills.languages}
-                  onChange={(e) => setResumeData(prev => ({
-                    ...prev,
-                    skills: { ...prev.skills, languages: e.target.value }
-                  }))}
+                  onChange={(e) => setResumeData({
+                    ...resumeData,
+                    skills: { ...resumeData.skills, languages: e.target.value }
+                  })}
                 />
               </div>
-
               <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>Libraries & Web Frameworks</label>
+                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>Frameworks & Web</label>
                 <input
                   type="text"
                   className="input"
                   value={resumeData.skills.frameworks}
-                  onChange={(e) => setResumeData(prev => ({
-                    ...prev,
-                    skills: { ...prev.skills, frameworks: e.target.value }
-                  }))}
+                  onChange={(e) => setResumeData({
+                    ...resumeData,
+                    skills: { ...resumeData.skills, frameworks: e.target.value }
+                  })}
                 />
               </div>
-
               <div>
                 <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>Developer Tools & Cloud</label>
                 <input
                   type="text"
                   className="input"
                   value={resumeData.skills.developerTools}
-                  onChange={(e) => setResumeData(prev => ({
-                    ...prev,
-                    skills: { ...prev.skills, developerTools: e.target.value }
-                  }))}
+                  onChange={(e) => setResumeData({
+                    ...resumeData,
+                    skills: { ...resumeData.skills, developerTools: e.target.value }
+                  })}
                 />
               </div>
-
               <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>Core CS Fundamentals (Vital for Campus Drives)</label>
+                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>Core CS Subjects</label>
                 <input
                   type="text"
                   className="input"
                   value={resumeData.skills.coreSubjects}
-                  onChange={(e) => setResumeData(prev => ({
-                    ...prev,
-                    skills: { ...prev.skills, coreSubjects: e.target.value }
-                  }))}
+                  onChange={(e) => setResumeData({
+                    ...resumeData,
+                    skills: { ...resumeData.skills, coreSubjects: e.target.value }
+                  })}
                 />
               </div>
             </div>
@@ -329,11 +330,11 @@ export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {resumeData.experience.map((exp, idx) => (
                 <div key={idx} style={{ padding: '0.85rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', marginBottom: '0.5rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '0.6rem', marginBottom: '0.5rem' }}>
                     <input
                       type="text"
                       className="input"
-                      placeholder="Role Title"
+                      placeholder="Title / Role"
                       value={exp.title}
                       onChange={(e) => {
                         const copy = [...resumeData.experience];
@@ -344,7 +345,7 @@ export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
                     <input
                       type="text"
                       className="input"
-                      placeholder="Company Name"
+                      placeholder="Company"
                       value={exp.company}
                       onChange={(e) => {
                         const copy = [...resumeData.experience];
@@ -447,14 +448,14 @@ export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
           </div>
         </div>
 
-        {/* Right Column: Live ATS-Compliant Document Preview */}
+        {/* Right Column: Live ATS-Compliant Document Preview & Print Target */}
         <div
           className="card resume-preview-card"
           style={{
             background: '#ffffff',
             color: '#0f172a',
             padding: '2.5rem',
-            fontFamily: selectedTemplate === 'tmpl_ats' ? 'Arial, sans-serif' : 'var(--font-sans)',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.4)',
             overflowY: 'auto',
             maxHeight: '850px',
@@ -463,63 +464,67 @@ export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
           id="printable-resume"
         >
           {/* Header */}
-          <div style={{ textAlign: 'center', borderBottom: '2px solid #0f172a', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.35rem', letterSpacing: '-0.02em' }}>
+          <div className="resume-section" style={{ textAlign: 'center', borderBottom: '2px solid #0f172a', paddingBottom: '0.75rem', marginBottom: '1.15rem' }}>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.35rem', letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
               {resumeData.personal.fullName}
             </h1>
-            <div style={{ fontSize: '0.8rem', color: '#334155', display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '0.6rem' }}>
+            <div style={{ fontSize: '0.82rem', color: '#334155', display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '0.6rem' }}>
               <span>{resumeData.personal.email}</span>
               <span>•</span>
               <span>{resumeData.personal.phone}</span>
               <span>•</span>
               <span>{resumeData.personal.location}</span>
             </div>
-            <div style={{ fontSize: '0.78rem', color: '#2563eb', display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '0.75rem', marginTop: '0.25rem' }}>
+            <div style={{ fontSize: '0.78rem', color: '#0284c7', display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '0.75rem', marginTop: '0.3rem' }}>
               <span>{resumeData.personal.linkedin}</span>
               <span>•</span>
               <span>{resumeData.personal.github}</span>
-              <span>•</span>
-              <span>{resumeData.personal.portfolio}</span>
+              {resumeData.personal.portfolio && (
+                <>
+                  <span>•</span>
+                  <span>{resumeData.personal.portfolio}</span>
+                </>
+              )}
             </div>
           </div>
 
-          {/* Summary */}
+          {/* Professional Summary */}
           {resumeData.personal.summary && (
-            <div style={{ marginBottom: '1.25rem' }}>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, textTransform: 'uppercase', color: '#0f172a', borderBottom: '1px solid #94a3b8', paddingBottom: '0.2rem', marginBottom: '0.4rem', letterSpacing: '0.05em' }}>
-                Summary
+            <div className="resume-section" style={{ marginBottom: '1.15rem' }}>
+              <h3 className="resume-section-title" style={{ fontSize: '0.92rem', fontWeight: 700, textTransform: 'uppercase', color: '#0f172a', borderBottom: '1.5px solid #0f172a', paddingBottom: '0.2rem', marginBottom: '0.45rem', letterSpacing: '0.05em' }}>
+                Professional Summary
               </h3>
-              <p style={{ fontSize: '0.82rem', color: '#334155', lineHeight: '1.5' }}>
+              <p style={{ fontSize: '0.82rem', color: '#1e293b', lineHeight: '1.5', margin: 0 }}>
                 {resumeData.personal.summary}
               </p>
             </div>
           )}
 
           {/* Education */}
-          <div style={{ marginBottom: '1.25rem' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, textTransform: 'uppercase', color: '#0f172a', borderBottom: '1px solid #94a3b8', paddingBottom: '0.2rem', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+          <div className="resume-section" style={{ marginBottom: '1.15rem' }}>
+            <h3 className="resume-section-title" style={{ fontSize: '0.92rem', fontWeight: 700, textTransform: 'uppercase', color: '#0f172a', borderBottom: '1.5px solid #0f172a', paddingBottom: '0.2rem', marginBottom: '0.45rem', letterSpacing: '0.05em' }}>
               Education
             </h3>
             {resumeData.education.map((edu, i) => (
-              <div key={i} style={{ marginBottom: '0.5rem' }}>
+              <div key={i} style={{ marginBottom: '0.45rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>
                   <span>{edu.institution}</span>
-                  <span style={{ fontWeight: 500, color: '#475569' }}>{edu.year}</span>
+                  <span style={{ fontWeight: 600, color: '#475569' }}>{edu.year}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#334155' }}>
                   <span>{edu.degree}</span>
-                  <span style={{ fontWeight: 600, color: '#0f172a' }}>{edu.score}</span>
+                  <span style={{ fontWeight: 700, color: '#0f172a' }}>{edu.score}</span>
                 </div>
               </div>
             ))}
           </div>
 
           {/* Technical Skills */}
-          <div style={{ marginBottom: '1.25rem' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, textTransform: 'uppercase', color: '#0f172a', borderBottom: '1px solid #94a3b8', paddingBottom: '0.2rem', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+          <div className="resume-section" style={{ marginBottom: '1.15rem' }}>
+            <h3 className="resume-section-title" style={{ fontSize: '0.92rem', fontWeight: 700, textTransform: 'uppercase', color: '#0f172a', borderBottom: '1.5px solid #0f172a', paddingBottom: '0.2rem', marginBottom: '0.45rem', letterSpacing: '0.05em' }}>
               Technical Skills
             </h3>
-            <div style={{ fontSize: '0.82rem', color: '#334155', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <div style={{ fontSize: '0.82rem', color: '#1e293b', display: 'flex', flexDirection: 'column', gap: '0.25rem', lineHeight: '1.45' }}>
               <div><strong>Languages:</strong> {resumeData.skills.languages}</div>
               <div><strong>Frameworks & Web:</strong> {resumeData.skills.frameworks}</div>
               <div><strong>Developer Tools & Cloud:</strong> {resumeData.skills.developerTools}</div>
@@ -528,17 +533,22 @@ export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
           </div>
 
           {/* Work Experience */}
-          <div style={{ marginBottom: '1.25rem' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, textTransform: 'uppercase', color: '#0f172a', borderBottom: '1px solid #94a3b8', paddingBottom: '0.2rem', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+          <div className="resume-section" style={{ marginBottom: '1.15rem' }}>
+            <h3 className="resume-section-title" style={{ fontSize: '0.92rem', fontWeight: 700, textTransform: 'uppercase', color: '#0f172a', borderBottom: '1.5px solid #0f172a', paddingBottom: '0.2rem', marginBottom: '0.45rem', letterSpacing: '0.05em' }}>
               Work Experience & Internships
             </h3>
             {resumeData.experience.map((exp, i) => (
-              <div key={i} style={{ marginBottom: '0.75rem' }}>
+              <div key={i} style={{ marginBottom: '0.65rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>
-                  <span>{exp.title} - <span style={{ fontWeight: 600, color: '#2563eb' }}>{exp.company}</span></span>
-                  <span style={{ fontWeight: 500, color: '#475569' }}>{exp.duration}</span>
+                  <span>{exp.title} | <span style={{ fontWeight: 600, color: '#0284c7' }}>{exp.company}</span></span>
+                  <span style={{ fontWeight: 600, color: '#475569' }}>{exp.duration}</span>
                 </div>
-                <ul style={{ margin: '0.35rem 0 0 1.25rem', padding: 0, fontSize: '0.8rem', color: '#334155', lineHeight: '1.45' }}>
+                {exp.location && (
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', fontStyle: 'italic', marginBottom: '0.2rem' }}>
+                    {exp.location}
+                  </div>
+                )}
+                <ul className="resume-bullet-list" style={{ margin: '0.25rem 0 0 1.25rem', padding: 0, fontSize: '0.82rem', color: '#334155', lineHeight: '1.45' }}>
                   {exp.bullets.map((b, bIdx) => (
                     <li key={bIdx} style={{ marginBottom: '0.2rem' }}>{b}</li>
                   ))}
@@ -548,17 +558,17 @@ export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
           </div>
 
           {/* Projects */}
-          <div style={{ marginBottom: '1.25rem' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, textTransform: 'uppercase', color: '#0f172a', borderBottom: '1px solid #94a3b8', paddingBottom: '0.2rem', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+          <div className="resume-section" style={{ marginBottom: '1.15rem' }}>
+            <h3 className="resume-section-title" style={{ fontSize: '0.92rem', fontWeight: 700, textTransform: 'uppercase', color: '#0f172a', borderBottom: '1.5px solid #0f172a', paddingBottom: '0.2rem', marginBottom: '0.45rem', letterSpacing: '0.05em' }}>
               Technical Projects
             </h3>
             {resumeData.projects.map((proj, i) => (
-              <div key={i} style={{ marginBottom: '0.75rem' }}>
+              <div key={i} style={{ marginBottom: '0.65rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>
                   <span>{proj.name} | <span style={{ fontWeight: 500, fontStyle: 'italic', color: '#475569' }}>{proj.tech}</span></span>
-                  <span style={{ color: '#2563eb', fontSize: '0.78rem' }}>{proj.link}</span>
+                  <span style={{ color: '#0284c7', fontSize: '0.78rem' }}>{proj.link}</span>
                 </div>
-                <ul style={{ margin: '0.35rem 0 0 1.25rem', padding: 0, fontSize: '0.8rem', color: '#334155', lineHeight: '1.45' }}>
+                <ul className="resume-bullet-list" style={{ margin: '0.25rem 0 0 1.25rem', padding: 0, fontSize: '0.82rem', color: '#334155', lineHeight: '1.45' }}>
                   {proj.bullets.map((b, bIdx) => (
                     <li key={bIdx} style={{ marginBottom: '0.2rem' }}>{b}</li>
                   ))}
@@ -568,11 +578,11 @@ export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
           </div>
 
           {/* Achievements */}
-          <div>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, textTransform: 'uppercase', color: '#0f172a', borderBottom: '1px solid #94a3b8', paddingBottom: '0.2rem', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+          <div className="resume-section">
+            <h3 className="resume-section-title" style={{ fontSize: '0.92rem', fontWeight: 700, textTransform: 'uppercase', color: '#0f172a', borderBottom: '1.5px solid #0f172a', paddingBottom: '0.2rem', marginBottom: '0.45rem', letterSpacing: '0.05em' }}>
               Key Achievements & Honors
             </h3>
-            <ul style={{ margin: '0.25rem 0 0 1.25rem', padding: 0, fontSize: '0.8rem', color: '#334155', lineHeight: '1.45' }}>
+            <ul className="resume-bullet-list" style={{ margin: '0.25rem 0 0 1.25rem', padding: 0, fontSize: '0.82rem', color: '#334155', lineHeight: '1.45' }}>
               {resumeData.achievements.map((ach, i) => (
                 <li key={i} style={{ marginBottom: '0.2rem' }}>{ach}</li>
               ))}

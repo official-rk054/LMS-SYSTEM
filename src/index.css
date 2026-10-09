@@ -774,11 +774,108 @@ a:hover {
   .brand-badge { font-size: 1.1rem; }
 }
 
-/* Print Styles for Resume & Offer Letter */
+/* Dedicated Print & PDF Export Styles for Resume & Offer Letter */
 @media print {
-  body { background: white !important; color: black !important; }
-  .sidebar, .topbar, .btn, .no-print { display: none !important; }
-  .main-wrapper { margin: 0 !important; width: 100% !important; }
-  .content-body { padding: 0 !important; max-width: 100% !important; }
-  .card { border: none !important; box-shadow: none !important; background: white !important; color: black !important; }
+  @page {
+    size: A4 portrait;
+    margin: 10mm 15mm 12mm 15mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    font-size: 10pt !important;
+    line-height: 1.4 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide navigation, topbar, buttons, and editor forms */
+  .sidebar,
+  .topbar,
+  .btn,
+  .no-print,
+  #mobile-menu-toggle,
+  .resume-editor-col,
+  .resume-header-bar,
+  .tabs-nav {
+    display: none !important;
+  }
+
+  .main-wrapper {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    min-height: auto !important;
+  }
+
+  .content-body {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  .resume-builder-grid {
+    display: block !important;
+    grid-template-columns: 1fr !important;
+    gap: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Resume Document Container for Print */
+  .resume-preview-card,
+  #printable-resume {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .resume-section {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-bottom: 11pt !important;
+  }
+
+  .resume-section-title {
+    font-size: 10pt !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    color: #0f172a !important;
+    border-bottom: 1.5pt solid #0f172a !important;
+    padding-bottom: 2pt !important;
+    margin-bottom: 5pt !important;
+    letter-spacing: 0.05em !important;
+  }
+
+  .resume-bullet-list {
+    margin: 3pt 0 0 14pt !important;
+    padding: 0 !important;
+  }
+
+  .resume-bullet-list li {
+    font-size: 9pt !important;
+    color: #1e293b !important;
+    line-height: 1.38 !important;
+    margin-bottom: 2.5pt !important;
+  }
+
+  a {
+    text-decoration: none !important;
+    color: #0f172a !important;
+  }
 }
