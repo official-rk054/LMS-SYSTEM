@@ -438,8 +438,8 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
         {/* Global Action Strip */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
           {/* Target Role Dropdown */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(24, 24, 28, 0.8)', padding: '0.25rem 0.6rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
-            <Target size={14} color="var(--text-muted)" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--bg-glass-strong)', padding: '0.25rem 0.65rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-glass)' }}>
+            <Target size={14} color="var(--primary)" />
             <select
               value={targetRole}
               onChange={(e) => {
@@ -451,18 +451,18 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
               style={{
                 background: 'transparent',
                 border: 'none',
-                color: 'var(--text-bright)',
+                color: 'var(--text-main)',
                 fontSize: '0.8rem',
                 fontWeight: 600,
                 outline: 'none',
                 cursor: 'pointer',
               }}
             >
-              <option value="sde_amazon" style={{ background: '#09090b' }}>Amazon SDE 1 (₹44.5 LPA)</option>
-              <option value="sde_microsoft" style={{ background: '#09090b' }}>Microsoft SWE (₹45.0 LPA)</option>
-              <option value="flipkart_ase" style={{ background: '#09090b' }}>Flipkart Assoc. SDE (₹32.0 LPA)</option>
-              <option value="tcs_digital" style={{ background: '#09090b' }}>TCS Digital (₹7.5 LPA)</option>
-              <option value="infosys_sp" style={{ background: '#09090b' }}>Infosys SP (₹9.5 LPA)</option>
+              <option value="sde_amazon" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Amazon SDE 1 (₹44.5 LPA)</option>
+              <option value="sde_microsoft" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Microsoft SWE (₹45.0 LPA)</option>
+              <option value="flipkart_ase" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Flipkart Assoc. SDE (₹32.0 LPA)</option>
+              <option value="tcs_digital" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>TCS Digital (₹7.5 LPA)</option>
+              <option value="infosys_sp" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Infosys SP (₹9.5 LPA)</option>
             </select>
           </div>
 
@@ -504,21 +504,21 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
 
       {/* Live Scan Step Progress Bar */}
       {isAnalyzing && (
-        <div style={{ padding: '0.75rem 1rem', background: 'rgba(24, 24, 28, 0.9)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+        <div style={{ padding: '0.75rem 1rem', background: 'var(--bg-glass-strong)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-glass)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
             <span>
               {scanStep === 1 && 'Ingesting & parsing candidate resume profile...'}
               {scanStep === 2 && 'Evaluating 2026 tech trends, metric density, and ATS hygiene...'}
               {scanStep === 3 && 'Finalizing ATS audit metrics and actionable checklist...'}
             </span>
-            <span style={{ fontWeight: 700, color: '#fafafa' }}>{scanStep === 1 ? '33%' : scanStep === 2 ? '66%' : '100%'}</span>
+            <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{scanStep === 1 ? '33%' : scanStep === 2 ? '66%' : '100%'}</span>
           </div>
-          <div style={{ width: '100%', height: '5px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '999px', overflow: 'hidden' }}>
+          <div style={{ width: '100%', height: '5px', background: 'var(--bg-glass-subtle)', borderRadius: '999px', overflow: 'hidden' }}>
             <div
               style={{
                 height: '100%',
                 width: scanStep === 1 ? '33%' : scanStep === 2 ? '66%' : '100%',
-                background: '#fafafa',
+                background: 'var(--primary)',
                 transition: 'width 0.3s ease',
               }}
             />
@@ -572,28 +572,33 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                 display: 'grid',
                 gridTemplateColumns: 'repeat(4, 1fr)',
                 gap: '0.5rem',
-                padding: '0.65rem',
-                background: 'rgba(9, 9, 11, 0.5)',
+                padding: '0.65rem 0.85rem',
+                background: 'var(--bg-glass-strong)',
                 borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--border-subtle)',
+                border: '1px solid var(--border-glass)',
                 fontSize: '0.75rem',
               }}
             >
               <div>
-                <span style={{ color: 'var(--text-dim)', display: 'block', fontSize: '0.68rem' }}>Candidate</span>
-                <strong style={{ color: 'var(--text-bright)' }}>{uploadedResume.parsedName}</strong>
+                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>Candidate</span>
+                <strong style={{ color: 'var(--text-main)', fontWeight: 700 }}>{uploadedResume.parsedName}</strong>
               </div>
               <div>
+<<<<<<< HEAD
                 <span style={{ color: 'var(--text-dim)', display: 'block', fontSize: '0.68rem' }}>College</span>
                 <strong style={{ color: 'var(--text-bright)' }}>{uploadedResume.parsedCollege || userProfile?.college || 'Institutional Profile'}</strong>
+=======
+                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>College</span>
+                <strong style={{ color: 'var(--text-main)', fontWeight: 700 }}>VIT Vellore</strong>
+>>>>>>> 51241a4 (style(resume-analyzer): replace dark background containers with light glassmorphism variables for clean contrast)
               </div>
               <div>
-                <span style={{ color: 'var(--text-dim)', display: 'block', fontSize: '0.68rem' }}>CGPA</span>
-                <strong style={{ color: '#22c55e' }}>{uploadedResume.parsedCgpa}</strong>
+                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>CGPA</span>
+                <strong style={{ color: '#10b981', fontWeight: 800 }}>{uploadedResume.parsedCgpa}</strong>
               </div>
               <div>
-                <span style={{ color: 'var(--text-dim)', display: 'block', fontSize: '0.68rem' }}>Extracted Skills</span>
-                <strong style={{ color: '#fafafa' }}>{uploadedResume.skillsCount} Technical</strong>
+                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>Extracted Skills</span>
+                <strong style={{ color: 'var(--text-main)', fontWeight: 700 }}>{uploadedResume.skillsCount} Technical</strong>
               </div>
             </div>
           </div>
@@ -649,7 +654,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                 background: 'rgba(34, 197, 94, 0.08)',
               }}
             >
-              <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fafafa', lineHeight: 1 }}>
+              <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1 }}>
                 {analysisResult.atsScore}
               </span>
               <span style={{ fontSize: '0.65rem', color: 'var(--text-dim)', fontWeight: 600 }}>
@@ -677,8 +682,8 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                 <span style={{ color: 'var(--text-muted)' }}>Target JD Relevance</span>
                 <strong style={{ color: 'var(--text-bright)' }}>{analysisResult.jdMatchRate}%</strong>
               </div>
-              <div style={{ width: '100%', height: '5px', background: 'rgba(255, 255, 255, 0.07)', borderRadius: '999px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${analysisResult.jdMatchRate}%`, background: '#fafafa', borderRadius: '999px' }} />
+              <div style={{ width: '100%', height: '5px', background: 'var(--bg-glass-subtle)', borderRadius: '999px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${analysisResult.jdMatchRate}%`, background: 'var(--primary)', borderRadius: '999px' }} />
               </div>
             </div>
 
@@ -764,6 +769,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
           4. WORKSPACE TAB CONTENTS (COMPACT & PRECISE)
           ═════════════════════════════════════════════════════════════ */}
 
+<<<<<<< HEAD
 
       {/* TAB 2: KEYWORDS */}
       {activeWorkspaceTab === 'keywords' && (
@@ -776,6 +782,38 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                 Target Keywords for {currentJD.role}
               </span>
               <span className="badge badge-primary" style={{ fontSize: '0.68rem' }}>{currentJD.company}</span>
+=======
+      {/* TAB: AGENT AUDIT & FEEDBACK LOOP (NEW NON-GENERIC REWRITES) */}
+      {activeWorkspaceTab === 'feedback_loop' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* 5-Factor Diagnostic Score Ribbon */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(5, 1fr)',
+              gap: '0.75rem',
+            }}
+          >
+            <div className="card" style={{ padding: '0.85rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>{analysisResult.jdMatchRate}%</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Factor 1: 2026 Tech Trend</div>
+            </div>
+            <div className="card" style={{ padding: '0.85rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#10b981' }}>{analysisResult.impactMetricScore}%</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Factor 2: Google XYZ Impact</div>
+            </div>
+            <div className="card" style={{ padding: '0.85rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f59e0b' }}>{analysisResult.formatScore}%</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Factor 3: ATS Hygiene</div>
+            </div>
+            <div className="card" style={{ padding: '0.85rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>{analysisResult.actionVerbScore}%</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Factor 4: Action Verb Power</div>
+            </div>
+            <div className="card" style={{ padding: '0.85rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#10b981' }}>{analysisResult.recruiterScreenScore}%</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Factor 5: Recruiter Telemetry</div>
+>>>>>>> 51241a4 (style(resume-analyzer): replace dark background containers with light glassmorphism variables for clean contrast)
             </div>
 
             <button
@@ -818,6 +856,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                 <span
                   key={i}
                   style={{
+<<<<<<< HEAD
                     fontSize: '0.72rem',
                     padding: '0.2rem 0.5rem',
                     borderRadius: 'var(--radius-sm)',
@@ -827,6 +866,15 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '0.25rem',
+=======
+                    padding: '1rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--bg-glass-strong)',
+                    border: '1px solid var(--border-glass)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.65rem',
+>>>>>>> 51241a4 (style(resume-analyzer): replace dark background containers with light glassmorphism variables for clean contrast)
                   }}
                 >
                   <Check size={11} /> {kw}
@@ -844,6 +892,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
               </span>
             </div>
 
+<<<<<<< HEAD
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
               {analysisResult.missingKeywords.map((kw, i) => (
                 <span
@@ -866,6 +915,102 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                 >
                   <span style={{ fontWeight: 700, fontSize: '0.65rem' }}>
                     {kw.priority === 'High' ? '●' : '○'}
+=======
+            {sandboxFeedback && (
+              <div style={{ padding: '0.85rem', background: 'var(--bg-glass-strong)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-glass)' }}>
+                <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginBottom: '0.35rem' }}>
+                  <strong>Diagnostic Critique:</strong> {sandboxFeedback.critique}
+                </div>
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-main)', background: 'rgba(16, 185, 129, 0.1)', padding: '0.5rem 0.75rem', borderRadius: '4px', borderLeft: '3px solid #10b981' }}>
+                  <strong>XYZ Rewrite:</strong> {sandboxFeedback.rewrite}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 1: KEYWORD INTELLIGENCE & JD MATCH MATRIX */}
+      {activeWorkspaceTab === 'keywords' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.35fr', gap: '1.25rem' }}>
+          {/* Left Column: Target Role Benchmark & Custom JD */}
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
+              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <Target size={16} /> Role Requirements
+              </h3>
+              <span className="badge badge-primary">{currentJD.package}</span>
+            </div>
+
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.5', marginBottom: '1rem', whiteSpace: 'pre-line', background: 'var(--bg-glass-strong)', padding: '0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-glass)' }}>
+              {currentJD.text}
+            </div>
+
+            {/* Custom JD Editor Accordion */}
+            <div>
+              <button
+                onClick={() => setShowCustomJD(!showCustomJD)}
+                className="btn btn-ghost btn-sm"
+                style={{ fontSize: '0.76rem', color: 'var(--text-muted)', padding: '0.2rem 0', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                {showCustomJD ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                {showCustomJD ? 'Close Custom JD Editor' : 'Paste Custom Job Description'}
+              </button>
+
+              {showCustomJD && (
+                <div style={{ marginTop: '0.65rem' }}>
+                  <textarea
+                    className="textarea"
+                    rows={5}
+                    value={customJDText}
+                    onChange={(e) => setCustomJDText(e.target.value)}
+                    placeholder="Paste job description requirements here..."
+                    style={{ fontSize: '0.78rem', fontFamily: 'var(--font-mono)' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.4rem' }}>
+                    <button
+                      onClick={() => executeAgentAudit(uploadedResume.rawText, targetRole)}
+                      className="btn btn-primary btn-sm"
+                      style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
+                    >
+                      Audit Against Custom JD
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column: Keyword Match vs Missing Matrix */}
+          <div className="card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {/* Matched Keywords Grid */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
+                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#22c55e', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <CheckCircle size={15} />
+                  Found in Your Resume ({analysisResult.matchedKeywords.length})
+                </div>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>High-Frequency JD Match</span>
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                {analysisResult.matchedKeywords.map((kw, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      fontSize: '0.75rem',
+                      padding: '0.25rem 0.6rem',
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'rgba(34, 197, 94, 0.1)',
+                      border: '1px solid rgba(34, 197, 94, 0.25)',
+                      color: '#4ade80',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                    }}
+                  >
+                    <Check size={12} /> {kw}
+>>>>>>> 51241a4 (style(resume-analyzer): replace dark background containers with light glassmorphism variables for clean contrast)
                   </span>
                   +{kw.name}
                   {copiedKeyword === kw.name && (
@@ -916,9 +1061,16 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                 style={{
                   padding: '0.35rem 0.5rem',
                   borderRadius: 'var(--radius-sm)',
+<<<<<<< HEAD
                   background: 'rgba(9, 9, 11, 0.5)',
                   fontSize: '0.7rem',
                   color: sec.status === 'pass' ? 'var(--text-dim)' : '#facc15',
+=======
+                  background: 'var(--bg-glass-strong)',
+                  border: '1px solid var(--border-glass)',
+                  fontSize: '0.72rem',
+                  color: sec.status === 'pass' ? 'var(--text-main)' : '#f59e0b',
+>>>>>>> 51241a4 (style(resume-analyzer): replace dark background containers with light glassmorphism variables for clean contrast)
                 }}
               >
                 💡 {sec.tip}
@@ -950,8 +1102,13 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                   style={{
                     padding: '0.55rem 0.75rem',
                     borderRadius: 'var(--radius-sm)',
+<<<<<<< HEAD
                     background: isResolved ? 'rgba(34, 197, 94, 0.04)' : 'rgba(9, 9, 11, 0.4)',
                     border: isResolved ? '1px solid rgba(34, 197, 94, 0.2)' : '1px solid var(--border-subtle)',
+=======
+                    background: isResolved ? 'rgba(16, 185, 129, 0.08)' : 'var(--bg-glass-strong)',
+                    border: isResolved ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-glass)',
+>>>>>>> 51241a4 (style(resume-analyzer): replace dark background containers with light glassmorphism variables for clean contrast)
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.65rem',
@@ -1022,11 +1179,19 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
 
           <pre
             style={{
+<<<<<<< HEAD
               padding: '0.75rem',
               background: '#09090b',
               borderRadius: 'var(--radius-sm)',
               border: '1px solid var(--border-subtle)',
               fontSize: '0.74rem',
+=======
+              padding: '1rem',
+              background: 'var(--bg-glass-strong)',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border-glass)',
+              fontSize: '0.78rem',
+>>>>>>> 51241a4 (style(resume-analyzer): replace dark background containers with light glassmorphism variables for clean contrast)
               fontFamily: 'var(--font-mono)',
               color: 'var(--text-main)',
               lineHeight: '1.5',
