@@ -817,9 +817,13 @@ public class Main {
 print(invertTree([4, 2, 7, 1, 3, 6, 9]))
 `,
       javascript: `function invertTree(root) {
-    if (!root || !root.length) return [];
-    // Mirror swap top-level children
-    return [4, 7, 2, 9, 6, 3, 1];
+    if (!Array.isArray(root) || root.length === 0) return [];
+    const inverted = root.slice();
+    for (let start = 1, width = 2; start < root.length; start += width, width *= 2) {
+        const level = root.slice(start, Math.min(start + width, root.length)).reverse();
+        inverted.splice(start, level.length, ...level);
+    }
+    return inverted;
 }
 
 console.log(JSON.stringify(invertTree([4, 2, 7, 1, 3, 6, 9])));

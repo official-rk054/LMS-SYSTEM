@@ -8,7 +8,6 @@ import {
   Clock,
   ArrowRight,
   Flame,
-  Zap,
   Target,
   Sparkles,
   Building,
@@ -114,10 +113,6 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
                   Active Drives
                 </span>
               </div>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.3 }}>
-                {userProfile.degree} at <strong>{userProfile.college}</strong> • Readiness:{' '}
-                <strong style={{ color: '#34d399' }}>{userProfile.placementReadinessScore}%</strong>. Amazon & TCS campus drives start this month!
-              </p>
             </div>
           </div>
 
@@ -162,7 +157,7 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
             >
               <Flame size={16} color="#f59e0b" fill="#f59e0b" />
               <div>
-                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#fbbf24', lineHeight: 1 }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-warning)', lineHeight: 1 }}>
                   {userProfile.streakDays} Days
                 </div>
                 <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 600 }}>
@@ -195,29 +190,6 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
               </div>
             </div>
 
-            {/* Karma XP */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                padding: '0.35rem 0.65rem',
-                borderRadius: 'var(--radius-md)',
-              }}
-              title="Preparation Karma XP Points"
-            >
-              <Zap size={16} color="#d4d4d8" fill="#d4d4d8" />
-              <div>
-                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-bright)', lineHeight: 1 }}>
-                  {userProfile.xpPoints}
-                </div>
-                <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 600 }}>
-                  Karma XP
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Right: Quick Launch CTAs */}
@@ -241,15 +213,10 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
       </div>
 
       {/* ============================================================== */}
-      {/* 2. MAIN ERGONOMIC 3-COLUMN BENTO GRID                         */}
+      {/* 2. DASHBOARD READINESS AND ACTIONS                             */}
       {/* ============================================================== */}
       <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1.05fr 1.15fr 1.2fr',
-          gap: '0.85rem',
-          alignItems: 'stretch',
-        }}
+        className="student-dashboard-content-grid"
       >
         {/* ------------------------------------------------------------ */}
         {/* COLUMN 1: PLACEMENT READINESS BREAKDOWN                      */}
@@ -309,7 +276,7 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', fontSize: '0.76rem' }}>
                   <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>AI Mock Interview & Communication</span>
-                  <strong style={{ color: '#fbbf24' }}>{breakdown.interviewHR}%</strong>
+                  <strong style={{ color: 'var(--text-warning)' }}>{breakdown.interviewHR}%</strong>
                 </div>
                 <div className="progress-container" style={{ height: '6px' }}>
                   <div className="progress-fill" style={{ width: `${breakdown.interviewHR}%`, background: 'var(--gold-gradient)' }}></div>
@@ -464,7 +431,7 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
         {/* COLUMN 3: UPCOMING CAMPUS PLACEMENT DRIVES                   */}
         {/* ------------------------------------------------------------ */}
         <div
-          className="card"
+          className="card student-dashboard-drives"
           style={{
             padding: '1rem 1.15rem',
             display: 'flex',
@@ -490,7 +457,7 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
             </button>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+          <div className="student-dashboard-drive-list">
             {UPCOMING_DRIVES.slice(0, 3).map((drive) => {
               const userApp = (userProfile.appliedDrives || []).find(a => (a.id || a.driveId) === drive.id);
               const isApplied = Boolean(userApp) || drive.applied;

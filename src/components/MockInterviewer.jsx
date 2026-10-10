@@ -41,6 +41,11 @@ import { MOCK_INTERVIEW_SESSIONS } from '../data/mockData';
 import { useMediaConnectivity } from '../hooks/useMediaConnectivity';
 import { recordInterviewEvaluation } from '../services/authDatabase';
 import {
+  generateInterviewQuestion,
+  generateInterviewScorecard,
+  orchestrator,
+} from '../services/gemini';
+import {
   analyzeSpeechInRealTime,
   LiveSpeechRecognizer,
   playNaturalTTS
@@ -80,6 +85,14 @@ export const MockInterviewer = ({ userProfile = {} }) => {
   const [turnIndex, setTurnIndex] = useState(0);
   const [currentAiQuestion, setCurrentAiQuestion] = useState('');
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
+  const [isAiThinking, setIsAiThinking] = useState(false);
+  const [hasGeminiKey, setHasGeminiKey] = useState(() => orchestrator.getStatus().hasKey);
+
+  useEffect(() => {
+    return orchestrator.subscribe(status => {
+      setHasGeminiKey(status.hasKey);
+    });
+  }, []);
 
   // 4. Live Audio Input & Real-Time Interpretation
   const [isMicListening, setIsMicListening] = useState(false);
@@ -461,7 +474,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
   // ─────────────────────────────────────────────────────────────
   // SUBMIT CANDIDATE SPOKEN RESPONSE & GENERATE AI FOLLOW-UP
   // ─────────────────────────────────────────────────────────────
-  const handleSubmitCandidateResponse = () => {
+  const handleSubmitCandidateResponse = async () => {
     const responseText = liveSpokenTranscript.trim();
     if (!responseText) return;
 
@@ -490,44 +503,91 @@ export const MockInterviewer = ({ userProfile = {} }) => {
     setLiveInterimSnippet('');
     setLiveSpeechMetrics(null);
     speechSecondsRef.current = 0;
+    setIsAiThinking(true);
 
-    // Dynamic AI follow-up generator
-    setTimeout(() => {
+    // Dynamic AI follow-up generator: First try Gemini InterviewAgent, else fallback
+    let aiFollowUp = '';
+    try {
+      const geminiRes = await generateInterviewQuestion({
+        roundTitle: selectedRound.title,
+        company: selectedRound.company,
+        roundType: selectedRound.type,
+        turnIndex: nextTurn,
+        candidateName: candidateFirstName,
+        conversationHistory: updatedMessages,
+        candidateAnswer: responseText,
+      });
+
+      if (geminiRes.success && geminiRes.question) {
+        aiFollowUp = geminiRes.question;
+      }
+    } catch (_) {}
+
+    if (!aiFollowUp) {
       const analysis = analyzeCandidateText(
         responseText,
         nextTurn,
         selectedRound,
         candidateFirstName
       );
-      const aiFollowUp = analysis.followUp;
-      setCurrentAiQuestion(aiFollowUp);
+      aiFollowUp = analysis.followUp;
+    }
 
-      const aiMsg = {
-        sender: 'interviewer',
-        text: aiFollowUp,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
+    setIsAiThinking(false);
+    setCurrentAiQuestion(aiFollowUp);
 
-      const finalMessages = [...updatedMessages, aiMsg];
-      setMessages(finalMessages);
+    const aiMsg = {
+      sender: 'interviewer',
+      text: aiFollowUp,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
 
-      if (nextTurn >= 3) {
-        // Conclude after 3 full turns: AI speaks closing reflection, then conclude without restarting mic
-        speakText(aiFollowUp, () => {
-          stopMedia();
-          if (proctorRef.current) proctorRef.current.stop();
-          const telemetry = proctorRef.current
-            ? proctorRef.current.getTelemetry()
-            : { totalStrikes: 0, attentionPercentage: 100, infractionsLog: [] };
-          const report = compileRealScorecard(finalMessages, telemetry);
-          setEvaluationReport(report);
-          setIsFinished(true);
-        });
-      } else {
-        // Turn 1 and 2: speak follow-up question, automatically starting mic once sentence finishes!
-        speakText(aiFollowUp);
-      }
-    }, 900);
+    const finalMessages = [...updatedMessages, aiMsg];
+    setMessages(finalMessages);
+
+    if (nextTurn >= 3) {
+      // Conclude after 3 full turns: AI speaks closing reflection, then compile scorecard with Gemini
+      speakText(aiFollowUp, async () => {
+        stopMedia();
+        if (proctorRef.current) proctorRef.current.stop();
+        const telemetry = proctorRef.current
+          ? proctorRef.current.getTelemetry()
+          : { totalStrikes: 0, attentionPercentage: 100, infractionsLog: [] };
+
+        const baseReport = compileRealScorecard(finalMessages, telemetry);
+
+        try {
+          const scorecardRes = await generateInterviewScorecard({
+            roundTitle: selectedRound.title,
+            company: selectedRound.company,
+            roundType: selectedRound.type,
+            candidateName,
+            messages: finalMessages,
+            telemetry,
+          });
+
+          if (scorecardRes.success && scorecardRes.report) {
+            const gr = scorecardRes.report;
+            if (gr.overallScore) baseReport.overallReadiness = Math.round((baseReport.overallReadiness + gr.overallScore) / 2);
+            if (gr.technicalScore) baseReport.technicalDepth = gr.technicalScore;
+            if (gr.summary) baseReport.aiSummary = gr.summary;
+            if (gr.verdict) baseReport.aiVerdict = gr.verdict;
+            if (Array.isArray(gr.strengths) && gr.strengths.length > 0) {
+              baseReport.strengths = [...gr.strengths, ...baseReport.strengths.slice(0, 1)];
+            }
+            if (Array.isArray(gr.improvements) && gr.improvements.length > 0) {
+              baseReport.improvements = [...gr.improvements, ...baseReport.improvements.slice(0, 1)];
+            }
+          }
+        } catch (_) {}
+
+        setEvaluationReport(baseReport);
+        setIsFinished(true);
+      });
+    } else {
+      // Turn 1 and 2: speak follow-up question, automatically starting mic once sentence finishes!
+      speakText(aiFollowUp);
+    }
   };
 
   // Adaptive Question Generator based on Candidate's Actual Spoken Words
@@ -935,7 +995,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <h4 style={{ fontSize: '0.9rem', color: 'var(--text-white)' }}>Proctoring & Audio Diagnostics</h4>
+                  <h4 style={{ fontSize: '0.9rem', color: 'var(--text-bright)' }}>Proctoring & Audio Diagnostics</h4>
                   <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                     Make sure your face is well-lit and centered. The proctor monitors attention: looking away from the screen for &gt;3 seconds triggers Warning 1, then Warning 2, and ends the session on the 3rd infraction.
                   </p>
@@ -944,7 +1004,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                     <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>Live Mic Level:</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <LiveAudioBarMeter level={audioLevel} active={isSpeaking || isMicActive} />
-                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: audioLevel > 20 ? '#4ade80' : 'var(--text-muted)' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: audioLevel > 20 ? 'var(--text-success)' : 'var(--text-muted)' }}>
                         {audioLevel}%
                       </span>
                     </div>
@@ -972,7 +1032,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                       <div style={{ fontSize: '2rem' }}>{round.avatar}</div>
                       <span className="badge badge-primary">{round.type}</span>
                     </div>
-                    <h3 style={{ fontSize: '1.1rem', marginBottom: '0.4rem', color: 'var(--text-white)' }}>
+                    <h3 style={{ fontSize: '1.1rem', marginBottom: '0.4rem', color: 'var(--text-bright)' }}>
                       {round.title}
                     </h3>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
@@ -1065,7 +1125,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                 >
                   {selectedRound.avatar}
                 </div>
-                <h3 style={{ fontSize: '1.05rem', color: 'var(--text-white)', marginBottom: '0.2rem' }}>
+                <h3 style={{ fontSize: '1.05rem', color: 'var(--text-bright)', marginBottom: '0.2rem' }}>
                   {selectedRound.interviewerName}
                 </h3>
                 <p style={{ fontSize: '0.76rem', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>
@@ -1099,7 +1159,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                       style={{ padding: '0.2rem 0.4rem' }}
                       title="Toggle Camera"
                     >
-                      {isCameraActive ? <Video size={14} color="#22c55e" /> : <VideoOff size={14} color="#f87171" />}
+                      {isCameraActive ? <Video size={14} color="#22c55e" /> : <VideoOff size={14} color="var(--text-danger)" />}
                     </button>
                     <button
                       onClick={() => toggleMic()}
@@ -1107,7 +1167,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                       style={{ padding: '0.2rem 0.4rem' }}
                       title="Toggle Mic"
                     >
-                      {isMicActive ? <Mic size={14} color="#22c55e" /> : <MicOff size={14} color="#f87171" />}
+                      {isMicActive ? <Mic size={14} color="#22c55e" /> : <MicOff size={14} color="var(--text-danger)" />}
                     </button>
                     <button
                       onClick={() => setShowDeviceSettings(!showDeviceSettings)}
@@ -1216,7 +1276,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                         <EyeOff size={12} /> Diverted: {gazeAttentionState.lookAwaySeconds || '1.0'}s
                       </span>
                     ) : (
-                      <span className="media-hud-badge" style={{ background: 'rgba(34, 197, 94, 0.25)', color: '#4ade80' }}>
+                      <span className="media-hud-badge" style={{ background: 'rgba(34, 197, 94, 0.25)', color: 'var(--text-success)' }}>
                         <Eye size={12} /> Screen Focused ({gazeAttentionState.attentionPercentage || 100}%)
                       </span>
                     )}
@@ -1232,9 +1292,9 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                             : 'rgba(0, 0, 0, 0.6)',
                         color:
                           proctorInfractions.length >= 2
-                            ? '#f87171'
+                            ? 'var(--text-danger)'
                             : proctorInfractions.length === 1
-                            ? '#fbbf24'
+                            ? 'var(--text-warning)'
                             : '#fafafa',
                       }}
                     >
@@ -1246,7 +1306,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                   <div className="media-hud-overlay">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                       <LiveAudioBarMeter level={audioLevel} active={isSpeaking || isMicListening} />
-                      <span style={{ fontSize: '0.7rem', color: isSpeaking ? '#4ade80' : 'var(--text-muted)' }}>
+                      <span style={{ fontSize: '0.7rem', color: isSpeaking ? 'var(--text-success)' : 'var(--text-muted)' }}>
                         {isSpeaking ? 'Speaking' : `${audioLevel}% Mic`}
                       </span>
                     </div>
@@ -1266,7 +1326,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                       fontSize: '0.72rem',
                       padding: '0.25rem 0.65rem',
                       borderColor: 'rgba(245, 158, 11, 0.4)',
-                      color: '#fbbf24',
+                      color: 'var(--text-warning)',
                     }}
                     title="Simulate looking away to test Alert 1, Alert 2, and Strike 3 termination"
                   >
@@ -1283,7 +1343,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
               <button
                 onClick={handleConcludeInterview}
                 className="btn btn-outline"
-                style={{ borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171', fontSize: '0.82rem' }}
+                style={{ borderColor: 'rgba(239, 68, 68, 0.4)', color: 'var(--text-danger)', fontSize: '0.82rem' }}
               >
                 Conclude Interview & Generate Report
               </button>
@@ -1301,14 +1361,42 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span className="badge badge-primary">
-                    Live Audio Interpretation
-                  </span>
+                  {hasGeminiKey ? (
+                    <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.35)', fontSize: '0.7rem', fontWeight: 700 }}>
+                      ✨ Gemini 2.5 Active
+                    </span>
+                  ) : (
+                    <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.35)', fontSize: '0.7rem', fontWeight: 700 }}>
+                      ⚡ Heuristic Fallback
+                    </span>
+                  )}
                   <span className={`badge ${proctorInfractions.length >= 2 ? 'badge-danger' : 'badge-success'}`}>
                     Proctor: {3 - proctorInfractions.length} Strikes Left
                   </span>
                 </div>
               </div>
+
+              {/* AI Thinking Indicator Banner */}
+              {isAiThinking && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.55rem',
+                    color: '#c084fc',
+                    background: 'rgba(168, 85, 247, 0.12)',
+                    border: '1px solid rgba(168, 85, 247, 0.3)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '0.6rem 0.9rem',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    marginBottom: '0.75rem',
+                  }}
+                >
+                  <Sparkles size={16} className="pulse-dot" />
+                  <span>Gemini AI is analyzing your response and formulating dynamic technical probe...</span>
+                </div>
+              )}
 
               {/* Current Question Box */}
               <div
@@ -1373,7 +1461,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <LiveAudioBarMeter level={audioLevel} active={isSpeaking || isMicListening} />
-                    <span style={{ fontSize: '0.7rem', color: isSpeaking ? '#4ade80' : '#a1a1aa' }}>
+                    <span style={{ fontSize: '0.7rem', color: isSpeaking ? 'var(--text-success)' : '#a1a1aa' }}>
                       {audioLevel}% Vol
                     </span>
                   </div>
@@ -1396,7 +1484,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                       <span style={{ fontSize: '0.76rem', color: '#a1a1aa' }}>Listen carefully! Your microphone will activate automatically the moment they finish their sentence.</span>
                     </div>
                   ) : isMicListening ? (
-                    <div style={{ color: '#4ade80', fontSize: '0.84rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '0.45rem', textAlign: 'center' }}>
+                    <div style={{ color: 'var(--text-success)', fontSize: '0.84rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '0.45rem', textAlign: 'center' }}>
                       <Mic className="pulse-dot" size={24} color="#22c55e" />
                       <span style={{ fontWeight: 700 }}>🎙️ Sentence finished — Your turn to speak!</span>
                       <span style={{ fontSize: '0.76rem', color: '#a1a1aa' }}>Speak out loud. Your voice is being interpreted and transcribed live in real time.</span>
@@ -1414,13 +1502,13 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.4rem' }}>
                     <div style={{ padding: '0.35rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.62rem', color: '#a1a1aa' }}>Pace</div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: liveSpeechMetrics.wpmStatus === 'optimal' ? '#4ade80' : '#facc15' }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: liveSpeechMetrics.wpmStatus === 'optimal' ? 'var(--text-success)' : '#facc15' }}>
                         {liveSpeechMetrics.wpm} WPM
                       </div>
                     </div>
                     <div style={{ padding: '0.35rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.62rem', color: '#a1a1aa' }}>Fillers</div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: liveSpeechMetrics.fillerCount === 0 ? '#4ade80' : '#f87171' }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: liveSpeechMetrics.fillerCount === 0 ? 'var(--text-success)' : 'var(--text-danger)' }}>
                         {liveSpeechMetrics.fillerCount} found
                       </div>
                     </div>
@@ -1432,7 +1520,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                     </div>
                     <div style={{ padding: '0.35rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.62rem', color: '#a1a1aa' }}>Confidence</div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: liveSpeechMetrics.confidenceScore >= 80 ? '#4ade80' : '#eab308' }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: liveSpeechMetrics.confidenceScore >= 80 ? 'var(--text-success)' : '#eab308' }}>
                         {liveSpeechMetrics.confidenceScore}%
                       </div>
                     </div>
@@ -1515,7 +1603,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                 <div style={{ marginTop: '0.65rem', maxHeight: '110px', overflowY: 'auto', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                   <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Turn History:</span>
                   {messages.slice(0, -1).map((m, idx) => (
-                    <div key={idx} style={{ fontSize: '0.74rem', color: m.sender === 'candidate' ? '#4ade80' : 'var(--text-muted)' }}>
+                    <div key={idx} style={{ fontSize: '0.74rem', color: m.sender === 'candidate' ? 'var(--text-success)' : 'var(--text-muted)' }}>
                       <strong>{m.sender === 'candidate' ? 'You' : 'Interviewer'}:</strong> {m.text.length > 90 ? m.text.substring(0, 90) + '...' : m.text}
                     </div>
                   ))}
@@ -1591,7 +1679,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                 <XCircle size={28} />
               </div>
               <div>
-                <h3 style={{ color: '#f87171', fontSize: '1.05rem', marginBottom: '0.25rem' }}>
+                <h3 style={{ color: 'var(--text-danger)', fontSize: '1.05rem', marginBottom: '0.25rem' }}>
                   Integrity Disqualification Notice: 3/3 Gaze Infractions
                 </h3>
                 <p style={{ color: '#fca5a5', fontSize: '0.82rem', lineHeight: '1.5', margin: 0 }}>
@@ -1608,7 +1696,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                 <BarChart2 size={22} />
               </div>
               <div>
-                <div className="stat-val" style={{ color: 'var(--text-white)' }}>
+                <div className="stat-val" style={{ color: 'var(--text-bright)' }}>
                   {evaluationReport?.metrics?.technicalDepth || 75}/100
                 </div>
                 <div className="stat-label">Technical Depth</div>
@@ -1620,7 +1708,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                 <TrendingUp size={22} />
               </div>
               <div>
-                <div className="stat-val" style={{ color: 'var(--text-white)' }}>
+                <div className="stat-val" style={{ color: 'var(--text-bright)' }}>
                   {evaluationReport?.metrics?.problemSolving || 72}/100
                 </div>
                 <div className="stat-label">Problem Solving</div>
@@ -1632,7 +1720,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                 <UserCheck size={22} />
               </div>
               <div>
-                <div className="stat-val" style={{ color: 'var(--text-white)' }}>
+                <div className="stat-val" style={{ color: 'var(--text-bright)' }}>
                   {evaluationReport?.metrics?.verbalFluency || 70}/100
                 </div>
                 <div className="stat-label">Verbal Fluency & Mic</div>
@@ -1647,7 +1735,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                 <div
                   className="stat-val"
                   style={{
-                    color: isTerminatedByProctor ? '#f87171' : 'var(--text-white)',
+                    color: isTerminatedByProctor ? 'var(--text-danger)' : 'var(--text-bright)',
                   }}
                 >
                   {evaluationReport?.metrics?.overallReadiness || 72}/100
@@ -1682,7 +1770,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                 </div>
                 <div style={{ padding: '0.65rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-sm)', textAlign: 'center', border: '1px solid var(--border-subtle)' }}>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Filler Words Used</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 700, color: (evaluationReport?.speechTelemetry?.fillerCount || 0) === 0 ? '#4ade80' : '#f87171' }}>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 700, color: (evaluationReport?.speechTelemetry?.fillerCount || 0) === 0 ? 'var(--text-success)' : 'var(--text-danger)' }}>
                     {evaluationReport?.speechTelemetry?.fillerCount || 0}
                   </div>
                 </div>
@@ -1696,7 +1784,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                     {evaluationReport.speechTelemetry.fillersDetected.map(f => `"${f.word}" (${f.count}x)`).join(', ')}
                   </span>
                 ) : (
-                  <span style={{ color: '#4ade80' }}>0 verbal fillers detected. Commendable verbal discipline!</span>
+                  <span style={{ color: 'var(--text-success)' }}>0 verbal fillers detected. Commendable verbal discipline!</span>
                 )}
               </div>
 
@@ -1721,7 +1809,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
             <div className="card">
               <div className="card-header">
                 <h3 className="card-title">
-                  <ShieldCheck size={18} color={isTerminatedByProctor ? '#f87171' : '#22c55e'} />
+                  <ShieldCheck size={18} color={isTerminatedByProctor ? 'var(--text-danger)' : '#22c55e'} />
                   Proctor Gaze & Attention Audit
                 </h3>
               </div>
@@ -1729,7 +1817,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', padding: '0.6rem 0.8rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-sm)' }}>
                 <div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Integrity Status</div>
-                  <strong style={{ fontSize: '0.88rem', color: isTerminatedByProctor ? '#f87171' : '#4ade80' }}>
+                  <strong style={{ fontSize: '0.88rem', color: isTerminatedByProctor ? 'var(--text-danger)' : 'var(--text-success)' }}>
                     {evaluationReport?.proctorAudit?.integrityStatus || 'Verified'}
                   </strong>
                 </div>
@@ -1743,7 +1831,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
 
               {/* Infraction Log Table */}
               <div>
-                <strong style={{ fontSize: '0.78rem', color: 'var(--text-white)' }}>
+                <strong style={{ fontSize: '0.78rem', color: 'var(--text-bright)' }}>
                   Chronological Infraction History ({evaluationReport?.proctorAudit?.infractionsLog?.length || 0} strikes recorded):
                 </strong>
                 {evaluationReport?.proctorAudit?.infractionsLog?.length > 0 ? (
@@ -1758,7 +1846,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                     <tbody>
                       {evaluationReport.proctorAudit.infractionsLog.map((item, idx) => (
                         <tr key={idx}>
-                          <td style={{ color: item.strike >= 3 ? '#ef4444' : '#fbbf24', fontWeight: 700 }}>
+                          <td style={{ color: item.strike >= 3 ? '#ef4444' : 'var(--text-warning)', fontWeight: 700 }}>
                             Strike {item.strike}/3
                           </td>
                           <td style={{ color: 'var(--text-dim)' }}>{item.timestamp}</td>
@@ -1768,7 +1856,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                     </tbody>
                   </table>
                 ) : (
-                  <div style={{ fontSize: '0.8rem', color: '#4ade80', marginTop: '0.4rem', padding: '0.5rem', background: 'rgba(34, 197, 94, 0.08)', borderRadius: 'var(--radius-sm)' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-success)', marginTop: '0.4rem', padding: '0.5rem', background: 'rgba(34, 197, 94, 0.08)', borderRadius: 'var(--radius-sm)' }}>
                     ✓ Flawless focus. No lookaway infractions or tab switches recorded.
                   </div>
                 )}

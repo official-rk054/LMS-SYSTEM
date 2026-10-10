@@ -18,6 +18,7 @@ import { Leaderboard } from './components/Leaderboard';
 import { AdminPanel } from './components/AdminPanel';
 import { ExtraFeaturesSuite } from './components/ExtraFeaturesSuite';
 import { JobBoard } from './components/JobBoard';
+import { GeminiSettingsModal } from './components/GeminiSettingsModal';
 import {
   getActiveUserSession,
   logoutUserSession,
@@ -31,10 +32,11 @@ export function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [theme, setTheme] = useState('dark');
-  const [lang, setLang] = useState('en');
+  const lang = 'en';
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [resumeDataForAudit, setResumeDataForAudit] = useState(null);
   const [selectedProblemIdForArena, setSelectedProblemIdForArena] = useState(null);
+  const [isGeminiModalOpen, setIsGeminiModalOpen] = useState(false);
 
   // Initialize DB and load session on mount
   useEffect(() => {
@@ -143,7 +145,6 @@ export function App() {
         userProfile={currentUser}
         onLogout={handleLogout}
         lang={lang}
-        setLang={setLang}
         isMobileOpen={isMobileOpen}
         setIsMobileOpen={setIsMobileOpen}
       />
@@ -157,6 +158,7 @@ export function App() {
           setTheme={setTheme}
           lang={lang}
           onToggleMobile={() => setIsMobileOpen(!isMobileOpen)}
+          onOpenGeminiSettings={() => setIsGeminiModalOpen(true)}
         />
 
         <main className="content-body">
@@ -185,7 +187,7 @@ export function App() {
                 />
               )}
 
-              {activeTab === 'mock_interview' && (
+              {activeTab === 'mock_interviewer' && (
                 <MockInterviewer
                   userProfile={currentUser}
                 />
@@ -253,13 +255,13 @@ export function App() {
                 />
               )}
 
-              {activeTab === 'trainer_roster' && (
-                <AdminPanel
-                  userRole="trainer"
+              {activeTab === 'trainer_leaderboard' && (
+                <Leaderboard
+                  userProfile={currentUser}
                 />
               )}
 
-              {(activeTab === 'trainer_curriculum' || activeTab === 'learning_modules' || activeTab === 'learning_model' || activeTab === 'learning') && (
+              {(activeTab === 'learning_modules' || activeTab === 'learning_model' || activeTab === 'learning') && (
                 <LearningModules
                   userProfile={currentUser}
                   onNavigateToArena={handleNavigateToArena}
@@ -267,35 +269,17 @@ export function App() {
                   setActiveTab={setActiveTab}
                 />
               )}
-
-              {activeTab === 'trainer_leaderboard' && (
-                <Leaderboard
-                  userProfile={currentUser}
-                />
-              )}
             </>
           )}
 
-          {/* ==================== 3. PLACEMENT OFFICER / ADMIN AREA ==================== */}
-          {currentUser.role === 'admin' && (
+          {/* ==================== 3. TPO / CAMPUS ADMIN AREA ==================== */}
+          {currentUser.role === 'tpo' && (
             <>
               {activeTab === 'tpo_dashboard' && (
                 <TpoDashboard
                   userProfile={currentUser}
                   setActiveTab={setActiveTab}
                   onExportReport={handleExportPlacementReport}
-                />
-              )}
-
-              {activeTab === 'tpo_shortlist' && (
-                <AdminPanel
-                  userRole="admin"
-                />
-              )}
-
-              {activeTab === 'tpo_drives' && (
-                <JobBoard
-                  onApplyDrive={() => {}}
                 />
               )}
 
@@ -323,6 +307,12 @@ export function App() {
           )}
         </main>
       </div>
+
+      {/* Global Gemini Settings Modal */}
+      <GeminiSettingsModal
+        isOpen={isGeminiModalOpen}
+        onClose={() => setIsGeminiModalOpen(false)}
+      />
     </div>
   );
 }

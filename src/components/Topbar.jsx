@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Menu,
   Flame,
@@ -15,6 +15,7 @@ import {
   Building
 } from 'lucide-react';
 import { TRANSLATIONS } from '../data/translations';
+import { orchestrator } from '../services/gemini';
 
 export const Topbar = ({
   userProfile,
@@ -22,8 +23,17 @@ export const Topbar = ({
   theme,
   setTheme,
   lang,
-  onToggleMobile
+  onToggleMobile,
+  onOpenGeminiSettings,
 }) => {
+  const [hasGeminiKey, setHasGeminiKey] = useState(() => orchestrator.getStatus().hasKey);
+
+  useEffect(() => {
+    return orchestrator.subscribe(status => {
+      setHasGeminiKey(status.hasKey);
+    });
+  }, []);
+
   const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
   const isLight = theme === 'light';
 
@@ -72,7 +82,7 @@ export const Topbar = ({
                 border: isLight ? '1px solid #fde68a' : '1px solid rgba(245, 158, 11, 0.3)',
                 padding: '0.35rem 0.75rem',
                 borderRadius: 'var(--radius-full)',
-                color: isLight ? '#b45309' : '#fbbf24',
+                color: isLight ? '#b45309' : 'var(--text-warning)',
                 fontSize: '0.82rem',
                 fontWeight: 700,
               }}
@@ -134,7 +144,7 @@ export const Topbar = ({
               border: isLight ? '1px solid #fde68a' : '1px solid rgba(245, 158, 11, 0.35)',
               padding: '0.35rem 0.85rem',
               borderRadius: 'var(--radius-full)',
-              color: isLight ? '#b45309' : '#fbbf24',
+              color: isLight ? '#b45309' : 'var(--text-warning)',
               fontSize: '0.82rem',
               fontWeight: 700,
             }}
@@ -143,6 +153,42 @@ export const Topbar = ({
             <span>Placement Rate: 71.4% (1,320 Placed)</span>
           </div>
         )}
+
+        {/* Gemini AI Status & Settings Button */}
+        <button
+          onClick={onOpenGeminiSettings}
+          className="btn btn-sm"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            fontSize: '0.74rem',
+            fontWeight: 700,
+            padding: '0.3rem 0.75rem',
+            borderRadius: 'var(--radius-full)',
+            background: hasGeminiKey
+              ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.18) 0%, rgba(168, 85, 247, 0.18) 100%)'
+              : (isLight ? '#f1f5f9' : 'rgba(255, 255, 255, 0.06)'),
+            border: hasGeminiKey
+              ? '1px solid rgba(168, 85, 247, 0.45)'
+              : (isLight ? '1px solid #cbd5e1' : '1px solid var(--border-subtle)'),
+            color: hasGeminiKey ? '#c084fc' : (isLight ? '#475569' : 'var(--text-muted)'),
+            cursor: 'pointer',
+          }}
+          title="Google Gemini AI Engine: Configure API key and test connection"
+        >
+          <Sparkles size={13} color={hasGeminiKey ? '#c084fc' : (isLight ? '#64748b' : '#a1a1aa')} />
+          <span>{hasGeminiKey ? 'Gemini 2.5 Active' : 'Gemini AI'}</span>
+          <span
+            style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              backgroundColor: hasGeminiKey ? '#34d399' : '#f59e0b',
+              display: 'inline-block',
+            }}
+          />
+        </button>
 
         {/* Anti-Cheating / Proctoring Status */}
         <div
@@ -180,7 +226,7 @@ export const Topbar = ({
             onClick={onLogout}
             className="btn btn-ghost btn-sm"
             title="Sign out of current account"
-            style={{ color: isLight ? '#ef4444' : '#f87171', padding: '0.4rem' }}
+            style={{ color: isLight ? '#ef4444' : 'var(--text-danger)', padding: '0.4rem' }}
           >
             <LogOut size={18} />
           </button>

@@ -83,7 +83,7 @@ export const JobBoard = ({ userProfile, onApplyDrive }) => {
             justifyContent: 'space-between',
             alignItems: 'center',
             fontSize: '0.85rem',
-            color: actionNotice.type === 'success' ? '#4ade80' : '#f87171',
+            color: actionNotice.type === 'success' ? 'var(--text-success)' : 'var(--text-danger)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -223,7 +223,7 @@ export const JobBoard = ({ userProfile, onApplyDrive }) => {
                       date: drive.date,
                     })}
                     className="btn btn-outline btn-sm"
-                    style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem', color: '#4ade80' }}
+                    style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem', color: 'var(--text-success)' }}
                   >
                     <CheckCircle size={14} color="#10b981" /> View Application
                   </button>
@@ -321,7 +321,7 @@ export const JobBoard = ({ userProfile, onApplyDrive }) => {
             </div>
 
             <div style={{ padding: '0.75rem', background: 'rgba(34, 197, 94, 0.05)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(34, 197, 94, 0.2)', marginBottom: '1.25rem' }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#4ade80', marginBottom: '0.25rem' }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-success)', marginBottom: '0.25rem' }}>
                 ✓ Status: {selectedApplicationModal.stage || 'Registered'}
               </div>
               <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
@@ -344,4 +344,3 @@ export const JobBoard = ({ userProfile, onApplyDrive }) => {
     </div>
   );
 };
-

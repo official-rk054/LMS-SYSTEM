@@ -156,7 +156,7 @@ export const AdminDashboard = ({ userProfile, setActiveTab }) => {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24' }}>
+          <div className="stat-icon" style={{ background: 'rgba(251, 191, 36, 0.15)', color: 'var(--text-warning)' }}>
             <Building size={22} />
           </div>
           <div>

@@ -574,7 +574,7 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
                     <span>🏛️</span>
                     <strong>TPO Admin Portal:</strong> Dr. Meenakshi Ramanathan
                   </span>
-                  <span style={{ color: '#fbbf24', fontSize: '0.72rem' }}>admin@vit.ac.in</span>
+                  <span style={{ color: 'var(--text-warning)', fontSize: '0.72rem' }}>admin@vit.ac.in</span>
                 </button>
               </div>
             </div>
@@ -893,9 +893,9 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
                         fontWeight: 700,
                         color:
                           passwordEvaluation.score <= 1
-                            ? '#f87171'
+                            ? 'var(--text-danger)'
                             : passwordEvaluation.score === 2
-                            ? '#fbbf24'
+                            ? 'var(--text-warning)'
                             : passwordEvaluation.score === 3
                             ? '#60a5fa'
                             : '#34d399',

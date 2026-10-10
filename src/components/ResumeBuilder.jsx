@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Download,
   Sparkles,
@@ -20,38 +20,44 @@ import {
 export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
   const [activeSection, setActiveSection] = useState('personal');
 
-  // Initial resume data with authentic Indian placement context
-  const [resumeData, setResumeData] = useState({
-    personal: {
-      fullName: 'Aarav Sharma',
-      email: 'aarav.sharma22@vitstudent.ac.in',
-      phone: '+91 98765 43210',
-      location: 'Vellore, Tamil Nadu / Bengaluru, India',
-      linkedin: 'linkedin.com/in/aarav-sharma-tech',
-      github: 'github.com/aarav-sharma',
-      portfolio: 'aaravsharma.dev',
-      summary: 'Final year B.Tech Computer Science student with strong foundations in Data Structures, Algorithms, and Full-Stack Engineering. Proven record of developing scalable web applications and solving 350+ LeetCode problems. Looking for an SDE-1 role in a high-growth engineering team.',
-    },
-    education: [
-      {
-        degree: 'B.Tech in Computer Science and Engineering',
-        institution: 'Vellore Institute of Technology (VIT)',
-        year: '2022 - 2026',
-        score: 'CGPA: 8.85 / 10.0',
+  // Initial resume data with authentic Indian placement context and localStorage persistence
+  const [resumeData, setResumeData] = useState(() => {
+    try {
+      const saved = localStorage.getItem('placeiq_resume_builder_data');
+      if (saved) return JSON.parse(saved);
+    } catch (_) {}
+
+    return {
+      personal: {
+        fullName: userProfile?.name || 'Aarav Sharma',
+        email: userProfile?.email || 'aarav.sharma22@vitstudent.ac.in',
+        phone: userProfile?.phone || '+91 98765 43210',
+        location: `${userProfile?.college ? userProfile.college.split('(')[0].trim() : 'Vellore'}, India`,
+        linkedin: `linkedin.com/in/${(userProfile?.name || 'aarav-sharma').toLowerCase().replace(/\s+/g, '-')}`,
+        github: `github.com/${(userProfile?.name || 'aarav-sharma').toLowerCase().replace(/\s+/g, '-')}`,
+        portfolio: `${(userProfile?.name || 'aaravsharma').toLowerCase().replace(/\s+/g, '')}.dev`,
+        summary: 'Final year B.Tech Computer Science student with strong foundations in Data Structures, Algorithms, and Full-Stack Engineering. Proven record of developing scalable web applications and solving 350+ LeetCode problems. Looking for an SDE-1 role in a high-growth engineering team.',
       },
-      {
-        degree: 'Senior Secondary Education (Class XII - CBSE)',
-        institution: 'Delhi Public School (DPS), R.K. Puram',
-        year: '2020 - 2022',
-        score: 'Percentage: 96.2%',
+      education: [
+        {
+          degree: userProfile?.degree || 'B.Tech in Computer Science and Engineering',
+          institution: userProfile?.college || 'Vellore Institute of Technology (VIT)',
+          year: '2022 - 2026',
+          score: userProfile?.cgpa ? `CGPA: ${Number(userProfile.cgpa).toFixed(2)} / 10.0` : 'CGPA: 8.85 / 10.0',
+        },
+        {
+          degree: 'Senior Secondary Education (Class XII - CBSE)',
+          institution: 'Delhi Public School (DPS), R.K. Puram',
+          year: '2020 - 2022',
+          score: 'Percentage: 96.2%',
+        },
+      ],
+      skills: {
+        languages: 'C++, Python, JavaScript (ES6+), TypeScript, SQL, Java',
+        frameworks: 'React.js, Node.js, Express.js, Next.js, Redux Toolkit',
+        developerTools: 'Git, GitHub, Docker, AWS (S3, EC2), Postman, Linux',
+        coreSubjects: 'Data Structures & Algorithms, Operating Systems, DBMS, Computer Networks, Object-Oriented Programming (OOP)',
       },
-    ],
-    skills: {
-      languages: 'C++, Python, JavaScript (ES6+), TypeScript, SQL, Java',
-      frameworks: 'React.js, Node.js, Express.js, Next.js, Redux Toolkit',
-      developerTools: 'Git, GitHub, Docker, AWS (S3, EC2), Postman, Linux',
-      coreSubjects: 'Data Structures & Algorithms, Operating Systems, DBMS, Computer Networks, Object-Oriented Programming (OOP)',
-    },
     experience: [
       {
         title: 'Software Development Engineering Intern',
@@ -86,12 +92,19 @@ export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
         ],
       },
     ],
-    achievements: [
-      'Knight on LeetCode (Rating: 1890+, Solved 350+ DSA problems).',
-      'Finalist (Top 10 out of 4,000+ teams) in Smart India Hackathon (SIH 2025).',
-      'Winner of VIT CodeSprint 2024 organized by Computer Society of India.',
-    ],
+      achievements: [
+        'Knight on LeetCode (Rating: 1890+, Solved 350+ DSA problems).',
+        'Finalist (Top 10 out of 4,000+ teams) in Smart India Hackathon (SIH 2025).',
+        'Winner of VIT CodeSprint 2024 organized by Computer Society of India.',
+      ],
+    };
   });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('placeiq_resume_builder_data', JSON.stringify(resumeData));
+    } catch (_) {}
+  }, [resumeData]);
 
   const handlePersonalChange = (field, value) => {
     setResumeData(prev => ({
@@ -146,7 +159,12 @@ export const ResumeBuilder = ({ userProfile, onSendToAnalyzer }) => {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <button
-              onClick={() => onSendToAnalyzer(resumeData)}
+              onClick={() => {
+                try {
+                  localStorage.setItem('placeiq_resume_builder_data', JSON.stringify(resumeData));
+                } catch (_) {}
+                onSendToAnalyzer(resumeData);
+              }}
               className="btn btn-outline"
               title="Audit this resume in AI Resume Analyzer"
             >

@@ -193,7 +193,7 @@ export const MentorDashboard = ({ userProfile, setActiveTab }) => {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24' }}>
+          <div className="stat-icon" style={{ background: 'rgba(251, 191, 36, 0.15)', color: 'var(--text-warning)' }}>
             <HelpCircle size={22} />
           </div>
           <div>

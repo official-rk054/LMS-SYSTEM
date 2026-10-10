@@ -4,6 +4,7 @@ import authRoutes from './routes/authRoutes.js';
 import studentRoutes from './routes/studentRoutes.js';
 import mentorRoutes from './routes/mentorRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import geminiRoutes from './routes/geminiRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -17,6 +18,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/mentor', mentorRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/gemini', geminiRoutes);
 
 // Health Check Endpoint
 app.get('/api/health', (req, res) => {
