@@ -584,13 +584,8 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                 <strong style={{ color: 'var(--text-main)', fontWeight: 700 }}>{uploadedResume.parsedName}</strong>
               </div>
               <div>
-<<<<<<< HEAD
-                <span style={{ color: 'var(--text-dim)', display: 'block', fontSize: '0.68rem' }}>College</span>
-                <strong style={{ color: 'var(--text-bright)' }}>{uploadedResume.parsedCollege || userProfile?.college || 'Institutional Profile'}</strong>
-=======
                 <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>College</span>
-                <strong style={{ color: 'var(--text-main)', fontWeight: 700 }}>VIT Vellore</strong>
->>>>>>> 51241a4 (style(resume-analyzer): replace dark background containers with light glassmorphism variables for clean contrast)
+                <strong style={{ color: 'var(--text-main)', fontWeight: 700 }}>{uploadedResume.parsedCollege || 'VIT Vellore'}</strong>
               </div>
               <div>
                 <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>CGPA</span>
@@ -769,9 +764,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
           4. WORKSPACE TAB CONTENTS (COMPACT & PRECISE)
           ═════════════════════════════════════════════════════════════ */}
 
-<<<<<<< HEAD
-
-      {/* TAB 2: KEYWORDS */}
+      {/* TAB 1: KEYWORDS */}
       {activeWorkspaceTab === 'keywords' && (
         <div className="card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
           {/* Target Header with Collapsible JD Input */}
@@ -813,7 +806,6 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
             <div className="card" style={{ padding: '0.85rem', textAlign: 'center' }}>
               <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#10b981' }}>{analysisResult.recruiterScreenScore}%</div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Factor 5: Recruiter Telemetry</div>
->>>>>>> 51241a4 (style(resume-analyzer): replace dark background containers with light glassmorphism variables for clean contrast)
             </div>
 
             <button
