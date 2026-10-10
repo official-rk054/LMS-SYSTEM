@@ -318,7 +318,7 @@ export const CodingArena = ({ userProfile, onProblemSolved, initialProblemId }) 
               className="badge"
               style={{
                 background: selectedProblem.difficulty === 'Easy' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                color: selectedProblem.difficulty === 'Easy' ? '#34d399' : '#fbbf24',
+                color: selectedProblem.difficulty === 'Easy' ? '#34d399' : 'var(--text-warning)',
               }}
             >
               {selectedProblem.difficulty}
@@ -355,7 +355,7 @@ export const CodingArena = ({ userProfile, onProblemSolved, initialProblemId }) 
         {/* Left: Problem Description & Company Tags */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '720px', overflowY: 'auto' }}>
           <div style={{ marginBottom: '1rem' }}>
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '0.4rem', color: 'var(--text-white)' }}>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '0.4rem', color: 'var(--text-bright)' }}>
               {selectedProblem.title}
             </h3>
             <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
@@ -521,7 +521,7 @@ export const CodingArena = ({ userProfile, onProblemSolved, initialProblemId }) 
                                 Output: {r.actual} <span style={{ color: 'var(--text-dim)' }}>({r.runtimeMs}ms)</span>
                               </span>
                             ) : (
-                              <span style={{ color: '#f87171' }}>
+                              <span style={{ color: 'var(--text-danger)' }}>
                                 Expected: {r.expected} | Actual: {r.actual} <span style={{ color: 'var(--text-dim)' }}>({r.runtimeMs}ms)</span>
                               </span>
                             )}

@@ -72,7 +72,7 @@ export const Topbar = ({
                 border: isLight ? '1px solid #fde68a' : '1px solid rgba(245, 158, 11, 0.3)',
                 padding: '0.35rem 0.75rem',
                 borderRadius: 'var(--radius-full)',
-                color: isLight ? '#b45309' : '#fbbf24',
+                color: isLight ? '#b45309' : 'var(--text-warning)',
                 fontSize: '0.82rem',
                 fontWeight: 700,
               }}
@@ -134,7 +134,7 @@ export const Topbar = ({
               border: isLight ? '1px solid #fde68a' : '1px solid rgba(245, 158, 11, 0.35)',
               padding: '0.35rem 0.85rem',
               borderRadius: 'var(--radius-full)',
-              color: isLight ? '#b45309' : '#fbbf24',
+              color: isLight ? '#b45309' : 'var(--text-warning)',
               fontSize: '0.82rem',
               fontWeight: 700,
             }}
@@ -180,7 +180,7 @@ export const Topbar = ({
             onClick={onLogout}
             className="btn btn-ghost btn-sm"
             title="Sign out of current account"
-            style={{ color: isLight ? '#ef4444' : '#f87171', padding: '0.4rem' }}
+            style={{ color: isLight ? '#ef4444' : 'var(--text-danger)', padding: '0.4rem' }}
           >
             <LogOut size={18} />
           </button>

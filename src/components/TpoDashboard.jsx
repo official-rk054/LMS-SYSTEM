@@ -38,7 +38,7 @@ export const TpoDashboard = ({ userProfile, setActiveTab, onExportReport }) => {
             </h1>
             <p style={{ fontSize: '0.92rem', maxWidth: '680px' }}>
               {userProfile.designation}. Managing campus placement operations, corporate relations, and candidate shortlists for the{' '}
-              <strong style={{ color: '#fbbf24' }}>2026 Graduating Batch</strong>.
+              <strong style={{ color: 'var(--text-warning)' }}>2026 Graduating Batch</strong>.
             </p>
           </div>
 

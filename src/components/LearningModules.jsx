@@ -301,7 +301,7 @@ export const LearningModules = ({
                     {mod.progressPercent}% Done
                   </span>
                 </div>
-                <h4 style={{ fontSize: '0.92rem', color: 'var(--text-white)', marginBottom: '0.35rem', lineHeight: 1.3 }}>
+                <h4 style={{ fontSize: '0.92rem', color: 'var(--text-bright)', marginBottom: '0.35rem', lineHeight: 1.3 }}>
                   {mod.title}
                 </h4>
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -323,7 +323,7 @@ export const LearningModules = ({
         <div className="card" style={{ padding: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem' }}>
             <div>
-              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, margin: 0, color: 'var(--text-white)' }}>
+              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, margin: 0, color: 'var(--text-bright)' }}>
                 Curriculum Playlist
               </h3>
               <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)', margin: 0 }}>
@@ -403,7 +403,7 @@ export const LearningModules = ({
                         style={{
                           fontSize: '0.84rem',
                           fontWeight: isCurrent ? 700 : 500,
-                          color: isCurrent ? 'var(--text-white)' : 'var(--text-main)',
+                          color: isCurrent ? 'var(--text-bright)' : 'var(--text-main)',
                           lineHeight: 1.25,
                         }}
                       >
@@ -435,7 +435,7 @@ export const LearningModules = ({
                   {activeTopic.video?.channel || selectedModule.instructor}
                 </span>
               </div>
-              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-white)', margin: 0 }}>
+              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-bright)', margin: 0 }}>
                 {activeTopic.title}
               </h3>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0.25rem 0 0 0' }}>
@@ -544,7 +544,7 @@ export const LearningModules = ({
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <div>
-                    <h4 style={{ fontSize: '0.95rem', color: 'var(--text-white)', margin: 0 }}>
+                    <h4 style={{ fontSize: '0.95rem', color: 'var(--text-bright)', margin: 0 }}>
                       {activeTopic.video?.title}
                     </h4>
                     <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
@@ -597,7 +597,7 @@ export const LearningModules = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <div>
-                  <h4 style={{ fontSize: '0.95rem', color: 'var(--text-white)', margin: 0 }}>
+                  <h4 style={{ fontSize: '0.95rem', color: 'var(--text-bright)', margin: 0 }}>
                     High-Frequency Interview Problems for "{activeTopic.title}"
                   </h4>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', margin: 0 }}>
@@ -655,14 +655,14 @@ export const LearningModules = ({
                                   prob.difficulty === 'Easy'
                                     ? '#34d399'
                                     : prob.difficulty === 'Medium'
-                                    ? '#fbbf24'
+                                    ? 'var(--text-warning)'
                                     : '#f43f5e',
                                 fontSize: '0.7rem',
                               }}
                             >
                               {prob.difficulty}
                             </span>
-                            <h4 style={{ fontSize: '0.95rem', color: 'var(--text-white)', margin: 0 }}>
+                            <h4 style={{ fontSize: '0.95rem', color: 'var(--text-bright)', margin: 0 }}>
                               {prob.title}
                             </h4>
                           </div>
@@ -795,7 +795,7 @@ export const LearningModules = ({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div style={{ padding: '0.85rem 1rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-white)' }}>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-bright)' }}>
                       DSA 75 High-Frequency Patterns.pdf
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
@@ -809,7 +809,7 @@ export const LearningModules = ({
 
                 <div style={{ padding: '0.85rem 1rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-white)' }}>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-bright)' }}>
                       TCS NQT & Infosys Speed Math Hacks.pdf
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
@@ -823,7 +823,7 @@ export const LearningModules = ({
 
                 <div style={{ padding: '0.85rem 1rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-white)' }}>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-bright)' }}>
                       Core CS (OS/DBMS/CN) 100 Interview Q&A.pdf
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
@@ -992,7 +992,7 @@ export const LearningModules = ({
                   <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>110</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.68rem', color: '#fbbf24' }}>Medium Solved</div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-warning)' }}>Medium Solved</div>
                   <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>118</div>
                 </div>
                 <div>

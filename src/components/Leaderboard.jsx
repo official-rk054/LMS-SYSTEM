@@ -36,7 +36,7 @@ export const Leaderboard = ({ userProfile }) => {
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-            <div style={{ padding: '0.5rem 1rem', background: 'rgba(245, 158, 11, 0.12)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#fbbf24', fontWeight: 700 }}>
+            <div style={{ padding: '0.5rem 1rem', background: 'rgba(245, 158, 11, 0.12)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(245, 158, 11, 0.3)', color: 'var(--text-warning)', fontWeight: 700 }}>
               Your Rank: #4 of 420
             </div>
             <div style={{ padding: '0.5rem 1rem', background: 'rgba(168, 85, 247, 0.12)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(168, 85, 247, 0.3)', color: '#c084fc', fontWeight: 700 }}>
@@ -190,7 +190,7 @@ export const Leaderboard = ({ userProfile }) => {
                 >
                   <BIcon size={22} />
                 </div>
-                <h4 style={{ fontSize: '0.9rem', color: 'var(--text-white)', marginBottom: '0.25rem' }}>
+                <h4 style={{ fontSize: '0.9rem', color: 'var(--text-bright)', marginBottom: '0.25rem' }}>
                   {b.title}
                 </h4>
                 <p style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>

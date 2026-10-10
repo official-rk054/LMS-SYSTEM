@@ -504,10 +504,10 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
                 </span>
                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                   <button onClick={() => toggleCamera()} className="btn btn-ghost btn-sm" style={{ padding: '2px', color: '#ffffff' }} title="Toggle Video">
-                    {isCameraActive ? <Video size={12} color="#22c55e" /> : <VideoOff size={12} color="#f87171" />}
+                    {isCameraActive ? <Video size={12} color="#22c55e" /> : <VideoOff size={12} color="var(--text-danger)" />}
                   </button>
                   <button onClick={() => toggleMic()} className="btn btn-ghost btn-sm" style={{ padding: '2px', color: '#ffffff' }} title="Toggle Microphone">
-                    {isMicActive ? <Mic size={12} color="#22c55e" /> : <MicOff size={12} color="#f87171" />}
+                    {isMicActive ? <Mic size={12} color="#22c55e" /> : <MicOff size={12} color="var(--text-danger)" />}
                   </button>
                 </div>
               </div>
@@ -619,7 +619,7 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
                   setActiveTtsInfo(null);
                 }}
                 className="btn btn-ghost btn-sm"
-                style={{ color: '#f87171', padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
+                style={{ color: 'var(--text-danger)', padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
               >
                 <VolumeX size={14} /> Stop Audio
               </button>
@@ -631,7 +631,7 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
             <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '560px', padding: '1.25rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
                 <div>
-                  <h3 style={{ fontSize: '1rem', color: 'var(--text-white)' }}>
+                  <h3 style={{ fontSize: '1rem', color: 'var(--text-bright)' }}>
                     Topic: {selectedGdTopic.topic}
                   </h3>
                   <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
@@ -715,21 +715,21 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
 
                     <div style={{ padding: '0.45rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.64rem', color: '#a1a1aa' }}>Pace (WPM)</div>
-                      <div style={{ fontSize: '0.92rem', fontWeight: 700, color: liveSpeechMetrics.wpmStatus === 'optimal' ? '#4ade80' : liveSpeechMetrics.wpmStatus === 'fast' ? '#f87171' : '#facc15' }}>
+                      <div style={{ fontSize: '0.92rem', fontWeight: 700, color: liveSpeechMetrics.wpmStatus === 'optimal' ? 'var(--text-success)' : liveSpeechMetrics.wpmStatus === 'fast' ? 'var(--text-danger)' : '#facc15' }}>
                         {liveSpeechMetrics.wpm} WPM
                       </div>
                     </div>
 
                     <div style={{ padding: '0.45rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.64rem', color: '#a1a1aa' }}>Filler Words</div>
-                      <div style={{ fontSize: '0.92rem', fontWeight: 700, color: liveSpeechMetrics.fillerCount === 0 ? '#4ade80' : '#facc15' }}>
+                      <div style={{ fontSize: '0.92rem', fontWeight: 700, color: liveSpeechMetrics.fillerCount === 0 ? 'var(--text-success)' : '#facc15' }}>
                         {liveSpeechMetrics.fillerCount} detected
                       </div>
                     </div>
 
                     <div style={{ padding: '0.45rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.64rem', color: '#a1a1aa' }}>Confidence</div>
-                      <div style={{ fontSize: '0.92rem', fontWeight: 700, color: liveSpeechMetrics.confidenceScore >= 80 ? '#4ade80' : '#eab308' }}>
+                      <div style={{ fontSize: '0.92rem', fontWeight: 700, color: liveSpeechMetrics.confidenceScore >= 80 ? 'var(--text-success)' : '#eab308' }}>
                         {liveSpeechMetrics.confidenceScore}%
                       </div>
                     </div>
@@ -795,11 +795,11 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Entry Timing</div>
                       </div>
                       <div style={{ textAlign: 'center', padding: '0.6rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-sm)' }}>
-                        <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-white)' }}>{gdEvaluation.argumentDepthScore}</div>
+                        <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-bright)' }}>{gdEvaluation.argumentDepthScore}</div>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Argument Depth</div>
                       </div>
                       <div style={{ textAlign: 'center', padding: '0.6rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-sm)' }}>
-                        <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-white)' }}>{gdEvaluation.collaborationScore}</div>
+                        <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-bright)' }}>{gdEvaluation.collaborationScore}</div>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Collaboration</div>
                       </div>
                     </div>
@@ -809,7 +809,7 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
                     </div>
 
                     <div>
-                      <h5 style={{ fontSize: '0.8rem', color: 'var(--text-white)', marginBottom: '0.4rem' }}>Key Observations:</h5>
+                      <h5 style={{ fontSize: '0.8rem', color: 'var(--text-bright)', marginBottom: '0.4rem' }}>Key Observations:</h5>
                       <ul style={{ paddingLeft: '1.2rem', fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                         {gdEvaluation.feedbackPoints.map((pt, i) => (
                           <li key={i}>{pt}</li>
@@ -863,8 +863,8 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
             {/* Live Audio Visualizer when recording */}
             {isFluencyRecording && (
               <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'rgba(9, 9, 11, 0.85)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '0.75rem', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}>
-                  <span className="pulse-dot" style={{ background: '#4ade80' }}></span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-success)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}>
+                  <span className="pulse-dot" style={{ background: 'var(--text-success)' }}></span>
                   Recording • Speak naturally, then stop when finished
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -884,19 +884,19 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
                   </div>
                   <div style={{ padding: '0.4rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
                     <div style={{ fontSize: '0.62rem', color: '#a1a1aa' }}>Pace</div>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: liveFluencyMetrics.wpmStatus === 'optimal' ? '#4ade80' : '#facc15' }}>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: liveFluencyMetrics.wpmStatus === 'optimal' ? 'var(--text-success)' : '#facc15' }}>
                       {liveFluencyMetrics.wpm} WPM
                     </div>
                   </div>
                   <div style={{ padding: '0.4rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
                     <div style={{ fontSize: '0.62rem', color: '#a1a1aa' }}>Fillers</div>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: liveFluencyMetrics.fillerCount === 0 ? '#4ade80' : '#f87171' }}>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: liveFluencyMetrics.fillerCount === 0 ? 'var(--text-success)' : 'var(--text-danger)' }}>
                       {liveFluencyMetrics.fillerCount}
                     </div>
                   </div>
                   <div style={{ padding: '0.4rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
                     <div style={{ fontSize: '0.62rem', color: '#a1a1aa' }}>Confidence</div>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#4ade80' }}>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-success)' }}>
                       {liveFluencyMetrics.confidenceScore}%
                     </div>
                   </div>
@@ -972,7 +972,7 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
                 </div>
 
                 <div style={{ padding: '0.75rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-sm)' }}>
-                  <h5 style={{ fontSize: '0.82rem', marginBottom: '0.4rem', color: 'var(--text-white)' }}>
+                  <h5 style={{ fontSize: '0.82rem', marginBottom: '0.4rem', color: 'var(--text-bright)' }}>
                     Actionable Polish Suggestions:
                   </h5>
                   <ul style={{ paddingLeft: '1.2rem', fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
@@ -1120,7 +1120,7 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
             <span className="badge badge-warning" style={{ marginBottom: '1rem' }}>
               {APTITUDE_FLASHCARDS[currentCardIdx].topic} • Click to Flip
             </span>
-            <h3 style={{ fontSize: '1.3rem', color: 'var(--text-white)', marginBottom: '0.75rem' }}>
+            <h3 style={{ fontSize: '1.3rem', color: 'var(--text-bright)', marginBottom: '0.75rem' }}>
               {isFlipped ? '💡 Formula & Shortcut Trick' : APTITUDE_FLASHCARDS[currentCardIdx].front}
             </h3>
             <div style={{ fontSize: '0.9rem', color: isFlipped ? '#fafafa' : 'var(--text-muted)', whiteSpace: 'pre-line', lineHeight: '1.6' }}>
@@ -1169,19 +1169,19 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
             <div style={{ padding: '1rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-              <div style={{ fontWeight: 700, color: 'var(--text-white)', marginBottom: '0.35rem' }}>Week 1: Aptitude & Speed Math</div>
+              <div style={{ fontWeight: 700, color: 'var(--text-bright)', marginBottom: '0.35rem' }}>Week 1: Aptitude & Speed Math</div>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Master Time & Work, Percentages, and Syllogisms. Complete 2 timed sectional mocks daily.</p>
             </div>
             <div style={{ padding: '1rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-              <div style={{ fontWeight: 700, color: 'var(--text-white)', marginBottom: '0.35rem' }}>Week 2: High-Yield DSA (Trees & DP)</div>
+              <div style={{ fontWeight: 700, color: 'var(--text-bright)', marginBottom: '0.35rem' }}>Week 2: High-Yield DSA (Trees & DP)</div>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Solve 20 high-frequency dynamic programming and graph problems. Focus on space-optimized state transitions.</p>
             </div>
             <div style={{ padding: '1rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-              <div style={{ fontWeight: 700, color: 'var(--text-white)', marginBottom: '0.35rem' }}>Week 3: Core CS & Low-Level Design</div>
+              <div style={{ fontWeight: 700, color: 'var(--text-bright)', marginBottom: '0.35rem' }}>Week 3: Core CS & Low-Level Design</div>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Deep dive into OS Paging, Deadlocks, SQL Indexing, and OOP design patterns (Factory, Singleton, Observer).</p>
             </div>
             <div style={{ padding: '1rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-              <div style={{ fontWeight: 700, color: 'var(--text-white)', marginBottom: '0.35rem' }}>Week 4: Mock Drives & Leadership Principles</div>
+              <div style={{ fontWeight: 700, color: 'var(--text-bright)', marginBottom: '0.35rem' }}>Week 4: Mock Drives & Leadership Principles</div>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Conduct 3 AI voice mock interviews, refine resume impact bullets, and rehearse STAR method anecdotes.</p>
             </div>
           </div>
@@ -1211,7 +1211,7 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
                     <div style={{ fontSize: '1.8rem' }}>{m.avatar}</div>
                     <span className="badge badge-success">{m.status}</span>
                   </div>
-                  <h4 style={{ fontSize: '1rem', color: 'var(--text-white)', margin: 0 }}>{m.name}</h4>
+                  <h4 style={{ fontSize: '1rem', color: 'var(--text-bright)', margin: 0 }}>{m.name}</h4>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>{m.role} • {m.company}</div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '0.2rem' }}>{m.collegeBatch} • CTC: {m.packageCTC}</div>
                 </div>
@@ -1275,7 +1275,7 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
                     <div style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}>{activeMentorCall.avatar}</div>
                     <div style={{ fontWeight: 700, color: '#ffffff', fontSize: '0.95rem' }}>{activeMentorCall.name}</div>
                     <div style={{ fontSize: '0.76rem', color: '#93c5fd', fontWeight: 600 }}>{activeMentorCall.company}</div>
-                    <div style={{ position: 'absolute', bottom: 8, left: 8, fontSize: '0.7rem', background: 'rgba(0,0,0,0.75)', padding: '2px 8px', borderRadius: '4px', color: '#4ade80', fontWeight: 600, border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    <div style={{ position: 'absolute', bottom: 8, left: 8, fontSize: '0.7rem', background: 'rgba(0,0,0,0.75)', padding: '2px 8px', borderRadius: '4px', color: 'var(--text-success)', fontWeight: 600, border: '1px solid rgba(255, 255, 255, 0.1)' }}>
                       🟢 Audio Connected
                     </div>
                   </div>
@@ -1299,7 +1299,7 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
                         </button>
                       </div>
                     )}
-                    <div style={{ position: 'absolute', bottom: 8, left: 8, fontSize: '0.7rem', background: 'rgba(0,0,0,0.75)', padding: '2px 8px', borderRadius: '4px', color: isSpeaking ? '#4ade80' : '#e4e4e7', border: '1px solid rgba(255, 255, 255, 0.1)', fontWeight: 600 }}>
+                    <div style={{ position: 'absolute', bottom: 8, left: 8, fontSize: '0.7rem', background: 'rgba(0,0,0,0.75)', padding: '2px 8px', borderRadius: '4px', color: isSpeaking ? 'var(--text-success)' : '#e4e4e7', border: '1px solid rgba(255, 255, 255, 0.1)', fontWeight: 600 }}>
                       You ({userProfile.name}) {isSpeaking ? '• 🎙️ Speaking' : ''}
                     </div>
                   </div>
@@ -1315,7 +1315,7 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
                     {isMicActive ? <Mic size={14} /> : <MicOff size={14} />}
                     {isMicActive ? 'Mic Unmuted' : 'Mic Muted'}
                   </button>
-                  <button onClick={handleEndAlumniCall} className="btn btn-outline btn-sm" style={{ borderColor: '#ef4444', color: '#f87171' }}>
+                  <button onClick={handleEndAlumniCall} className="btn btn-outline btn-sm" style={{ borderColor: '#ef4444', color: 'var(--text-danger)' }}>
                     <PhoneOff size={14} /> End Session
                   </button>
                 </div>

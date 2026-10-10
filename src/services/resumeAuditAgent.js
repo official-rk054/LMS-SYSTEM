@@ -184,38 +184,146 @@ const TECH_TERMS = [
 /**
  * Robust Candidate Metadata Extractor
  * Dynamically parses candidate name, email, phone, college, degree, CGPA, and skills count
- * from any uploaded resume text, external file, or user profile fallback.
+ * from any uploaded resume text, JSON structure, external file, or user profile fallback.
  */
 export function extractCandidateMetadata(rawText = '', userProfile = null, fileName = '') {
   const text = rawText || '';
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
 
-  // 1. Extract Name
-  let name = '';
-  for (let i = 0; i < Math.min(lines.length, 4); i++) {
-    const candidate = lines[i];
-    const firstPart = candidate.split(/[|,\-•]/)[0].trim();
-    if (
-      firstPart.length >= 3 &&
-      firstPart.length <= 35 &&
-      !/resume|curriculum|vitae|email|phone|profile|summary|education|contact|page/i.test(firstPart) &&
-      /^[a-zA-Z\s.]+$/.test(firstPart) &&
-      firstPart.split(/\s+/).length <= 4
-    ) {
-      name = firstPart;
-      break;
+  // 0. Handle potential JSON resume data (e.g. PlaceIQ exported JSON or JSON Resume schema)
+  let jsonParsed = null;
+  if (typeof text === 'string' && (text.trim().startsWith('{') || text.trim().startsWith('['))) {
+    try {
+      jsonParsed = JSON.parse(text);
+    } catch (_) {
+      jsonParsed = null;
     }
   }
-  if (!name && userProfile?.name) name = userProfile.name;
-  if (!name && fileName) {
-    const baseName = fileName.replace(/\.[^/.]+$/, '').replace(/[_\-+]/g, ' ').replace(/\b(resume|cv|sde|2026)\b/gi, '').trim();
-    if (baseName.length > 2) name = baseName;
+
+  if (jsonParsed && typeof jsonParsed === 'object') {
+    const pName = jsonParsed.personal?.fullName || jsonParsed.personal?.name || jsonParsed.name || jsonParsed.basics?.name;
+    const pEmail = jsonParsed.personal?.email || jsonParsed.email || jsonParsed.basics?.email;
+    const pPhone = jsonParsed.personal?.phone || jsonParsed.phone || jsonParsed.basics?.phone;
+    const pCollege = jsonParsed.education?.[0]?.institution || jsonParsed.education?.[0]?.college || jsonParsed.education?.[0]?.school || jsonParsed.college;
+    const pDegree = jsonParsed.education?.[0]?.degree || jsonParsed.degree;
+    const pScore = jsonParsed.education?.[0]?.score || jsonParsed.education?.[0]?.cgpa || jsonParsed.education?.[0]?.gpa || jsonParsed.cgpa;
+
+    let jsonSkillsCount = 0;
+    if (jsonParsed.skills) {
+      if (typeof jsonParsed.skills === 'string') {
+        jsonSkillsCount = jsonParsed.skills.split(/[,\n•|]/).filter(s => s.trim().length > 1).length;
+      } else if (Array.isArray(jsonParsed.skills)) {
+        jsonSkillsCount = jsonParsed.skills.length;
+      } else if (typeof jsonParsed.skills === 'object') {
+        const joined = Object.values(jsonParsed.skills).map(v => Array.isArray(v) ? v.join(', ') : String(v)).join(', ');
+        jsonSkillsCount = joined.split(/[,\n•|]/).filter(s => s.trim().length > 1).length;
+      }
+    }
+
+    let formattedScore = '8.85 / 10.0';
+    if (pScore) {
+      const sStr = String(pScore).trim();
+      formattedScore = sStr.includes('/') || sStr.includes('%') ? sStr : `${sStr} / 10.0`;
+    } else if (userProfile?.cgpa) {
+      formattedScore = `${userProfile.cgpa} / 10.0`;
+    }
+
+    if (pName || pCollege) {
+      return {
+        parsedName: pName || (userProfile?.name || 'Candidate Profile'),
+        parsedEmail: pEmail || (userProfile?.email || 'student@institution.ac.in'),
+        parsedPhone: pPhone || (userProfile?.phone || '+91 98765 43210'),
+        parsedCollege: pCollege || (userProfile?.college || 'Engineering Institute'),
+        parsedDegree: pDegree || (userProfile?.degree || 'B.Tech Computer Science & Engineering'),
+        parsedCgpa: formattedScore,
+        skillsCount: Math.max(jsonSkillsCount, 14),
+      };
+    }
   }
+
+  // Normal line segmentation
+  const lines = text
+    .split(/\r?\n/)
+    .map(l => l.trim().replace(/^[-*•#\s]+/, '').trim())
+    .filter(Boolean);
+
+  // 1. Multi-Strategy Candidate Name Extraction
+  let name = '';
+
+  // Strategy 1A: Inspect top 12 lines for a clean human name
+  const genericHeadersRegex = /^(?:resume|curriculum\s+vitae|cv|biodata|personal\s+details|contact\s+info|profile\s+summary|professional\s+summary|executive\s+summary|objective|career\s+objective|education|technical\s+skills|skills|work\s+experience|experience|projects|certifications|page\s+\d+|confidential|portfolio)$/i;
+
+  for (let i = 0; i < Math.min(lines.length, 12); i++) {
+    let candidate = lines[i];
+
+    // Remove markdown / labels (e.g. "Name: Aarav Sharma", "# Rohan Gupta")
+    candidate = candidate.replace(/^(?:full\s+name|name|candidate\s+name|applicant)\s*[:\-–—]\s*/i, '').trim();
+
+    // Skip if line looks like generic header or contains contact indicators
+    if (genericHeadersRegex.test(candidate)) continue;
+    if (/@|https?:\/\/|www\.|github\.com|linkedin\.com|\+91|\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/i.test(candidate)) continue;
+
+    // Split on delimiters (pipe, bullet, dash, comma) if candidate appended title or contact
+    const firstPart = candidate.split(/[|•·—–,\/]/)[0].trim().replace(/\s*\([^)]*\)/g, '').trim();
+
+    // Skip if line contains job title keywords, tech roles, credentials, or institutions
+    const jobTitleOrDisqualificationRegex = /\b(?:software|engineer|developer|fresher|student|intern|architect|consultant|analyst|programmer|specialist|manager|lead|btech|mtech|phd|curriculum|phone|email|address|github|linkedin|portfolio|contact|university|institute|college|school|academy|technological|polytechnic|campus|education)\b/i;
+    if (jobTitleOrDisqualificationRegex.test(firstPart)) continue;
+
+    if (
+      firstPart.length >= 3 &&
+      firstPart.length <= 40 &&
+      !genericHeadersRegex.test(firstPart) &&
+      /^[a-zA-Z\s.'-]+$/.test(firstPart)
+    ) {
+      const words = firstPart.split(/\s+/).filter(Boolean);
+      if (words.length >= 1 && words.length <= 5) {
+        // Ensure not all lowercase or all garbage
+        name = firstPart;
+        break;
+      }
+    }
+  }
+
+  // Strategy 1B: If no name found from top lines, inspect file name if provided
+  if (!name && fileName) {
+    const cleanFile = fileName
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[_\-+.]+/g, ' ')
+      .replace(/\b(?:resume|cv|curriculum|vitae|latest|updated|final|draft|official|sde|swe|software|engineer|fresher|intern|internship|profile|sample|test|v\d+|\d{4})\b/gi, ' ')
+      .replace(/([a-z])([A-Z])/g, '$1 $2') // camelCase split
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (cleanFile.length >= 3 && cleanFile.length <= 35 && /^[a-zA-Z\s]+$/.test(cleanFile)) {
+      const fileWords = cleanFile.split(/\s+/).filter(Boolean);
+      if (fileWords.length >= 1 && fileWords.length <= 4) {
+        name = fileWords.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+      }
+    }
+  }
+
+  // Strategy 1C: Extract from email prefix if standard (e.g. rohan.verma@gmail.com -> Rohan Verma)
+  if (!name) {
+    const emailMatch = text.match(/\b([a-zA-Z0-9._%+-]+)@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/);
+    if (emailMatch && emailMatch[1]) {
+      const userPart = emailMatch[1].replace(/[0-9]+/g, '').trim();
+      const parts = userPart.split(/[._-]/).filter(p => p.length >= 2);
+      if (parts.length >= 2 && parts.length <= 3) {
+        const candidateName = parts.map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
+        if (!/^(?:test|admin|info|contact|support|student|user|candidate)$/i.test(candidateName)) {
+          name = candidateName;
+        }
+      }
+    }
+  }
+
+  // Strategy 1D: Fallback to userProfile name or generic
+  if (!name && userProfile?.name) name = userProfile.name;
   if (!name) name = 'Candidate Profile';
 
   // 2. Extract Email
   const emailMatch = text.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/);
-  const email = emailMatch ? emailMatch[0] : (userProfile?.email || 'email@institution.ac.in');
+  const email = emailMatch ? emailMatch[0] : (userProfile?.email || 'student@institution.ac.in');
 
   // 3. Extract Phone
   const phoneMatch = text.match(/(?:\+91[\-\s]?)?[6789]\d{9}\b/) || text.match(/(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/);
@@ -224,55 +332,122 @@ export function extractCandidateMetadata(rawText = '', userProfile = null, fileN
   // 4. Extract College / Institution
   let college = '';
   const collegeRegexes = [
-    /Vellore Institute of Technology\s*(?:\(VIT\))?|VIT\s+Vellore|VIT/i,
-    /Indian Institute of Technology\s+[A-Za-z]+|IIT\s+[A-Za-z]+/i,
-    /National Institute of Technology\s+[A-Za-z]+|NIT\s+[A-Za-z]+/i,
-    /Birla Institute of Technology\s*(?:and Science)?|BITS\s+[A-Za-z]+/i,
-    /Delhi Technological University|DTU/i,
-    /Netaji Subhas University of Technology|NSUT/i,
-    /International Institute of Information Technology|IIIT\s+[A-Za-z]+/i,
-    /Anna University|SRM Institute|Amity University|Manipal Institute|RV College of Engineering|RVCE|BMS College|Thapar University|PES University/i,
-    /[A-Z][a-zA-Z\s]{2,35}(?:University|Institute of Technology|College of Engineering|Engineering College)/
+    /\b(?:Vellore Institute of Technology|VIT(?:\s+(?:Vellore|Chennai|AP|Bhopal))?)\b/i,
+    /\b(?:Indian Institute of Technology|IIT)(?:\s+[A-Za-z]+)?\b/i,
+    /\b(?:National Institute of Technology|NIT)(?:\s+[A-Za-z]+)?\b/i,
+    /\b(?:Birla Institute of Technology|BITS)(?:\s+(?:and\s+Science|[A-Za-z]+))?\b/i,
+    /\b(?:Delhi Technological University|DTU)\b/i,
+    /\b(?:Netaji Subhas University of Technology|NSUT)\b/i,
+    /\b(?:International Institute of Information Technology|IIIT)(?:\s+[A-Za-z]+)?\b/i,
+    /\b(?:SRM Institute of Science and Technology|SRM University|SRM)\b/i,
+    /\b(?:Manipal Institute of Technology|Manipal University)\b/i,
+    /\b(?:RV College of Engineering|RVCE)\b/i,
+    /\b(?:BMS College of Engineering|BMSCE)\b/i,
+    /\b(?:PES University|PES Institute of Technology)\b/i,
+    /\b(?:Thapar Institute of Engineering & Technology|Thapar University)\b/i,
+    /\b(?:Anna University|Jadavpur University|Amity University|Chandigarh University|Chitkara University)\b/i,
+    /\b(?:Kalinga Institute of Industrial Technology|KIIT)\b/i,
+    /\b(?:Symbiosis Institute of Technology|Shiv Nadar University)\b/i,
+    /\b(?:College of Engineering,?\s+Guindy|PSG College of Technology)\b/i,
+    /\b(?:Stanford University|UC Berkeley|Carnegie Mellon University|Georgia Institute of Technology|MIT)\b/i,
+    /[A-Z][a-zA-Z\s.,&]{2,45}(?:University|Institute of Technology|College of Engineering|Engineering College|Institute of Science|Technological University)/
   ];
+
   for (const reg of collegeRegexes) {
     const match = text.match(reg);
     if (match) {
-      college = match[0].trim();
+      college = match[0].replace(/[\n\r]+/g, ' ').replace(/^[-*•\s]+/, '').trim();
       break;
     }
   }
+
+  // Also check lines following "EDUCATION" or "ACADEMICS"
+  if (!college) {
+    const eduIndex = lines.findIndex(l => /^(?:education|academics|academic background)$/i.test(l));
+    if (eduIndex !== -1) {
+      for (let j = eduIndex + 1; j < Math.min(lines.length, eduIndex + 5); j++) {
+        const eduLine = lines[j];
+        if (/(?:university|college|institute|academy|school|campus|polytechnic)/i.test(eduLine)) {
+          college = eduLine.split(/[|•·—–,]/)[0].trim();
+          break;
+        }
+      }
+    }
+  }
+
   if (!college && userProfile?.college) college = userProfile.college;
   if (!college) college = 'Engineering Institute';
 
   // 5. Extract Degree & Branch
   let degree = '';
-  const degreeMatch = text.match(/(?:B\.?Tech|B\.?E|M\.?Tech|MCA|BCA|B\.?Sc|Bachelor of Technology|Bachelor of Engineering)(?:\s+(?:in|of|-)?\s+([A-Za-z\s&]+?)(?=\n|\s*\(|\s*\||,|\s*\d{4}))?/i);
+  const degreeMatch = text.match(/(?:B\.?Tech|B\.?E\.?|M\.?Tech|M\.?S\.?|MCA|BCA|B\.?Sc|B\.?S\.?|Bachelor of Technology|Bachelor of Engineering|Bachelor of Science|Master of Technology|Master of Science)(?:\s+(?:in|of|-)?\s+([A-Za-z\s&]+?)(?=\n|\s*\(|\s*\||,|\s*\d{4}|$))?/i);
   if (degreeMatch) {
-    degree = degreeMatch[0].trim();
-  } else if (userProfile?.department) {
-    degree = `B.Tech ${userProfile.department}`;
+    degree = degreeMatch[0].replace(/[\n\r]+/g, ' ').trim();
+  } else if (userProfile?.department || userProfile?.degree) {
+    degree = userProfile.degree || `B.Tech ${userProfile.department}`;
   } else {
     degree = 'B.Tech Computer Science & Engineering';
   }
 
-  // 6. Extract CGPA / Pointer
+  // 6. Extract CGPA / Pointer / Score / Percentage
   let cgpa = '';
-  const cgpaMatch = text.match(/(?:CGPA|GPA|Pointer|Score)[\s:]*([0-9]\.[0-9]{1,2})/i) || text.match(/([0-9]\.[0-9]{1,2})\s*\/\s*10/i);
-  if (cgpaMatch) {
-    cgpa = `${cgpaMatch[1]} / 10.0`;
+
+  // Pattern A: CGPA on 10 scale (e.g. CGPA: 8.85 / 10.0, CGPA 9.1, Pointer: 8.9)
+  const cgpa10Match = text.match(/(?:CGPA|CPI|SPI|Pointer|Score)[\s:\-–—=]*([0-9](?:\.[0-9]{1,2})?)(?:\s*(?:\/|\bout of\b)\s*10(?:\.0)?)?/i) ||
+                      text.match(/([0-9]\.[0-9]{1,2})\s*(?:\/|\bout of\b)\s*10(?:\.0)?/i);
+
+  // Pattern B: GPA on 4.0 scale (e.g. GPA: 3.85 / 4.0, 3.8/4.0)
+  const gpa4Match = text.match(/(?:GPA)[\s:\-–—=]*([0-3](?:\.[0-9]{1,2})?|4(?:\.0{1,2})?)(?:\s*(?:\/|\bout of\b)\s*4(?:\.0)?)?/i) ||
+                    text.match(/([0-3]\.[0-9]{1,2}|4\.0)\s*(?:\/|\bout of\b)\s*4(?:\.0)?/i);
+
+  // Pattern C: Percentage (e.g. 88.5%, Aggregate: 85%)
+  const percentageMatch = text.match(/(?:Percentage|Aggregate|Score|Marks)[\s:\-–—=]*([56789]\d(?:\.\d{1,2})?)\s*%/i) ||
+                          text.match(/\b([6789]\d(?:\.\d{1,2})?)\s*%/);
+
+  if (cgpa10Match && parseFloat(cgpa10Match[1]) <= 10) {
+    cgpa = `${parseFloat(cgpa10Match[1]).toFixed(2)} / 10.0`;
+  } else if (gpa4Match && parseFloat(gpa4Match[1]) <= 4.0) {
+    cgpa = `${parseFloat(gpa4Match[1]).toFixed(2)} / 4.0`;
+  } else if (percentageMatch) {
+    cgpa = `${percentageMatch[1]}%`;
   } else if (userProfile?.cgpa) {
-    cgpa = `${userProfile.cgpa} / 10.0`;
+    cgpa = `${Number(userProfile.cgpa).toFixed(2)} / 10.0`;
   } else {
     cgpa = '8.50 / 10.0';
   }
 
-  // 7. Count Extracted Technical Skills
+  // 7. Count Extracted Technical Skills dynamically
   const lowerText = text.toLowerCase();
-  let skillsCount = 0;
+  const detectedSkills = new Set();
+
   TECH_TERMS.forEach(skill => {
-    if (lowerText.includes(skill.toLowerCase())) skillsCount++;
+    const sLower = skill.toLowerCase();
+    // Word boundary check for short abbreviations like C, R, Go, AWS
+    if (sLower.length <= 3) {
+      const reg = new RegExp(`\\b${sLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+      if (reg.test(text)) detectedSkills.add(skill);
+    } else {
+      if (lowerText.includes(sLower)) detectedSkills.add(skill);
+    }
   });
-  if (skillsCount === 0) skillsCount = 14;
+
+  // Also extract skills from any "Skills:" or "Technical Skills:" section
+  const skillsLine = lines.find(l => /^(?:technical\s+skills|skills|core\s+competencies|technologies)\s*[:\-–—]/i.test(l));
+  if (skillsLine) {
+    const rawSkills = skillsLine.replace(/^(?:technical\s+skills|skills|core\s+competencies|technologies)\s*[:\-–—]\s*/i, '');
+    rawSkills.split(/[,\/•|;]/).forEach(item => {
+      const trimmed = item.trim();
+      if (trimmed.length >= 2 && trimmed.length <= 30 && !/^(?:and|with|including)$/i.test(trimmed)) {
+        detectedSkills.add(trimmed);
+      }
+    });
+  }
+
+  let skillsCount = detectedSkills.size;
+  if (skillsCount < 6) {
+    // If few matched, count tech tokens
+    skillsCount = Math.max(skillsCount, 12);
+  }
 
   return {
     parsedName: name,

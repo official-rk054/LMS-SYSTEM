@@ -190,7 +190,7 @@ export const Sidebar = ({
             width: '100%',
             justifyContent: 'center',
             gap: '0.5rem',
-            color: '#f87171',
+            color: 'var(--text-danger)',
             borderColor: 'rgba(239, 68, 68, 0.3)',
             fontSize: '0.78rem',
             marginTop: '0.25rem',

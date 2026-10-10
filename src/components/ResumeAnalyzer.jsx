@@ -5,7 +5,6 @@ import {
   AlertTriangle,
   CheckCircle,
   HelpCircle,
-  Sparkles,
   Search,
   Target,
   ArrowRight,
@@ -31,7 +30,8 @@ import {
   CheckCircle2,
   SlidersHorizontal,
   Info,
-  Wand2
+  Wand2,
+  Pencil
 } from 'lucide-react';
 import {
   runResumeAuditAgent,
@@ -112,24 +112,68 @@ Requirements:
   }
 };
 
-const DEFAULT_RESUME_INFO = {
-  fileName: 'Sample_SDE_Resume.txt',
-  fileSize: '194 KB',
-  fileType: 'text/plain',
-  uploadSource: 'demo',
-  lastModified: 'Sample profile — replace with your resume',
-  parsedName: 'Aarav Sharma',
-  parsedCollege: 'Vellore Institute of Technology (VIT)',
-  parsedDegree: 'B.Tech Computer Science & Engineering (2026 Batch)',
-  parsedCgpa: '8.85 / 10.0',
-  skillsCount: 16,
-  rawText: `Aarav Sharma | VIT Vellore | Computer Science
-Email: aarav.sharma22@vitstudent.ac.in | Phone: +91 98765 43210 | LinkedIn: linkedin.com/in/aarav-sharma | GitHub: github.com/aarav-vit
+const buildResumeFromBuilderData = (builderData, userProfile) => {
+  const candidateName = builderData.personal?.fullName || userProfile?.name || 'Candidate';
+  const college = builderData.education?.[0]?.institution || userProfile?.college || 'Engineering College';
+  const degree = builderData.education?.[0]?.degree || userProfile?.degree || 'B.Tech in Computer Science & Engineering';
+  const scoreRaw = builderData.education?.[0]?.score || (builderData.education?.[0]?.cgpa ? `${builderData.education[0].cgpa} / 10.0` : null);
+  const cgpa = scoreRaw ? (scoreRaw.includes('/') || scoreRaw.includes('%') ? scoreRaw : `${scoreRaw} / 10.0`) : (userProfile?.cgpa ? `${Number(userProfile.cgpa).toFixed(2)} / 10.0` : '8.85 / 10.0');
+
+  const text = `${candidateName} | ${college} | ${degree}
+Email: ${builderData.personal?.email || userProfile?.email || 'student@domain.com'} | Phone: ${builderData.personal?.phone || userProfile?.phone || '+91 98765 43210'} | LinkedIn: ${builderData.personal?.linkedin || 'linkedin.com/in/candidate'} | GitHub: ${builderData.personal?.github || 'github.com/candidate'}
+Summary: ${builderData.personal?.summary || 'Engineering student focused on high-scale systems.'}
+Skills: ${typeof builderData.skills === 'object' ? Object.values(builderData.skills).join(', ') : builderData.skills || ''}
+Experience: ${builderData.experience?.map(e => `${e.title} at ${e.company}: ${Array.isArray(e.bullets) ? e.bullets.join(' ') : e.bullets || ''}`).join('\n') || ''}
+Projects: ${builderData.projects?.map(p => `${p.name} (${p.tech}): ${Array.isArray(p.bullets) ? p.bullets.join(' ') : p.bullets || ''}`).join('\n') || ''}`;
+
+  const meta = extractCandidateMetadata(text, userProfile, `${candidateName.replace(/\s+/g, '_')}_Resume.json`);
+
+  return {
+    fileName: `${candidateName.replace(/\s+/g, '_')}_Resume.json`,
+    fileSize: `${Math.max(12, Math.round(text.length / 30))} KB`,
+    fileType: 'application/json',
+    uploadSource: 'builder',
+    lastModified: 'Synced from PlaceIQ Resume Builder',
+    parsedName: candidateName,
+    parsedCollege: college,
+    parsedDegree: degree,
+    parsedCgpa: cgpa,
+    skillsCount: meta.skillsCount,
+    rawText: text
+  };
+};
+
+const buildDefaultResumeInfo = (userProfile) => {
+  const candidateName = userProfile?.name || 'Aarav Sharma';
+  const candidateCollege = userProfile?.college || 'Vellore Institute of Technology (VIT)';
+  const candidateDegree = userProfile?.degree || 'B.Tech Computer Science & Engineering (2026 Batch)';
+  const candidateCgpa = userProfile?.cgpa ? `${Number(userProfile.cgpa).toFixed(2)} / 10.0` : '8.85 / 10.0';
+  const candidateEmail = userProfile?.email || 'aarav.sharma22@vitstudent.ac.in';
+  const candidatePhone = userProfile?.phone || '+91 98765 43210';
+
+  const rawText = `${candidateName} | ${candidateCollege} | Computer Science
+Email: ${candidateEmail} | Phone: ${candidatePhone} | LinkedIn: linkedin.com/in/${candidateName.toLowerCase().replace(/\s+/g, '-')} | GitHub: github.com/${candidateName.toLowerCase().replace(/\s+/g, '-')}
 Summary: Aspiring Software Engineer with strong foundations in Data Structures, Algorithms, Distributed Systems, and Full-Stack Development.
 Skills: C++, Python, JavaScript, React, Node.js, SQL, Docker, AWS S3, Git, DSA, OS, DBMS, Computer Networks, REST APIs, Microservices, Unit Testing.
 Experience: Razorpay - Software Engineering Intern (May 2025 - July 2025). Engineered microservice for merchant webhook retries handling 150k daily events. Reduced payment processing latency by 32%. Built end-to-end integration tests achieving 94% coverage.
 Projects: PlaceIQ LMS - Architected full-stack placement portal with React, Node.js, and Web Speech API used by 400+ students. Mini-Raft KV Store - Distributed fault-tolerant key-value store using C++ sockets and Raft consensus algorithm.
-Achievements: LeetCode Knight (Rating 1890+), Smart India Hackathon (SIH) National Finalist 2024.`
+Achievements: LeetCode Knight (Rating 1890+), Smart India Hackathon (SIH) National Finalist 2024.`;
+
+  const meta = extractCandidateMetadata(rawText, userProfile, 'Sample_SDE_Resume.txt');
+
+  return {
+    fileName: userProfile?.name && userProfile.name !== 'Aarav Sharma' ? `${userProfile.name.replace(/\s+/g, '_')}_Profile_Resume.txt` : 'Sample_SDE_Resume.txt',
+    fileSize: '194 KB',
+    fileType: 'text/plain',
+    uploadSource: userProfile?.name && userProfile.name !== 'Aarav Sharma' ? 'profile' : 'demo',
+    lastModified: userProfile?.name && userProfile.name !== 'Aarav Sharma' ? 'Auto-loaded from active student profile' : 'Sample profile — replace with your resume',
+    parsedName: candidateName,
+    parsedCollege: candidateCollege,
+    parsedDegree: candidateDegree,
+    parsedCgpa: candidateCgpa,
+    skillsCount: meta.skillsCount || 16,
+    rawText
+  };
 };
 
 export const ResumeAnalyzer = ({ userProfile, resumeFromBuilder }) => {
@@ -141,34 +185,25 @@ export const ResumeAnalyzer = ({ userProfile, resumeFromBuilder }) => {
   const [uploadError, setUploadError] = useState('');
   const [copiedRewrite, setCopiedRewrite] = useState(null);
 
-  // File Import State
+  // Candidate Details Editing State
+  const [isEditingMetadata, setIsEditingMetadata] = useState(false);
+  const [editMetadata, setEditMetadata] = useState({ name: '', college: '', cgpa: '', degree: '' });
+
+  // File Import State initialized dynamically
   const [uploadedResume, setUploadedResume] = useState(() => {
     if (resumeFromBuilder) {
-      const candidateName = resumeFromBuilder.personal?.fullName || userProfile?.name || 'Candidate';
-      const text = `${candidateName} | ${resumeFromBuilder.education?.[0]?.institution || userProfile?.college || 'Engineering College'} | Computer Science
-Email: ${resumeFromBuilder.personal?.email || userProfile?.email || 'email@domain.com'} | Phone: ${resumeFromBuilder.personal?.phone || userProfile?.phone || '+91 98765 43210'} | LinkedIn: ${resumeFromBuilder.personal?.linkedin || 'linkedin.com/in/candidate'} | GitHub: ${resumeFromBuilder.personal?.github || 'github.com/candidate'}
-Summary: ${resumeFromBuilder.personal?.summary || 'Engineering student focused on high-scale systems.'}
-Skills: ${resumeFromBuilder.skills?.languages || ''}, ${resumeFromBuilder.skills?.frameworks || ''}, ${resumeFromBuilder.skills?.developerTools || ''}, ${resumeFromBuilder.skills?.coreSubjects || ''}
-Experience: ${resumeFromBuilder.experience?.map(e => `${e.title} at ${e.company}: ${e.bullets?.join(' ')}`).join('\n') || ''}
-Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bullets?.join(' ')}`).join('\n') || ''}`;
-
-      const meta = extractCandidateMetadata(text, userProfile, `${candidateName.replace(/\s+/g, '_')}_Resume.json`);
-
-      return {
-        fileName: `${candidateName.replace(/\s+/g, '_')}_Resume.json`,
-        fileSize: `${Math.max(12, Math.round(text.length / 30))} KB`,
-        fileType: 'application/json',
-        uploadSource: 'builder',
-        lastModified: 'Synced from PlaceIQ Resume Builder',
-        parsedName: candidateName,
-        parsedCollege: resumeFromBuilder.education?.[0]?.institution || meta.parsedCollege,
-        parsedDegree: `${resumeFromBuilder.education?.[0]?.degree || 'B.Tech'} in ${resumeFromBuilder.education?.[0]?.field || 'Computer Science'}`,
-        parsedCgpa: resumeFromBuilder.education?.[0]?.cgpa ? `${resumeFromBuilder.education[0].cgpa} / 10.0` : meta.parsedCgpa,
-        skillsCount: meta.skillsCount,
-        rawText: text
-      };
+      return buildResumeFromBuilderData(resumeFromBuilder, userProfile);
     }
-    return DEFAULT_RESUME_INFO;
+    try {
+      const saved = localStorage.getItem('placeiq_resume_builder_data');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.personal?.fullName) {
+          return buildResumeFromBuilderData(parsed, userProfile);
+        }
+      }
+    } catch (_) {}
+    return buildDefaultResumeInfo(userProfile);
   });
 
   const [isDragOver, setIsDragOver] = useState(false);
@@ -182,7 +217,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
 
   // Real Agent Analysis State
   const [analysisResult, setAnalysisResult] = useState(() => {
-    const initialText = uploadedResume?.rawText || DEFAULT_RESUME_INFO.rawText;
+    const initialText = uploadedResume?.rawText || buildDefaultResumeInfo(userProfile).rawText;
     return runResumeAuditAgent(initialText, 'sde_amazon', PRESET_JDS.sde_amazon.text, userProfile);
   });
 
@@ -237,9 +272,55 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
     auditTimersRef.current = [stepOneTimer, stepTwoTimer, stepThreeTimer, resultTimer];
   };
 
+  // Sync automatically when resumeFromBuilder changes via navigation
+  useEffect(() => {
+    if (resumeFromBuilder) {
+      const synced = buildResumeFromBuilderData(resumeFromBuilder, userProfile);
+      setUploadedResume(synced);
+      executeAgentAudit(synced.rawText, targetRole);
+    }
+  }, [resumeFromBuilder]);
+
   useEffect(() => () => auditTimersRef.current.forEach(clearTimeout), []);
 
-  // Handle text uploads. PDF and DOCX extraction are added through dedicated parsers below.
+  const handleOpenEditMetadata = () => {
+    setEditMetadata({
+      name: uploadedResume.parsedName || '',
+      college: uploadedResume.parsedCollege || '',
+      cgpa: uploadedResume.parsedCgpa || '',
+      degree: uploadedResume.parsedDegree || 'B.Tech Computer Science & Engineering',
+    });
+    setIsEditingMetadata(true);
+  };
+
+  const handleSaveEditMetadata = () => {
+    const trimmedName = editMetadata.name.trim() || 'Candidate Profile';
+    const trimmedCollege = editMetadata.college.trim() || (userProfile?.college || 'Engineering Institute');
+    const trimmedCgpa = editMetadata.cgpa.trim() || '8.50 / 10.0';
+    const trimmedDegree = editMetadata.degree.trim() || 'B.Tech Computer Science';
+    const normalizedCgpa = trimmedCgpa.includes('/') || trimmedCgpa.includes('%') ? trimmedCgpa : `${trimmedCgpa} / 10.0`;
+
+    setUploadedResume(prev => {
+      const lines = prev.rawText.split('\n');
+      lines[0] = `${trimmedName} | ${trimmedCollege} | ${trimmedDegree}`;
+      const updatedRawText = lines.join('\n');
+      const updated = {
+        ...prev,
+        parsedName: trimmedName,
+        parsedCollege: trimmedCollege,
+        parsedCgpa: normalizedCgpa,
+        parsedDegree: trimmedDegree,
+        uploadSource: 'custom',
+        lastModified: 'Customized by candidate',
+        rawText: updatedRawText
+      };
+      executeAgentAudit(updatedRawText, targetRole);
+      return updated;
+    });
+    setIsEditingMetadata(false);
+  };
+
+  // Handle text uploads with robust PDF newline reconstruction & metadata extraction
   const handleFileUpload = async (file) => {
     if (!file) return;
 
@@ -257,8 +338,27 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
     setIsExtractingResume(true);
     try {
       let text = '';
-      if (['txt', 'json', 'md'].includes(extension)) {
+      if (['txt', 'md'].includes(extension)) {
         text = await file.text();
+      } else if (extension === 'json') {
+        const rawJsonText = await file.text();
+        try {
+          const parsedJson = JSON.parse(rawJsonText);
+          if (parsedJson && (parsedJson.personal || parsedJson.education || parsedJson.basics)) {
+            const synced = buildResumeFromBuilderData(parsedJson, userProfile);
+            setUploadedResume({
+              ...synced,
+              fileName,
+              fileSize,
+              fileType: 'application/json',
+              uploadSource: 'external',
+              lastModified: 'Uploaded just now',
+            });
+            executeAgentAudit(synced.rawText, targetRole);
+            return;
+          }
+        } catch (_) {}
+        text = rawJsonText;
       } else if (extension === 'pdf') {
         const pdfjs = await import('pdfjs-dist');
         const workerModule = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
@@ -267,9 +367,28 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
         const pages = await Promise.all(Array.from({ length: pdf.numPages }, async (_, index) => {
           const page = await pdf.getPage(index + 1);
           const content = await page.getTextContent();
-          return content.items.map(item => item.str).join(' ');
+          let lastY = null;
+          let pageText = '';
+          for (const item of content.items) {
+            if (!item.str && !item.hasEOL) continue;
+            const currentY = item.transform ? item.transform[5] : null;
+            if (lastY !== null && currentY !== null && Math.abs(currentY - lastY) > 5) {
+              pageText += '\n';
+            } else if (item.hasEOL) {
+              pageText += '\n';
+            } else if (pageText && !pageText.endsWith('\n') && !pageText.endsWith(' ') && item.str) {
+              pageText += ' ';
+            }
+            if (item.str) {
+              pageText += item.str;
+            }
+            if (currentY !== null) {
+              lastY = currentY;
+            }
+          }
+          return pageText;
         }));
-        text = pages.join('\n');
+        text = pages.join('\n\n');
       } else if (extension === 'docx') {
         const mammothModule = await import('mammoth/mammoth.browser');
         const mammoth = mammothModule.default || mammothModule;
@@ -331,40 +450,31 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
   };
 
   const handleLoadDemoResume = () => {
-    setUploadedResume(DEFAULT_RESUME_INFO);
-    executeAgentAudit(DEFAULT_RESUME_INFO.rawText, targetRole);
+    const demo = buildDefaultResumeInfo(userProfile);
+    setUploadedResume(demo);
+    executeAgentAudit(demo.rawText, targetRole);
   };
 
   const handleLoadFromBuilder = () => {
     if (resumeFromBuilder) {
-      const candidateName = resumeFromBuilder.personal?.fullName || userProfile?.name || 'Candidate';
-      const text = `${candidateName} | ${resumeFromBuilder.education?.[0]?.institution || userProfile?.college || 'Engineering College'} | Computer Science
-Email: ${resumeFromBuilder.personal?.email || userProfile?.email || 'email@domain.com'} | Phone: ${resumeFromBuilder.personal?.phone || userProfile?.phone || '+91 98765 43210'} | LinkedIn: ${resumeFromBuilder.personal?.linkedin || 'linkedin.com/in/candidate'} | GitHub: ${resumeFromBuilder.personal?.github || 'github.com/candidate'}
-Summary: ${resumeFromBuilder.personal?.summary || 'Engineering student focused on high-scale systems.'}
-Skills: ${resumeFromBuilder.skills?.languages || ''}, ${resumeFromBuilder.skills?.frameworks || ''}, ${resumeFromBuilder.skills?.developerTools || ''}, ${resumeFromBuilder.skills?.coreSubjects || ''}
-Experience: ${resumeFromBuilder.experience?.map(e => `${e.title} at ${e.company}: ${e.bullets?.join(' ')}`).join('\n') || ''}
-Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bullets?.join(' ')}`).join('\n') || ''}`;
-
-      const meta = extractCandidateMetadata(text, userProfile, `${candidateName.replace(/\s+/g, '_')}_Resume.json`);
-
-      const generated = {
-        fileName: `${candidateName.replace(/\s+/g, '_')}_Resume.json`,
-        fileSize: `${Math.max(12, Math.round(text.length / 30))} KB`,
-        fileType: 'application/json',
-        uploadSource: 'builder',
-        lastModified: 'Synced from PlaceIQ Resume Builder',
-        parsedName: candidateName,
-        parsedCollege: resumeFromBuilder.education?.[0]?.institution || meta.parsedCollege,
-        parsedDegree: `${resumeFromBuilder.education?.[0]?.degree || 'B.Tech'} in ${resumeFromBuilder.education?.[0]?.field || 'Computer Science'}`,
-        parsedCgpa: resumeFromBuilder.education?.[0]?.cgpa ? `${resumeFromBuilder.education[0].cgpa} / 10.0` : meta.parsedCgpa,
-        skillsCount: meta.skillsCount,
-        rawText: text
-      };
-      setUploadedResume(generated);
-      executeAgentAudit(generated.rawText, targetRole);
-    } else {
-      handleLoadDemoResume();
+      const synced = buildResumeFromBuilderData(resumeFromBuilder, userProfile);
+      setUploadedResume(synced);
+      executeAgentAudit(synced.rawText, targetRole);
+      return;
     }
+    try {
+      const saved = localStorage.getItem('placeiq_resume_builder_data');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.personal?.fullName) {
+          const synced = buildResumeFromBuilderData(parsed, userProfile);
+          setUploadedResume(synced);
+          executeAgentAudit(synced.rawText, targetRole);
+          return;
+        }
+      }
+    } catch (_) {}
+    handleLoadDemoResume();
   };
 
   const handleCopyKeyword = async (keyword) => {
@@ -507,23 +617,6 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
             <RefreshCw size={13} /> {resumeFromBuilder ? 'Sync Builder' : 'Load Demo Resume'}
           </button>
 
-          <button
-            onClick={() => executeAgentAudit(uploadedResume.rawText, targetRole)}
-            className="btn btn-primary btn-sm"
-            disabled={isAnalyzing}
-            style={{ fontSize: '0.78rem', padding: '0.4rem 0.9rem', fontWeight: 700 }}
-          >
-            {isAnalyzing ? (
-              <>
-                <RefreshCw size={13} className="pulse-dot" style={{ animation: 'spin 1s linear infinite' }} />
-                Auditing...
-              </>
-            ) : (
-              <>
-                <Sparkles size={14} /> Re-run Agent Loop
-              </>
-            )}
-          </button>
         </div>
       </div>
 
@@ -586,41 +679,167 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                 </div>
               </div>
 
-              <span className={`badge ${uploadedResume.uploadSource === 'demo' ? 'badge-warning' : 'badge-success'}`} style={{ fontSize: '0.7rem' }}>
-                <Check size={11} /> {uploadedResume.uploadSource === 'demo' ? 'Demo profile' : uploadedResume.uploadSource === 'builder' ? 'Builder profile' : 'Resume loaded'}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="btn btn-ghost btn-sm"
+                  style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem', color: 'var(--text-bright)', border: '1px solid var(--border-subtle)' }}
+                  title="Upload another resume file"
+                >
+                  <Upload size={12} /> Upload
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOpenEditMetadata}
+                  className="btn btn-ghost btn-sm"
+                  style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem', color: 'var(--primary)', border: '1px solid var(--border-subtle)' }}
+                  title="Edit resume holder details"
+                >
+                  <Pencil size={12} /> Edit Details
+                </button>
+                <span className={`badge ${uploadedResume.uploadSource === 'demo' ? 'badge-warning' : 'badge-success'}`} style={{ fontSize: '0.7rem' }}>
+                  <Check size={11} /> {
+                    uploadedResume.uploadSource === 'demo' ? 'Demo profile' :
+                    uploadedResume.uploadSource === 'builder' ? 'Builder profile' :
+                    uploadedResume.uploadSource === 'profile' ? 'Student profile' :
+                    uploadedResume.uploadSource === 'custom' ? 'Custom profile' :
+                    'Resume loaded'
+                  }
+                </span>
+              </div>
             </div>
 
-            {/* Candidate Metadata Strip */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(4, 1fr)',
-                gap: '0.5rem',
-                padding: '0.65rem 0.85rem',
-                background: 'var(--bg-glass-strong)',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--border-glass)',
-                fontSize: '0.75rem',
-              }}
-            >
-              <div>
-                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>Candidate</span>
-                <strong style={{ color: 'var(--text-main)', fontWeight: 700 }}>{uploadedResume.parsedName}</strong>
+            {/* Candidate Metadata Strip & Inline Editor */}
+            {isEditingMetadata ? (
+              <div
+                style={{
+                  padding: '0.75rem',
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--primary)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.55rem',
+                  fontSize: '0.75rem',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong style={{ color: 'var(--text-bright)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Pencil size={13} color="var(--primary)" /> Edit Resume Holder Details
+                  </strong>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingMetadata(false)}
+                    className="btn btn-ghost btn-sm"
+                    style={{ padding: '0.1rem 0.3rem', fontSize: '0.7rem' }}
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
+                  <div>
+                    <label style={{ display: 'block', color: 'var(--text-dim)', fontSize: '0.68rem', marginBottom: '2px' }}>Candidate Name</label>
+                    <input
+                      type="text"
+                      value={editMetadata.name}
+                      onChange={(e) => setEditMetadata({ ...editMetadata, name: e.target.value })}
+                      className="form-control"
+                      style={{ width: '100%', fontSize: '0.76rem', padding: '0.35rem 0.55rem', background: 'var(--bg-glass-strong)', border: '1px solid var(--border-subtle)', borderRadius: '4px', color: 'var(--text-main)' }}
+                      placeholder="e.g. Aarav Sharma"
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', color: 'var(--text-dim)', fontSize: '0.68rem', marginBottom: '2px' }}>College / University</label>
+                    <input
+                      type="text"
+                      value={editMetadata.college}
+                      onChange={(e) => setEditMetadata({ ...editMetadata, college: e.target.value })}
+                      className="form-control"
+                      style={{ width: '100%', fontSize: '0.76rem', padding: '0.35rem 0.55rem', background: 'var(--bg-glass-strong)', border: '1px solid var(--border-subtle)', borderRadius: '4px', color: 'var(--text-main)' }}
+                      placeholder="e.g. VIT Vellore"
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', color: 'var(--text-dim)', fontSize: '0.68rem', marginBottom: '2px' }}>CGPA / Score</label>
+                    <input
+                      type="text"
+                      value={editMetadata.cgpa}
+                      onChange={(e) => setEditMetadata({ ...editMetadata, cgpa: e.target.value })}
+                      className="form-control"
+                      style={{ width: '100%', fontSize: '0.76rem', padding: '0.35rem 0.55rem', background: 'var(--bg-glass-strong)', border: '1px solid var(--border-subtle)', borderRadius: '4px', color: 'var(--text-main)' }}
+                      placeholder="e.g. 8.85 / 10.0 or 3.8 / 4.0"
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', color: 'var(--text-dim)', fontSize: '0.68rem', marginBottom: '2px' }}>Degree & Branch</label>
+                    <input
+                      type="text"
+                      value={editMetadata.degree}
+                      onChange={(e) => setEditMetadata({ ...editMetadata, degree: e.target.value })}
+                      className="form-control"
+                      style={{ width: '100%', fontSize: '0.76rem', padding: '0.35rem 0.55rem', background: 'var(--bg-glass-strong)', border: '1px solid var(--border-subtle)', borderRadius: '4px', color: 'var(--text-main)' }}
+                      placeholder="e.g. B.Tech Computer Science"
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.4rem', marginTop: '0.2rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingMetadata(false)}
+                    className="btn btn-ghost btn-sm"
+                    style={{ fontSize: '0.72rem', padding: '0.25rem 0.55rem' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveEditMetadata}
+                    className="btn btn-primary btn-sm"
+                    style={{ fontSize: '0.72rem', padding: '0.25rem 0.75rem', fontWeight: 700 }}
+                  >
+                    <Check size={12} /> Apply Changes
+                  </button>
+                </div>
               </div>
-              <div>
-                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>College</span>
-                <strong style={{ color: 'var(--text-main)', fontWeight: 700 }}>{uploadedResume.parsedCollege || 'VIT Vellore'}</strong>
+            ) : (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(4, 1fr)',
+                  gap: '0.5rem',
+                  padding: '0.65rem 0.85rem',
+                  background: 'var(--bg-glass-strong)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-glass)',
+                  fontSize: '0.75rem',
+                }}
+              >
+                <div>
+                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>Candidate</span>
+                  <strong style={{ color: 'var(--text-main)', fontWeight: 700 }}>{uploadedResume.parsedName}</strong>
+                  {uploadedResume.parsedDegree && (
+                    <span style={{ display: 'block', color: 'var(--text-dim)', fontSize: '0.62rem', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={uploadedResume.parsedDegree}>
+                      {uploadedResume.parsedDegree}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>College</span>
+                  <strong style={{ color: 'var(--text-main)', fontWeight: 700 }} title={uploadedResume.parsedCollege}>
+                    {uploadedResume.parsedCollege || userProfile?.college || 'Not specified'}
+                  </strong>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>CGPA</span>
+                  <strong style={{ color: '#10b981', fontWeight: 800 }}>{uploadedResume.parsedCgpa || 'Not found'}</strong>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>Extracted Skills</span>
+                  <strong style={{ color: 'var(--text-main)', fontWeight: 700 }}>{uploadedResume.skillsCount} Technical</strong>
+                </div>
               </div>
-              <div>
-                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>CGPA</span>
-                <strong style={{ color: '#10b981', fontWeight: 800 }}>{uploadedResume.parsedCgpa || 'Not found'}</strong>
-              </div>
-              <div>
-                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>Extracted Skills</span>
-                <strong style={{ color: 'var(--text-main)', fontWeight: 700 }}>{uploadedResume.skillsCount} Technical</strong>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Embedded Dropzone Subtext */}
@@ -684,7 +903,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
             <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-bright)' }}>
               Estimated Resume Fit
             </div>
-            <span style={{ fontSize: '0.68rem', color: analysisResult.atsScore >= 80 ? '#22c55e' : analysisResult.atsScore >= 70 ? '#eab308' : '#f87171', fontWeight: 600 }}>
+            <span style={{ fontSize: '0.68rem', color: analysisResult.atsScore >= 80 ? '#22c55e' : analysisResult.atsScore >= 70 ? '#eab308' : 'var(--text-danger)', fontWeight: 600 }}>
               Rule-based estimate • not a candidate ranking
             </span>
             <div style={{ maxWidth: '180px', margin: '0.4rem auto 0', color: 'var(--text-dim)', fontSize: '0.62rem', lineHeight: 1.45 }}>
@@ -903,7 +1122,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
             {/* Critical Missing Keywords */}
             <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
-                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#f87171', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-danger)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <AlertTriangle size={15} />
                   Missing Required Keywords ({analysisResult.missingKeywords.length})
                 </div>
@@ -941,7 +1160,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                           padding: '1px 5px',
                           borderRadius: '3px',
                           background: kw.priority === 'High' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(234, 179, 8, 0.2)',
-                          color: kw.priority === 'High' ? '#f87171' : '#f59e0b',
+                          color: kw.priority === 'High' ? 'var(--text-danger)' : '#f59e0b',
                           fontWeight: 700,
                         }}
                       >
@@ -1062,7 +1281,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                       padding: '1px 5px',
                       borderRadius: '3px',
                       background: item.impact === 'High' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(234, 179, 8, 0.15)',
-                      color: item.impact === 'High' ? '#f87171' : '#facc15',
+                      color: item.impact === 'High' ? 'var(--text-danger)' : '#facc15',
                       fontWeight: 700,
                       flexShrink: 0,
                     }}
@@ -1074,7 +1293,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                     <strong
                       style={{
                         fontSize: '0.78rem',
-                        color: isResolved ? '#4ade80' : 'var(--text-bright)',
+                        color: isResolved ? 'var(--text-success)' : 'var(--text-bright)',
                         textDecoration: isResolved ? 'line-through' : 'none',
                       }}
                     >

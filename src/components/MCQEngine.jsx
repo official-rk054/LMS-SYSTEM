@@ -311,7 +311,7 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
           </div>
 
           <div style={{ padding: '1.25rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', marginBottom: '1.5rem' }}>
-            <h4 style={{ fontSize: '0.95rem', marginBottom: '0.6rem', color: 'var(--text-white)' }}>
+            <h4 style={{ fontSize: '0.95rem', marginBottom: '0.6rem', color: 'var(--text-bright)' }}>
               Proctoring & Rules for Exam:
             </h4>
             <ul style={{ paddingLeft: '1.25rem', fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
@@ -375,28 +375,28 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', fontSize: '0.84rem' }}>
                 <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>🚫</span>
                 <div>
-                  <strong style={{ color: '#f87171' }}>No Copying / Text Selection:</strong> Text selection, highlighting, and copying questions (Ctrl+C / Cmd+C / Right-Click) are strictly disabled. Any copy attempt will <strong>IMMEDIATELY TERMINATE</strong> your test with a zero score.
+                  <strong style={{ color: 'var(--text-danger)' }}>No Copying / Text Selection:</strong> Text selection, highlighting, and copying questions (Ctrl+C / Cmd+C / Right-Click) are strictly disabled. Any copy attempt will <strong>IMMEDIATELY TERMINATE</strong> your test with a zero score.
                 </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', fontSize: '0.84rem' }}>
                 <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>🚫</span>
                 <div>
-                  <strong style={{ color: '#f87171' }}>No DevTools / Right-Clicking:</strong> Opening inspect element, context menu, or keyboard shortcuts (`F12`, `Ctrl+Shift+I`, `Ctrl+U`) will trigger instant disqualification.
+                  <strong style={{ color: 'var(--text-danger)' }}>No DevTools / Right-Clicking:</strong> Opening inspect element, context menu, or keyboard shortcuts (`F12`, `Ctrl+Shift+I`, `Ctrl+U`) will trigger instant disqualification.
                 </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', fontSize: '0.84rem' }}>
                 <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>🚫</span>
                 <div>
-                  <strong style={{ color: '#f87171' }}>Tab Switch Monitoring:</strong> Leaving the active exam window is tracked. Reaching the tab-switch limit automatically disqualifies your submission.
+                  <strong style={{ color: 'var(--text-danger)' }}>Tab Switch Monitoring:</strong> Leaving the active exam window is tracked. Reaching the tab-switch limit automatically disqualifies your submission.
                 </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', fontSize: '0.84rem' }}>
                 <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>⚡</span>
                 <div>
-                  <strong style={{ color: '#fbbf24' }}>Direct Exit & TPO Audit Log:</strong> Any suspicious activity forces an <strong>IMMEDIATE DIRECT EXIT</strong> from the exam and flags your student profile in the TPO disciplinary log.
+                  <strong style={{ color: 'var(--text-warning)' }}>Direct Exit & TPO Audit Log:</strong> Any suspicious activity forces an <strong>IMMEDIATE DIRECT EXIT</strong> from the exam and flags your student profile in the TPO disciplinary log.
                 </div>
               </div>
             </div>
@@ -731,7 +731,7 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
                 <span className="badge badge-danger" style={{ marginBottom: '0.5rem', fontWeight: 800 }}>
                   🚫 EXAM FORCIBLY TERMINATED - DISQUALIFIED BY PROCTOR
                 </span>
-                <h2 style={{ fontSize: '1.8rem', color: '#f87171', marginBottom: '0.35rem', fontWeight: 800 }}>
+                <h2 style={{ fontSize: '1.8rem', color: 'var(--text-danger)', marginBottom: '0.35rem', fontWeight: 800 }}>
                   Instant Disqualification & Proctor Audit Log
                 </h2>
                 <p style={{ fontSize: '0.9rem', color: '#fca5a5' }}>
@@ -739,7 +739,7 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
                 </p>
               </div>
 
-              <button onClick={handleOpenPreTestModal} className="btn btn-outline" style={{ borderColor: '#f87171', color: '#f87171' }}>
+              <button onClick={handleOpenPreTestModal} className="btn btn-outline" style={{ borderColor: 'var(--text-danger)', color: 'var(--text-danger)' }}>
                 <RotateCcw size={15} /> Request Retake Clearance
               </button>
             </div>
@@ -749,7 +749,7 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
               <XCircle size={32} color="#ef4444" />
               <div>
-                <h3 style={{ fontSize: '1.15rem', color: '#f87171', margin: 0, fontWeight: 700 }}>
+                <h3 style={{ fontSize: '1.15rem', color: 'var(--text-danger)', margin: 0, fontWeight: 700 }}>
                   Violation Reason: {disqualificationReason}
                 </h3>
                 <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '0.2rem 0 0 0' }}>
@@ -764,7 +764,7 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
                   Recorded Proctor Incident Timestamps:
                 </h4>
                 {proctorLogs.map((log, i) => (
-                  <div key={i} style={{ fontSize: '0.78rem', color: '#f87171', fontFamily: 'var(--font-mono)' }}>
+                  <div key={i} style={{ fontSize: '0.78rem', color: 'var(--text-danger)', fontFamily: 'var(--font-mono)' }}>
                     [{log.timestamp}] VIOLATION DETECTED: {log.reason}
                   </div>
                 ))}
@@ -845,7 +845,7 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
                 <Clock size={24} />
               </div>
               <div>
-                <div className="stat-val" style={{ color: '#fbbf24' }}>{avgSecondsPerQ}s</div>
+                <div className="stat-val" style={{ color: 'var(--text-warning)' }}>{avgSecondsPerQ}s</div>
                 <div className="stat-label">Avg Time Per Question</div>
               </div>
             </div>
@@ -914,12 +914,12 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                 <div style={{ padding: '0.75rem', background: 'rgba(245, 158, 11, 0.08)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid #f59e0b' }}>
-                  <strong style={{ color: 'var(--text-white)' }}>SQL Isolation Levels & Phantom Reads:</strong>
+                  <strong style={{ color: 'var(--text-bright)' }}>SQL Isolation Levels & Phantom Reads:</strong>
                   <div>Repeatable Read allows phantom reads in ANSI standard. Recommended reading: ACID isolation chapter in Core CS module.</div>
                 </div>
 
                 <div style={{ padding: '0.75rem', background: 'rgba(99, 102, 241, 0.08)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid #6366f1' }}>
-                  <strong style={{ color: 'var(--text-white)' }}>Alternate Days Time & Work:</strong>
+                  <strong style={{ color: 'var(--text-bright)' }}>Alternate Days Time & Work:</strong>
                   <div>Always compute pair-day LCM cycles first to avoid fractional cycle errors. Check Aptitude Flashcard deck #1.</div>
                 </div>
               </div>
