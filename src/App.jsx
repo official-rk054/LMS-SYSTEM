@@ -14,7 +14,6 @@ import { MockInterviewer } from './components/MockInterviewer';
 import { MCQEngine } from './components/MCQEngine';
 import { CodingArena } from './components/CodingArena';
 import { LearningModules } from './components/LearningModules';
-import { CompanyPrep } from './components/CompanyPrep';
 import { Leaderboard } from './components/Leaderboard';
 import { AdminPanel } from './components/AdminPanel';
 import { ExtraFeaturesSuite } from './components/ExtraFeaturesSuite';
@@ -214,10 +213,6 @@ export function App() {
                   onUpdateUserProfile={setCurrentUser}
                   setActiveTab={setActiveTab}
                 />
-              )}
-
-              {activeTab === 'company_prep' && (
-                <CompanyPrep />
               )}
 
               {activeTab === 'leaderboard' && (

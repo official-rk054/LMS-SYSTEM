@@ -113,11 +113,11 @@ Requirements:
 };
 
 const DEFAULT_RESUME_INFO = {
-  fileName: 'Aarav_Sharma_SDE_Resume_2026.pdf',
+  fileName: 'Sample_SDE_Resume.txt',
   fileSize: '194 KB',
-  fileType: 'application/pdf',
-  uploadSource: 'external',
-  lastModified: 'Today at 01:24 AM',
+  fileType: 'text/plain',
+  uploadSource: 'demo',
+  lastModified: 'Sample profile — replace with your resume',
   parsedName: 'Aarav Sharma',
   parsedCollege: 'Vellore Institute of Technology (VIT)',
   parsedDegree: 'B.Tech Computer Science & Engineering (2026 Batch)',
@@ -135,8 +135,11 @@ Achievements: LeetCode Knight (Rating 1890+), Smart India Hackathon (SIH) Nation
 export const ResumeAnalyzer = ({ userProfile, resumeFromBuilder }) => {
   const [targetRole, setTargetRole] = useState('sde_amazon');
   const [showCustomJD, setShowCustomJD] = useState(false);
-  const [customJDText, setCustomJDText] = useState(PRESET_JDS.sde_amazon.text);
-  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('keywords'); // 'keywords', 'sections', 'checklist'
+  const [isCustomJdActive, setIsCustomJdActive] = useState(false);
+  const [customJDText, setCustomJDText] = useState('');
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('keywords'); // 'keywords', 'rewrites', 'sections', 'checklist'
+  const [uploadError, setUploadError] = useState('');
+  const [copiedRewrite, setCopiedRewrite] = useState(null);
 
   // File Import State
   const [uploadedResume, setUploadedResume] = useState(() => {
@@ -169,11 +172,13 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
   });
 
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isExtractingResume, setIsExtractingResume] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [scanStep, setScanStep] = useState(0);
   const [copiedKeyword, setCopiedKeyword] = useState(null);
 
   const fileInputRef = useRef(null);
+  const auditTimersRef = useRef([]);
 
   // Real Agent Analysis State
   const [analysisResult, setAnalysisResult] = useState(() => {
@@ -194,22 +199,27 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
 
   // Current JD metadata
   const currentJD = PRESET_JDS[targetRole] || PRESET_JDS.sde_amazon;
+  const activeJDText = isCustomJdActive ? customJDText : currentJD.text;
 
   // Run audit agent whenever resume text or target role changes
-  const executeAgentAudit = (rawText, roleKey) => {
+  const executeAgentAudit = (rawText, roleKey, jdText = isCustomJdActive ? customJDText : PRESET_JDS[roleKey]?.text || '') => {
+    auditTimersRef.current.forEach(clearTimeout);
+    auditTimersRef.current = [];
     setIsAnalyzing(true);
-    setScanStep(1);
 
-    setTimeout(() => {
+    const stepOneTimer = setTimeout(() => {
+      setScanStep(1);
+    }, 0);
+    const stepTwoTimer = setTimeout(() => {
       setScanStep(2);
     }, 280);
 
-    setTimeout(() => {
+    const stepThreeTimer = setTimeout(() => {
       setScanStep(3);
     }, 560);
 
-    setTimeout(() => {
-      const result = runResumeAuditAgent(rawText, roleKey, customJDText, userProfile);
+    const resultTimer = setTimeout(() => {
+      const result = runResumeAuditAgent(rawText, roleKey, jdText, userProfile);
       setAnalysisResult(result);
       setResolvedChecklist(prev => {
         const next = { ...prev };
@@ -222,86 +232,86 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
       });
       setIsAnalyzing(false);
       setScanStep(0);
+      auditTimersRef.current = [];
     }, 850);
+    auditTimersRef.current = [stepOneTimer, stepTwoTimer, stepThreeTimer, resultTimer];
   };
 
-  // Handle external file upload with real text extraction & dynamic metadata
-  const handleFileUpload = (file) => {
+  useEffect(() => () => auditTimersRef.current.forEach(clearTimeout), []);
+
+  // Handle text uploads. PDF and DOCX extraction are added through dedicated parsers below.
+  const handleFileUpload = async (file) => {
     if (!file) return;
+
+    setUploadError('');
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('This file is larger than 10 MB. Choose a smaller resume file.');
+      return;
+    }
 
     const fileName = file.name;
     const fileSize = `${(file.size / 1024).toFixed(1)} KB`;
     const fileType = file.type || 'application/pdf';
+    const extension = file.name.split('.').pop()?.toLowerCase();
 
-    const reader = new FileReader();
+    setIsExtractingResume(true);
+    try {
+      let text = '';
+      if (['txt', 'json', 'md'].includes(extension)) {
+        text = await file.text();
+      } else if (extension === 'pdf') {
+        const pdfjs = await import('pdfjs-dist');
+        const workerModule = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
+        pdfjs.GlobalWorkerOptions.workerSrc = workerModule.default;
+        const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+        const pages = await Promise.all(Array.from({ length: pdf.numPages }, async (_, index) => {
+          const page = await pdf.getPage(index + 1);
+          const content = await page.getTextContent();
+          return content.items.map(item => item.str).join(' ');
+        }));
+        text = pages.join('\n');
+      } else if (extension === 'docx') {
+        const mammothModule = await import('mammoth/mammoth.browser');
+        const mammoth = mammothModule.default || mammothModule;
+        const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+        text = result.value;
+      } else {
+        setUploadError('Unsupported file type. Upload a PDF, DOCX, TXT, JSON, or Markdown file.');
+        return;
+      }
 
-    if (file.name.endsWith('.txt') || file.name.endsWith('.json') || file.name.endsWith('.md')) {
-      reader.onload = (e) => {
-        const text = e.target.result;
-        const meta = extractCandidateMetadata(text, userProfile, fileName);
-        setUploadedResume({
-          fileName,
-          fileSize,
-          fileType,
-          uploadSource: 'external',
-          lastModified: 'Uploaded just now',
-          parsedName: meta.parsedName,
-          parsedCollege: meta.parsedCollege,
-          parsedDegree: meta.parsedDegree,
-          parsedCgpa: meta.parsedCgpa,
-          skillsCount: meta.skillsCount,
-          rawText: text
-        });
-        executeAgentAudit(text, targetRole);
-      };
-      reader.readAsText(file);
-    } else {
-      // PDF or DOCX parsing
-      reader.onload = (e) => {
-        const buffer = e.target.result;
-        let extractedText = '';
-        try {
-          const uint8 = new Uint8Array(buffer);
-          let rawChars = '';
-          for (let i = 0; i < Math.min(uint8.length, 50000); i++) {
-            const charCode = uint8[i];
-            if ((charCode >= 32 && charCode <= 126) || charCode === 10 || charCode === 13) {
-              rawChars += String.fromCharCode(charCode);
-            }
-          }
-          const cleanWords = rawChars.replace(/[^a-zA-Z0-9\s.,@+\-:/]/g, ' ').replace(/\s+/g, ' ').trim();
-          if (cleanWords.length > 150) {
-            extractedText = cleanWords;
-          } else {
-            extractedText = DEFAULT_RESUME_INFO.rawText;
-          }
-        } catch (err) {
-          extractedText = DEFAULT_RESUME_INFO.rawText;
-        }
-
-        const meta = extractCandidateMetadata(extractedText, userProfile, fileName);
-        setUploadedResume({
-          fileName,
-          fileSize,
-          fileType,
-          uploadSource: 'external',
-          lastModified: 'Uploaded just now',
-          parsedName: meta.parsedName,
-          parsedCollege: meta.parsedCollege,
-          parsedDegree: meta.parsedDegree,
-          parsedCgpa: meta.parsedCgpa,
-          skillsCount: meta.skillsCount,
-          rawText: extractedText
-        });
-        executeAgentAudit(extractedText, targetRole);
-      };
-      reader.readAsArrayBuffer(file);
+      text = text.trim();
+      if (text.length < 80) {
+        setUploadError('We could not extract enough selectable text from this file. If it is a scanned PDF, run OCR first or upload a text-based PDF/DOCX.');
+        return;
+      }
+      const meta = extractCandidateMetadata(text, userProfile, fileName);
+      setUploadedResume({
+        fileName,
+        fileSize,
+        fileType,
+        uploadSource: 'external',
+        lastModified: 'Uploaded just now',
+        parsedName: meta.parsedName,
+        parsedCollege: meta.parsedCollege,
+        parsedDegree: meta.parsedDegree,
+        parsedCgpa: meta.parsedCgpa,
+        skillsCount: meta.skillsCount,
+        rawText: text
+      });
+      executeAgentAudit(text, targetRole);
+    } catch (err) {
+      console.error('Resume extraction failed:', err);
+      setUploadError(`Could not read this resume (${err.message || 'unknown error'}). Try another file or paste its text into a TXT file.`);
+    } finally {
+      setIsExtractingResume(false);
     }
   };
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (file) handleFileUpload(file);
+    e.target.value = '';
   };
 
   const handleDragOver = (e) => {
@@ -357,25 +367,39 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
     }
   };
 
-  const handleCopyKeyword = (keyword) => {
-    navigator.clipboard?.writeText(keyword);
-    setCopiedKeyword(keyword);
-    setTimeout(() => setCopiedKeyword(null), 2000);
+  const handleCopyKeyword = async (keyword) => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard API unavailable');
+      await navigator.clipboard.writeText(keyword);
+      setCopiedKeyword(keyword);
+      setTimeout(() => setCopiedKeyword(null), 2000);
+    } catch (err) {
+      setUploadError('Clipboard access was blocked. Copy the keyword manually.');
+    }
+  };
+
+  const getKeywordEvidence = (keyword) => {
+    const lines = uploadedResume.rawText.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    const tokens = keyword.toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(/\s+/).filter(token => token.length > 1);
+    const fullMatch = lines.find(line => tokens.every(token => line.toLowerCase().includes(token)));
+    if (fullMatch) return fullMatch;
+    const relatedLines = tokens.map(token => lines.find(line => line.toLowerCase().includes(token))).filter(Boolean);
+    return [...new Set(relatedLines)].slice(0, 2).join(' • ') || 'Matched in extracted resume text';
+  };
+
+  const handleCopyRewrite = async (rewrite, id) => {
+    try {
+      await navigator.clipboard.writeText(rewrite);
+      setCopiedRewrite(id);
+      setTimeout(() => setCopiedRewrite(null), 1800);
+    } catch (err) {
+      setUploadError('Clipboard access was blocked. Select and copy the rewrite text manually.');
+    }
   };
 
   const toggleChecklistItem = (id) => {
     setResolvedChecklist(prev => {
-      const next = { ...prev, [id]: !prev[id] };
-      const baseScore = analysisResult.baseAtsScore || analysisResult.atsScore;
-      const totalItems = analysisResult.checklist?.length || 5;
-      const resolvedCount = Object.values(next).filter(Boolean).length;
-      const bonus = Math.round((resolvedCount / totalItems) * 10);
-      const updatedScore = Math.min(99, Math.max(baseScore, baseScore + bonus));
-      setAnalysisResult(curr => ({
-        ...curr,
-        atsScore: updatedScore,
-      }));
-      return next;
+      return { ...prev, [id]: !prev[id] };
     });
   };
 
@@ -423,14 +447,14 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0 }}>
-                AI Resume Audit Agent & Feedback Engine
+                Resume Audit & Feedback
               </h2>
               <span className="badge badge-success" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
-                Multi-Factor Loop Active
+                Rule-Based Estimate
               </span>
             </div>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0.15rem 0 0' }}>
-              Autonomous 2026 Tech Trend Analysis • Target JD Keyword Benchmarking • Actionable Section Audit
+              Resume-text checks for role keywords, impact metrics, and ATS structure
             </p>
           </div>
         </div>
@@ -445,8 +469,8 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
               onChange={(e) => {
                 const newRole = e.target.value;
                 setTargetRole(newRole);
-                setCustomJDText(PRESET_JDS[newRole].text);
-                executeAgentAudit(uploadedResume.rawText, newRole);
+                setIsCustomJdActive(false);
+                executeAgentAudit(uploadedResume.rawText, newRole, PRESET_JDS[newRole].text);
               }}
               style={{
                 background: 'transparent',
@@ -458,20 +482,21 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                 cursor: 'pointer',
               }}
             >
-              <option value="sde_amazon" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Amazon SDE 1 (₹44.5 LPA)</option>
-              <option value="sde_microsoft" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Microsoft SWE (₹45.0 LPA)</option>
-              <option value="flipkart_ase" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Flipkart Assoc. SDE (₹32.0 LPA)</option>
-              <option value="tcs_digital" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>TCS Digital (₹7.5 LPA)</option>
-              <option value="infosys_sp" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Infosys SP (₹9.5 LPA)</option>
+              <option value="sde_amazon" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Amazon SDE 1</option>
+              <option value="sde_microsoft" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Microsoft SWE</option>
+              <option value="flipkart_ase" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Flipkart Associate SDE</option>
+              <option value="tcs_digital" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>TCS Digital</option>
+              <option value="infosys_sp" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Infosys Specialist Programmer</option>
             </select>
           </div>
 
           <button
             onClick={() => fileInputRef.current?.click()}
+            disabled={isExtractingResume}
             className="btn btn-outline btn-sm"
             style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}
           >
-            <Upload size={14} /> Upload Resume
+            <Upload size={14} /> {isExtractingResume ? 'Reading Resume…' : 'Upload Resume'}
           </button>
 
           <button
@@ -479,7 +504,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
             className="btn btn-outline btn-sm"
             style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}
           >
-            <RefreshCw size={13} /> Sync Builder
+            <RefreshCw size={13} /> {resumeFromBuilder ? 'Sync Builder' : 'Load Demo Resume'}
           </button>
 
           <button
@@ -529,7 +554,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
       {/* ═════════════════════════════════════════════════════════════
           2. UNIFIED BENTO ROW: DOCUMENT HUB + ATS READINESS GAUGE
           ═════════════════════════════════════════════════════════════ */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: '1.25rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 420px), 1fr))', gap: '1.25rem' }}>
         {/* Card A: Active Document Station & Drag-Drop Hub */}
         <div
           className="card"
@@ -561,8 +586,8 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                 </div>
               </div>
 
-              <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>
-                <Check size={11} /> Agent Processed
+              <span className={`badge ${uploadedResume.uploadSource === 'demo' ? 'badge-warning' : 'badge-success'}`} style={{ fontSize: '0.7rem' }}>
+                <Check size={11} /> {uploadedResume.uploadSource === 'demo' ? 'Demo profile' : uploadedResume.uploadSource === 'builder' ? 'Builder profile' : 'Resume loaded'}
               </span>
             </div>
 
@@ -589,7 +614,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
               </div>
               <div>
                 <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>CGPA</span>
-                <strong style={{ color: '#10b981', fontWeight: 800 }}>{uploadedResume.parsedCgpa}</strong>
+                <strong style={{ color: '#10b981', fontWeight: 800 }}>{uploadedResume.parsedCgpa || 'Not found'}</strong>
               </div>
               <div>
                 <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>Extracted Skills</span>
@@ -611,7 +636,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
               color: 'var(--text-dim)',
             }}
           >
-            <span>Drag & drop <code>.pdf</code>, <code>.docx</code>, <code>.json</code> to audit any resume</span>
+            <span>Drag & drop a selectable-text PDF, DOCX, TXT, JSON, or Markdown resume (max 10 MB)</span>
             <button
               onClick={handleLoadDemoResume}
               className="btn btn-ghost btn-sm"
@@ -657,17 +682,14 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
               </span>
             </div>
             <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-bright)' }}>
-              Overall ATS Score
+              Estimated Resume Fit
             </div>
             <span style={{ fontSize: '0.68rem', color: analysisResult.atsScore >= 80 ? '#22c55e' : analysisResult.atsScore >= 70 ? '#eab308' : '#f87171', fontWeight: 600 }}>
-              {analysisResult.candidateRank || (
-                analysisResult.atsScore >= 90 ? 'Top 5% Candidate Rank' :
-                analysisResult.atsScore >= 80 ? 'Top 15% Candidate Rank' :
-                analysisResult.atsScore >= 70 ? 'Top 30% Candidate Rank' :
-                analysisResult.atsScore >= 60 ? 'Top 50% Candidate Rank' :
-                'Developing Candidate Tier'
-              )}
+              Rule-based estimate • not a candidate ranking
             </span>
+            <div style={{ maxWidth: '180px', margin: '0.4rem auto 0', color: 'var(--text-dim)', fontSize: '0.62rem', lineHeight: 1.45 }}>
+              JD match 35% · impact 25% · structure 20% · verbs 10% · scan estimate 10%
+            </div>
           </div>
 
           {/* 3 Metric Pillar Progress Bars */}
@@ -684,7 +706,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
 
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.2rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Google XYZ Impact & Metrics</span>
+                <span style={{ color: 'var(--text-muted)' }}>Impact & Metrics</span>
                 <strong style={{ color: '#22c55e' }}>{analysisResult.impactMetricScore}%</strong>
               </div>
               <div style={{ width: '100%', height: '5px', background: 'rgba(255, 255, 255, 0.07)', borderRadius: '999px', overflow: 'hidden' }}>
@@ -704,6 +726,12 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
           </div>
         </div>
       </div>
+
+      {uploadError && (
+        <div role="alert" className="card" style={{ padding: '0.75rem 1rem', color: '#fecaca', borderColor: 'rgba(248, 113, 113, 0.35)', background: 'rgba(127, 29, 29, 0.18)', fontSize: '0.82rem' }}>
+          {uploadError}
+        </div>
+      )}
 
       {/* ═════════════════════════════════════════════════════════════
           3. WORKSPACE SEGMENTED TAB NAVIGATION
@@ -731,11 +759,19 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
           </button>
 
           <button
+            onClick={() => setActiveWorkspaceTab('rewrites')}
+            className={`btn btn-sm ${activeWorkspaceTab === 'rewrites' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', gap: '0.35rem' }}
+          >
+            <Wand2 size={13} /> Rewrite drafts ({analysisResult.feedbackLoop.length})
+          </button>
+
+          <button
             onClick={() => setActiveWorkspaceTab('sections')}
             className={`btn btn-sm ${activeWorkspaceTab === 'sections' ? 'btn-primary' : 'btn-ghost'}`}
             style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', gap: '0.35rem' }}
           >
-            <Layers size={13} /> Section Audit (6)
+            <Layers size={13} /> Section Audit ({analysisResult.sectionAudit.length})
           </button>
 
           <button
@@ -748,7 +784,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
         </div>
 
         <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
-          Target: <strong>{currentJD.company} ({currentJD.package})</strong>
+          Target: <strong>{isCustomJdActive ? 'Custom job description' : `${currentJD.company} — ${currentJD.role}`}</strong>
         </span>
       </div>
 
@@ -756,20 +792,51 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
           4. WORKSPACE TAB CONTENTS (COMPACT & PRECISE)
           ═════════════════════════════════════════════════════════════ */}
 
+      {activeWorkspaceTab === 'rewrites' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+          <div className="card" style={{ padding: '0.9rem 1rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+            These are writing templates based on your bullets. Replace every bracketed placeholder with a result you can verify; don’t add numbers or claims you can’t support.
+          </div>
+          {analysisResult.feedbackLoop.length ? analysisResult.feedbackLoop.map((item) => (
+            <article key={item.id} className="card" style={{ padding: '1rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '0.85rem' }}>
+              <div>
+                <h4 style={{ margin: '0 0 0.5rem', color: 'var(--text-muted)', fontSize: '0.78rem' }}>Current bullet</h4>
+                <p style={{ margin: 0, fontSize: '0.84rem', lineHeight: 1.55 }}>{item.beforeText}</p>
+                <p style={{ margin: '0.65rem 0 0', color: 'var(--text-dim)', fontSize: '0.76rem' }}>{item.critique}</p>
+              </div>
+              <div>
+                <h4 style={{ margin: '0 0 0.5rem', color: '#86efac', fontSize: '0.78rem' }}>Rewrite template</h4>
+                <p style={{ margin: 0, fontSize: '0.84rem', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{item.afterText}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginTop: '0.65rem' }}>
+                  <span style={{ color: 'var(--text-dim)', fontSize: '0.73rem' }}>{item.rationale}</span>
+                  <button type="button" className="btn btn-outline btn-sm" onClick={() => handleCopyRewrite(item.afterText, item.id)}>
+                    <Copy size={13} /> {copiedRewrite === item.id ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+            </article>
+          )) : (
+            <div className="card" style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+              No rewrite drafts were generated. Add experience or project bullets to your resume and run the audit again.
+            </div>
+          )}
+        </div>
+      )}
+
       {/* TAB: KEYWORD INTELLIGENCE & JD MATCH MATRIX */}
       {activeWorkspaceTab === 'keywords' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.35fr', gap: '1.25rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 380px), 1fr))', gap: '1.25rem' }}>
           {/* Left Column: Target Role Benchmark & Custom JD */}
           <div className="card" style={{ padding: '1.25rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
               <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                 <Target size={16} /> Role Requirements
               </h3>
-              <span className="badge badge-primary">{currentJD.package}</span>
+              <span className="badge badge-primary">{isCustomJdActive ? 'Custom description' : 'Sample role template'}</span>
             </div>
 
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.5', marginBottom: '1rem', whiteSpace: 'pre-line', background: 'var(--bg-glass-strong)', padding: '0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-glass)' }}>
-              {currentJD.text}
+              {activeJDText}
             </div>
 
             {/* Custom JD Editor Accordion */}
@@ -795,7 +862,11 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                   />
                   <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.4rem' }}>
                     <button
-                      onClick={() => executeAgentAudit(uploadedResume.rawText, targetRole)}
+                      onClick={() => {
+                        setIsCustomJdActive(true);
+                        executeAgentAudit(uploadedResume.rawText, targetRole, customJDText);
+                      }}
+                      disabled={customJDText.trim().length < 30 || isAnalyzing}
                       className="btn btn-primary btn-sm"
                       style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
                     >
@@ -819,24 +890,12 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>High-Frequency JD Match</span>
               </div>
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                {analysisResult.matchedKeywords.map((kw, i) => (
-                  <span
-                    key={i}
-                    style={{
-                      fontSize: '0.75rem',
-                      padding: '0.25rem 0.6rem',
-                      borderRadius: 'var(--radius-sm)',
-                      background: 'rgba(16, 185, 129, 0.1)',
-                      border: '1px solid rgba(16, 185, 129, 0.25)',
-                      color: '#10b981',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                    }}
-                  >
-                    <Check size={12} /> {kw}
-                  </span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '0.5rem' }}>
+                {analysisResult.matchedKeywords.map((kw) => (
+                  <details key={kw} style={{ padding: '0.45rem 0.6rem', borderRadius: 'var(--radius-sm)', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.22)' }}>
+                    <summary style={{ color: '#10b981', fontSize: '0.75rem', cursor: 'pointer' }}><Check size={12} style={{ verticalAlign: 'middle', marginRight: '0.25rem' }} />{kw}</summary>
+                    <p style={{ margin: '0.45rem 0 0', color: 'var(--text-muted)', fontSize: '0.7rem', lineHeight: 1.45 }}>{getKeywordEvidence(kw)}</p>
+                  </details>
                 ))}
               </div>
             </div>
@@ -851,13 +910,14 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Click chip to copy</span>
               </div>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-                Adding these keywords into your Projects or Skills section increases shortlisting probability:
+                Add a term only when it accurately describes your skills or experience. These are copied as prompts, not recommendations to claim experience you don’t have.
               </p>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.55rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.55rem' }}>
                 {analysisResult.missingKeywords.map((kw, i) => (
-                  <div
+                  <button
                     key={i}
+                    type="button"
                     onClick={() => handleCopyKeyword(kw.name)}
                     style={{
                       display: 'flex',
@@ -869,6 +929,9 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                       border: '1px solid rgba(239, 68, 68, 0.2)',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
+                      color: 'inherit',
+                      textAlign: 'left',
+                      font: 'inherit',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', overflow: 'hidden' }}>
@@ -896,7 +959,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                         <Copy size={13} />
                       )}
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -906,7 +969,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
 
       {/* TAB 3: SECTION AUDIT */}
       {activeWorkspaceTab === 'sections' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '0.75rem' }}>
           {analysisResult.sectionAudit.map((sec, i) => (
             <div
               key={i}
@@ -963,7 +1026,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
               <CheckCircle2 size={15} color="#22c55e" /> Actionable Fixes ({analysisResult.checklist.length})
             </h3>
             <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
-              Check to apply
+              Mark as reviewed
             </span>
           </div>
 
@@ -971,9 +1034,8 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
             {analysisResult.checklist.map((item) => {
               const isResolved = resolvedChecklist[item.id];
               return (
-                <div
+                <label
                   key={item.id}
-                  onClick={() => toggleChecklistItem(item.id)}
                   style={{
                     padding: '0.55rem 0.75rem',
                     borderRadius: 'var(--radius-sm)',
@@ -987,13 +1049,10 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                   }}
                 >
                   <input
+                    id={`check-${item.id}`}
                     type="checkbox"
                     checked={isResolved}
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      toggleChecklistItem(item.id);
-                    }}
+                    onChange={() => toggleChecklistItem(item.id)}
                     style={{ cursor: 'pointer', accentColor: '#22c55e' }}
                   />
 
@@ -1025,7 +1084,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                       {item.description}
                     </span>
                   </div>
-                </div>
+                </label>
               );
             })}
           </div>

@@ -408,7 +408,7 @@ function evaluateFactor1_RoleAlignment(resumeText, roleProfile, customJdText) {
   return {
     matchedKeywords: matched,
     missingKeywords: missing,
-    jdMatchRate: Math.max(48, Math.min(98, matchRate)),
+    jdMatchRate: Math.min(100, matchRate),
   };
 }
 
@@ -519,7 +519,7 @@ export function transformBulletToGoogleXYZ(originalText = '', targetRoleKey = 's
 
   const techStackString = detectedTech.length > 0
     ? detectedTech.slice(0, 3).join(' & ')
-    : (missingKeywords[0]?.name || 'modular microservices');
+    : '[relevant tools or technologies you used]';
 
   if (isML) {
     actionVerb = 'Engineered';
@@ -559,7 +559,12 @@ export function transformBulletToGoogleXYZ(originalText = '', targetRoleKey = 's
     rationale = `Applies Google XYZ: Replaces passive action with proactive engineering ownership [Z], test coverage (92%), and throughput gains (35%).`;
   }
 
-  const rewrite = `${actionVerb} ${methodZ}, ${metricY}, ${outcomeX}.`;
+  // Never invent performance figures, scale, or business outcomes for a candidate.
+  // Keep the rewrite useful as a structure while requiring the user to supply evidence.
+  metricY = 'achieving [verified result] measured by [specific metric] [Y]';
+  outcomeX = 'through [specific action or method you used] [Z]';
+  rationale = 'Template only: replace each bracketed placeholder with a result and method you can verify.';
+  const rewrite = `${actionVerb} ${methodZ.replace(/\s*\[Z\]$/, '')}, ${metricY}, ${outcomeX}.`;
 
   return {
     beforeText: text,
