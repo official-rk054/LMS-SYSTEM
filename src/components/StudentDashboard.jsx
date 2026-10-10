@@ -491,14 +491,19 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-            {UPCOMING_DRIVES.slice(0, 3).map((drive) => (
+            {UPCOMING_DRIVES.slice(0, 3).map((drive) => {
+              const userApp = (userProfile.appliedDrives || []).find(a => (a.id || a.driveId) === drive.id);
+              const isApplied = Boolean(userApp) || drive.applied;
+              const displayStage = userApp?.stage || drive.applicationStage || 'Registered';
+
+              return (
               <div
                 key={drive.id}
                 style={{
                   padding: '0.6rem 0.75rem',
                   borderRadius: 'var(--radius-md)',
                   background: 'rgba(255, 255, 255, 0.02)',
-                  border: '1px solid var(--border-subtle)',
+                  border: isApplied ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid var(--border-subtle)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0.35rem',
@@ -554,10 +559,10 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
                   }}
                 >
                   <span
-                    className={`badge ${drive.applied ? 'badge-success' : 'badge-primary'}`}
+                    className={`badge ${isApplied ? 'badge-success' : 'badge-primary'}`}
                     style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}
                   >
-                    {drive.applied ? drive.applicationStage : 'Eligible'}
+                    {isApplied ? `Applied: ${displayStage}` : 'Eligible'}
                   </span>
 
                   <button
@@ -569,7 +574,8 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
                   </button>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         </div>
       </div>

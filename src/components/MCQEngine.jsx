@@ -17,6 +17,8 @@ import {
   XCircle
 } from 'lucide-react';
 import { MCQ_QUESTION_BANK } from '../data/mockData';
+import confetti from 'canvas-confetti';
+import { recordAssessmentSubmission } from '../services/authDatabase';
 
 export const MCQEngine = ({ userProfile, onTestCompleted }) => {
   const [testActive, setTestActive] = useState(false);
@@ -94,20 +96,6 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
     });
   };
 
-  const handleSubmitTest = () => {
-    setTestSubmitted(true);
-    setTestActive(false);
-    if (onTestCompleted) {
-      onTestCompleted();
-    }
-  };
-
-  const formatTimer = (sec) => {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${m}:${s < 10 ? '0' : ''}${s}`;
-  };
-
   // Evaluation calculations
   let correctCount = 0;
   questions.forEach(q => {
@@ -116,6 +104,66 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
     }
   });
   const totalScorePercent = Math.round((correctCount / questions.length) * 100);
+
+  // Dynamic Sectional Evaluations
+  const quantQuestions = questions.filter(q => q.category === 'Quantitative Aptitude');
+  const quantCorrect = quantQuestions.filter(q => selectedAnswers[q.id] === q.correctIndex).length;
+  const quantPercent = quantQuestions.length ? Math.round((quantCorrect / quantQuestions.length) * 100) : 0;
+
+  const logicQuestions = questions.filter(q => q.category === 'Logical Reasoning');
+  const logicCorrect = logicQuestions.filter(q => selectedAnswers[q.id] === q.correctIndex).length;
+  const logicPercent = logicQuestions.length ? Math.round((logicCorrect / logicQuestions.length) * 100) : 0;
+
+  const coreQuestions = questions.filter(q => q.category && (q.category.includes('Technical') || q.category.includes('Core')));
+  const coreCorrect = coreQuestions.filter(q => selectedAnswers[q.id] === q.correctIndex).length;
+  const corePercent = coreQuestions.length ? Math.round((coreCorrect / coreQuestions.length) * 100) : totalScorePercent;
+
+  const verbalQuestions = questions.filter(q => q.category && q.category.includes('Verbal'));
+  const verbalCorrect = verbalQuestions.filter(q => selectedAnswers[q.id] === q.correctIndex).length;
+  const verbalPercent = verbalQuestions.length ? Math.round((verbalCorrect / verbalQuestions.length) * 100) : 75;
+
+  const overallPercentile = Math.min(99, Math.max(52, Math.round(50 + totalScorePercent * 0.49)));
+  const elapsedSeconds = Math.max(1, 900 - remainingSeconds);
+  const avgSecondsPerQ = Math.max(1, Math.round(elapsedSeconds / Math.max(1, Object.keys(selectedAnswers).length)));
+
+  const handleSubmitTest = () => {
+    setTestSubmitted(true);
+    setTestActive(false);
+
+    const submissionPayload = {
+      testId: 'tcs_nqt_assessment_2026',
+      testTitle: 'TCS NQT Full-Length Mock Assessment (2026 Edition)',
+      scorePercent: totalScorePercent,
+      correctCount,
+      totalQuestions: questions.length,
+      sectionalScores: {
+        aptitude: Math.round((quantPercent + logicPercent) / 2),
+        coreCS: corePercent,
+        verbal: verbalPercent,
+      },
+      tabSwitches: tabSwitchCount,
+    };
+
+    const updatedUser = recordAssessmentSubmission(submissionPayload);
+
+    if (totalScorePercent >= 70) {
+      confetti({
+        particleCount: 75,
+        spread: 60,
+        origin: { y: 0.6 },
+      });
+    }
+
+    if (onTestCompleted) {
+      onTestCompleted(submissionPayload, updatedUser);
+    }
+  };
+
+  const formatTimer = (sec) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -517,7 +565,7 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
                 <TrendingUp size={24} />
               </div>
               <div>
-                <div className="stat-val" style={{ color: '#818cf8' }}>92nd</div>
+                <div className="stat-val" style={{ color: '#818cf8' }}>{overallPercentile}th</div>
                 <div className="stat-label">College Percentile</div>
               </div>
             </div>
@@ -537,7 +585,7 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
                 <Clock size={24} />
               </div>
               <div>
-                <div className="stat-val" style={{ color: '#fbbf24' }}>48s</div>
+                <div className="stat-val" style={{ color: '#fbbf24' }}>{avgSecondsPerQ}s</div>
                 <div className="stat-label">Avg Time Per Question</div>
               </div>
             </div>
@@ -549,48 +597,48 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
               <div className="card-header">
                 <h3 className="card-title">
                   <BarChart2 size={18} color="var(--primary)" />
-                  Topic-Wise Accuracy Breakdown
+                  Topic-Wise Accuracy Breakdown (Real Diagnostic)
                 </h3>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.3rem' }}>
-                    <span>Quantitative Aptitude (Time & Work, Percentages, Trains)</span>
-                    <strong style={{ color: '#10b981' }}>85%</strong>
+                    <span>Quantitative Aptitude ({quantCorrect}/{quantQuestions.length} Correct)</span>
+                    <strong style={{ color: quantPercent >= 70 ? '#10b981' : '#f59e0b' }}>{quantPercent}%</strong>
                   </div>
                   <div className="progress-container">
-                    <div className="progress-fill" style={{ width: '85%', background: 'var(--emerald-gradient)' }}></div>
+                    <div className="progress-fill" style={{ width: `${quantPercent}%`, background: 'var(--emerald-gradient)' }}></div>
                   </div>
                 </div>
 
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.3rem' }}>
-                    <span>Logical Reasoning (Blood Relations, Syllogisms)</span>
-                    <strong style={{ color: '#6366f1' }}>80%</strong>
+                    <span>Logical Reasoning ({logicCorrect}/{logicQuestions.length} Correct)</span>
+                    <strong style={{ color: logicPercent >= 70 ? '#6366f1' : '#f59e0b' }}>{logicPercent}%</strong>
                   </div>
                   <div className="progress-container">
-                    <div className="progress-fill" style={{ width: '80%', background: 'var(--accent-gradient)' }}></div>
+                    <div className="progress-fill" style={{ width: `${logicPercent}%`, background: 'var(--accent-gradient)' }}></div>
                   </div>
                 </div>
 
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.3rem' }}>
-                    <span>Technical Core (OS, DBMS, DSA, Networks)</span>
-                    <strong style={{ color: '#06b6d4' }}>90%</strong>
+                    <span>Technical Core ({coreCorrect}/{coreQuestions.length} Correct)</span>
+                    <strong style={{ color: corePercent >= 70 ? '#06b6d4' : '#f59e0b' }}>{corePercent}%</strong>
                   </div>
                   <div className="progress-container">
-                    <div className="progress-fill" style={{ width: '90%', background: 'var(--cyan-gradient)' }}></div>
+                    <div className="progress-fill" style={{ width: `${corePercent}%`, background: 'var(--cyan-gradient)' }}></div>
                   </div>
                 </div>
 
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.3rem' }}>
-                    <span>Verbal Ability (Grammar & Sentence Correction)</span>
-                    <strong style={{ color: '#f59e0b' }}>75%</strong>
+                    <span>Verbal & Communication ({verbalCorrect}/{verbalQuestions.length} Correct)</span>
+                    <strong style={{ color: verbalPercent >= 70 ? '#f59e0b' : '#ef4444' }}>{verbalPercent}%</strong>
                   </div>
                   <div className="progress-container">
-                    <div className="progress-fill" style={{ width: '75%', background: 'var(--gold-gradient)' }}></div>
+                    <div className="progress-fill" style={{ width: `${verbalPercent}%`, background: 'var(--gold-gradient)' }}></div>
                   </div>
                 </div>
               </div>

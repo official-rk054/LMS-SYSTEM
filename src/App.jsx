@@ -22,7 +22,10 @@ import { JobBoard } from './components/JobBoard';
 import {
   getActiveUserSession,
   logoutUserSession,
-  initUserDatabase
+  initUserDatabase,
+  recordCodingProblemSolved,
+  recordAssessmentSubmission,
+  applyToCampusDrive
 } from './services/authDatabase';
 
 export function App() {
@@ -32,6 +35,7 @@ export function App() {
   const [lang, setLang] = useState('en');
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [resumeDataForAudit, setResumeDataForAudit] = useState(null);
+  const [selectedProblemIdForArena, setSelectedProblemIdForArena] = useState(null);
 
   // Initialize DB and load session on mount
   useEffect(() => {
@@ -42,6 +46,11 @@ export function App() {
       setDefaultTabForRole(active.role);
     }
   }, []);
+
+  const handleNavigateToArena = (problemId) => {
+    setSelectedProblemIdForArena(problemId);
+    setActiveTab('coding_arena');
+  };
 
   // Apply theme to document element
   useEffect(() => {
@@ -71,27 +80,34 @@ export function App() {
   };
 
   // Handler when MCQ test is completed (for student)
-  const handleTestCompleted = () => {
-    setCurrentUser(prev => {
-      if (!prev || prev.role !== 'student') return prev;
-      return {
-        ...prev,
-        xpPoints: prev.xpPoints + 150,
-        placementReadinessScore: Math.min(prev.placementReadinessScore + 2, 98),
-      };
-    });
+  const handleTestCompleted = (submissionPayload, updatedUser) => {
+    if (updatedUser) {
+      setCurrentUser(updatedUser);
+    } else {
+      const active = getActiveUserSession();
+      if (active) setCurrentUser(active);
+    }
   };
 
   // Handler when a coding problem is solved (for student)
-  const handleProblemSolved = () => {
-    setCurrentUser(prev => {
-      if (!prev || prev.role !== 'student') return prev;
-      return {
-        ...prev,
-        xpPoints: prev.xpPoints + 100,
-        placementReadinessScore: Math.min(prev.placementReadinessScore + 1, 98),
-      };
-    });
+  const handleProblemSolved = (problemId, title, language, code, runtime) => {
+    const updated = recordCodingProblemSolved(problemId, title, language, code, runtime);
+    if (updated) {
+      setCurrentUser(updated);
+    } else {
+      const active = getActiveUserSession();
+      if (active) setCurrentUser(active);
+    }
+  };
+
+  // Handler when candidate applies to a campus placement drive
+  const handleApplyDrive = (drive, updatedUser) => {
+    if (updatedUser) {
+      setCurrentUser(updatedUser);
+    } else {
+      const active = getActiveUserSession();
+      if (active) setCurrentUser(active);
+    }
   };
 
   const handleExportPlacementReport = () => {
@@ -185,6 +201,7 @@ export function App() {
               {activeTab === 'coding_arena' && (
                 <CodingArena
                   userProfile={currentUser}
+                  initialProblemId={selectedProblemIdForArena}
                   onProblemSolved={handleProblemSolved}
                 />
               )}
@@ -192,6 +209,9 @@ export function App() {
               {activeTab === 'learning_modules' && (
                 <LearningModules
                   userProfile={currentUser}
+                  onNavigateToArena={handleNavigateToArena}
+                  onUpdateUserProfile={setCurrentUser}
+                  setActiveTab={setActiveTab}
                 />
               )}
 
@@ -213,7 +233,8 @@ export function App() {
 
               {activeTab === 'job_board' && (
                 <JobBoard
-                  onApplyDrive={() => {}}
+                  userProfile={currentUser}
+                  onApplyDrive={handleApplyDrive}
                 />
               )}
             </>

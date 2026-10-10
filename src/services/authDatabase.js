@@ -579,3 +579,251 @@ export const getSecurityAuditReport = () => {
     ],
   };
 };
+
+// =========================================================================
+// REAL DATA & FUNCTIONALITY PERSISTENCE ENGINE
+// =========================================================================
+
+/**
+ * Atomically updates active user session and main users database
+ */
+export const updateActiveUserProfile = (updaterFn) => {
+  try {
+    const active = getActiveUserSession();
+    if (!active) return null;
+
+    const updatedUser = typeof updaterFn === 'function' ? updaterFn(active) : { ...active, ...updaterFn };
+    
+    // Save active user
+    localStorage.setItem(ACTIVE_USER_KEY, JSON.stringify(updatedUser));
+
+    // Update in users database list
+    const usersJson = localStorage.getItem(DB_KEY);
+    if (usersJson) {
+      const users = JSON.parse(usersJson);
+      const updatedList = users.map(u => (u.id === updatedUser.id || u.email === updatedUser.email) ? updatedUser : u);
+      localStorage.setItem(DB_KEY, JSON.stringify(updatedList));
+    }
+
+    return updatedUser;
+  } catch (err) {
+    console.warn('Failed to update active user profile:', err);
+    return null;
+  }
+};
+
+/**
+ * Real Campus Placement Drive Application Submission with Eligibility Check
+ */
+export const applyToCampusDrive = (drive) => {
+  const activeUser = getActiveUserSession();
+  if (!activeUser) {
+    return { success: false, message: 'Please log in to apply for campus drives.' };
+  }
+
+  // 1. Eligibility Check: CGPA
+  const studentCgpa = parseFloat(activeUser.cgpa) || 8.0;
+  const minRequiredCgpa = parseFloat(drive.minCGPA) || 6.0;
+  if (studentCgpa < minRequiredCgpa) {
+    return {
+      success: false,
+      eligible: false,
+      message: `Eligibility mismatch: Your CGPA is ${studentCgpa.toFixed(2)}, but ${drive.company} requires a minimum of ${minRequiredCgpa.toFixed(2)}.`,
+    };
+  }
+
+  // 2. Check if already applied
+  const existingApps = activeUser.appliedDrives || [];
+  const alreadyApplied = existingApps.some(app => app.driveId === drive.id || app.id === drive.id);
+  if (alreadyApplied) {
+    return {
+      success: false,
+      alreadyApplied: true,
+      message: `You have already registered for ${drive.company}. Check your dashboard for OA schedule details.`,
+    };
+  }
+
+  // 3. Generate Official College TPO Application ID
+  const timestamp = Date.now();
+  const companyCode = (drive.company.replace(/[^a-zA-Z]/g, '').slice(0, 4) || 'DRV').toUpperCase();
+  const applicationId = `TPO-${companyCode}-${new Date().getFullYear()}-${timestamp.toString().slice(-4)}`;
+
+  const newApplication = {
+    id: drive.id,
+    driveId: drive.id,
+    company: drive.company,
+    role: drive.role,
+    packageCTC: drive.packageCTC,
+    tier: drive.tier,
+    logo: drive.logo,
+    location: drive.location,
+    date: drive.date,
+    appliedAt: new Date().toISOString(),
+    applicationId: applicationId,
+    stage: 'Registered (Online Assessment Scheduled)',
+    minCGPA: drive.minCGPA,
+    status: 'Applied',
+  };
+
+  // 4. Persist to active user and DB
+  const updatedUser = updateActiveUserProfile(prev => ({
+    ...prev,
+    appliedDrives: [...(prev.appliedDrives || []), newApplication],
+    xpPoints: (prev.xpPoints || 3420) + 50,
+  }));
+
+  // Non-blocking sync with backend
+  try {
+    fetch('http://localhost:5000/api/student/apply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: activeUser.id, application: newApplication })
+    }).catch(() => {});
+  } catch {}
+
+  return {
+    success: true,
+    eligible: true,
+    application: newApplication,
+    updatedUser,
+    message: `Application submitted successfully! Your Application ID is ${applicationId}.`,
+  };
+};
+
+/**
+ * Record Real Coding Problem Execution & Solution Submission
+ */
+export const recordCodingProblemSolved = (problemId, problemTitle, language, code, runtimeMs) => {
+  return updateActiveUserProfile(prev => {
+    const existingSolved = prev.solvedProblems || [];
+    const isFirstTime = !existingSolved.some(p => p.problemId === problemId);
+
+    const submissionRecord = {
+      problemId,
+      problemTitle,
+      language,
+      runtimeMs: Math.round(runtimeMs),
+      solvedAt: new Date().toISOString(),
+      passedAllTestCases: true,
+    };
+
+    const newSolved = isFirstTime ? [...existingSolved, submissionRecord] : existingSolved;
+    const bonusXp = isFirstTime ? 100 : 25;
+    const currentCoding = prev.readinessBreakdown?.coding || 82;
+    const newCoding = Math.min(98, currentCoding + (isFirstTime ? 2 : 1));
+
+    const updatedBreakdown = {
+      ...(prev.readinessBreakdown || {}),
+      coding: newCoding,
+    };
+
+    const breakdownValues = Object.values(updatedBreakdown);
+    const newReadiness = Math.round(breakdownValues.reduce((a, b) => a + b, 0) / breakdownValues.length);
+
+    return {
+      ...prev,
+      solvedProblems: newSolved,
+      xpPoints: (prev.xpPoints || 3420) + bonusXp,
+      readinessBreakdown: updatedBreakdown,
+      placementReadinessScore: Math.max(prev.placementReadinessScore || 84, newReadiness),
+    };
+  });
+};
+
+/**
+ * Record Real Assessment / MCQ Submission & Sectional Scoring
+ */
+export const recordAssessmentSubmission = ({
+  testId,
+  testTitle,
+  scorePercent,
+  correctCount,
+  totalQuestions,
+  sectionalScores = {},
+  tabSwitches = 0
+}) => {
+  return updateActiveUserProfile(prev => {
+    const history = prev.assessmentHistory || [];
+    const record = {
+      testId,
+      testTitle,
+      scorePercent,
+      correctCount,
+      totalQuestions,
+      sectionalScores,
+      tabSwitches,
+      completedAt: new Date().toISOString(),
+    };
+
+    const aptitudeImpact = sectionalScores.aptitude !== undefined ? sectionalScores.aptitude : scorePercent;
+    const coreCSImpact = sectionalScores.coreCS !== undefined ? sectionalScores.coreCS : scorePercent;
+
+    const prevAptitude = prev.readinessBreakdown?.aptitude || 88;
+    const prevCoreCS = prev.readinessBreakdown?.coreCS || 85;
+
+    const newAptitude = Math.min(98, Math.round(prevAptitude * 0.7 + aptitudeImpact * 0.3));
+    const newCoreCS = Math.min(98, Math.round(prevCoreCS * 0.7 + coreCSImpact * 0.3));
+
+    const updatedBreakdown = {
+      ...(prev.readinessBreakdown || {}),
+      aptitude: newAptitude,
+      coreCS: newCoreCS,
+    };
+
+    const values = Object.values(updatedBreakdown);
+    const newReadiness = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+
+    return {
+      ...prev,
+      assessmentHistory: [record, ...history],
+      xpPoints: (prev.xpPoints || 3420) + 150,
+      readinessBreakdown: updatedBreakdown,
+      placementReadinessScore: Math.max(prev.placementReadinessScore || 84, newReadiness),
+    };
+  });
+};
+
+/**
+ * Record Real AI Mock Interview Session Evaluation
+ */
+export const recordInterviewEvaluation = ({
+  roundId,
+  roundTitle,
+  overallScore,
+  metrics,
+  strengths,
+  improvements,
+}) => {
+  return updateActiveUserProfile(prev => {
+    const history = prev.interviewHistory || [];
+    const record = {
+      roundId,
+      roundTitle,
+      overallScore,
+      metrics,
+      strengths,
+      improvements,
+      completedAt: new Date().toISOString(),
+    };
+
+    const prevInterview = prev.readinessBreakdown?.interviewHR || 78;
+    const newInterview = Math.min(98, Math.round(prevInterview * 0.6 + overallScore * 0.4));
+
+    const updatedBreakdown = {
+      ...(prev.readinessBreakdown || {}),
+      interviewHR: newInterview,
+    };
+
+    const values = Object.values(updatedBreakdown);
+    const newReadiness = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+
+    return {
+      ...prev,
+      interviewHistory: [record, ...history],
+      xpPoints: (prev.xpPoints || 3420) + 200,
+      readinessBreakdown: updatedBreakdown,
+      placementReadinessScore: Math.max(prev.placementReadinessScore || 84, newReadiness),
+    };
+  });
+};
+

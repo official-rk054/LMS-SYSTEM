@@ -30,6 +30,8 @@ CREATE TABLE IF NOT EXISTS courses (
     modules_count INT DEFAULT 12,
     instructor_name VARCHAR(100),
     level VARCHAR(20) DEFAULT 'Intermediate',
+    youtube_playlist_url TEXT,
+    youtube_channel VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -55,6 +57,9 @@ CREATE TABLE IF NOT EXISTS coding_problems (
     sample_input TEXT,
     sample_output TEXT,
     points INT DEFAULT 100,
+    leetcode_url VARCHAR(255),
+    gfg_url VARCHAR(255),
+    company_tags VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
