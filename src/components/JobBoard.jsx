@@ -271,7 +271,7 @@ export const JobBoard = ({ userProfile, onApplyDrive }) => {
               width: '100%',
               padding: '1.5rem',
               border: '1px solid var(--border-glass)',
-              background: '#09090b',
+              background: 'var(--bg-card)',
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
             }}
           >

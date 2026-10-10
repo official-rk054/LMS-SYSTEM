@@ -115,7 +115,10 @@
   --text-bright: #020617;
   --text-muted: #334155;
   --text-dim: #475569;
-  --text-white: #020617;
+  --text-white: #ffffff;
+  --text-on-dark: #ffffff;
+  --text-on-dark-sub: #93c5fd;
+  --text-on-dark-dim: #cbd5e1;
   --primary: #4f46e5;
   --primary-hover: #4338ca;
   --primary-light: rgba(79, 70, 229, 0.12);
@@ -1444,12 +1447,18 @@ a:hover {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  color: var(--text-dim);
+  color: #cbd5e1 !important;
   text-align: center;
   padding: 1.5rem;
-  background: radial-gradient(circle at center, rgba(39, 39, 42, 0.4) 0%, rgba(9, 9, 11, 0.9) 100%);
+  background: radial-gradient(circle at center, rgba(39, 39, 45, 0.7) 0%, rgba(9, 9, 12, 0.95) 100%);
   width: 100%;
   height: 100%;
+}
+
+.media-video-placeholder span,
+.media-video-placeholder div,
+.media-video-placeholder strong {
+  color: #ffffff !important;
 }
 
 .media-hud-overlay {
@@ -1461,13 +1470,141 @@ a:hover {
   justify-content: space-between;
   align-items: center;
   font-size: 0.72rem;
-  background: rgba(9, 9, 11, 0.75);
+  background: rgba(9, 9, 12, 0.88);
   backdrop-filter: blur(8px);
   padding: 0.35rem 0.75rem;
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e4e4e7 !important;
   pointer-events: none;
+}
+
+/* ─── Video Roundtable Conference Stage (Referencing Meeting Layout) ─── */
+.video-conference-stage {
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  background: linear-gradient(180deg, rgba(22, 22, 26, 0.95) 0%, rgba(12, 12, 15, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+}
+
+.video-participant-tile {
+  position: relative;
+  height: 145px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: radial-gradient(circle at center, rgba(36, 36, 42, 0.8) 0%, rgba(14, 14, 18, 0.95) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.video-participant-tile:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  transform: translateY(-1px);
+}
+
+.video-participant-tile.speaking {
+  border: 2px solid #22c55e !important;
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.45) !important;
+}
+
+.video-participant-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #ffffff !important;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  margin-top: 3px;
+}
+
+.video-participant-college {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #93c5fd !important; /* High contrast soft sky blue on dark tile */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  margin-top: 1px;
+}
+
+.video-participant-hud {
+  position: absolute;
+  bottom: 5px;
+  left: 6px;
+  right: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(9, 9, 12, 0.88);
+  backdrop-filter: blur(6px);
+  padding: 3px 8px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.68rem;
+}
+
+.video-status-active {
+  color: #4ade80 !important;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.video-status-listening {
+  color: #e2e8f0 !important;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ─── Real-Time Live Speech Analysis HUD ─── */
+.live-speech-hud {
+  background: rgba(14, 14, 18, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  animation: slideUpFade 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.live-audio-meter {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 18px;
+  padding: 2px 4px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
+}
+
+.live-audio-bar {
+  width: 3px;
+  border-radius: 2px;
+  background: #22c55e;
+  transition: height 0.06s ease;
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .media-hud-top {

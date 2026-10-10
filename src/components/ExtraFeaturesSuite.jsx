@@ -23,11 +23,34 @@ import {
   PhoneOff,
   Activity,
   ShieldCheck,
-  Settings
+  Settings,
+  Volume2,
+  VolumeX,
+  Radio,
+  Gauge,
+  Flame,
+  Check
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { GROUP_DISCUSSION_TOPICS, APTITUDE_FLASHCARDS, ALUMNI_MENTORS } from '../data/mockData';
 import { useMediaConnectivity } from '../hooks/useMediaConnectivity';
+import {
+  analyzeSpeechInRealTime,
+  LiveSpeechRecognizer,
+  playNaturalTTS
+} from '../services/liveSpeechAnalyzer';
+
+const LiveAudioBarMeter = ({ level = 0, active = false }) => {
+  const bars = [0.35, 0.7, 1.0, 0.85, 0.5, 0.9, 0.4];
+  return (
+    <div className="live-audio-meter">
+      {bars.map((scale, i) => {
+        const h = active ? Math.max(3, Math.round((Math.max(18, level) / 100) * 16 * scale)) : 3;
+        return <div key={i} className="live-audio-bar" style={{ height: `${h}px` }} />;
+      })}
+    </div>
+  );
+};
 
 export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
   const [activeTool, setActiveTool] = useState(initialTool);
@@ -50,10 +73,19 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
   const [isGdMicListening, setIsGdMicListening] = useState(false);
   const [gdEvaluation, setGdEvaluation] = useState(null);
 
+  // Live Speech & TTS Real-Time Analysis state
+  const [activeTtsSpeaker, setActiveTtsSpeaker] = useState(null);
+  const [activeTtsInfo, setActiveTtsInfo] = useState(null);
+  const [liveSpeechMetrics, setLiveSpeechMetrics] = useState(null);
+  const [speechElapsedSecs, setSpeechElapsedSecs] = useState(0);
+  const recognizerRef = useRef(null);
+  const fluencyRecognizerRef = useRef(null);
+
   // Fluency Analyzer state
   const [speechText, setSpeechText] = useState('Actually, um, in our college project we, like, implemented a microservice that, you know, handled database transactions. It was basically very fast.');
   const [isFluencyRecording, setIsFluencyRecording] = useState(false);
   const [fluencyReport, setFluencyReport] = useState(null);
+  const [liveFluencyMetrics, setLiveFluencyMetrics] = useState(null);
 
   // Flashcards state
   const [currentCardIdx, setCurrentCardIdx] = useState(0);
@@ -140,53 +172,115 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
     }, 1000);
   };
 
-  // Toggle GD Speech Recognition
-  const toggleGdSpeech = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('Speech Recognition is not supported by this browser. You can type in the input box!');
+  // Natural TTS playback with active speaker highlighting & tone analysis
+  const handlePlayGdMessageTts = (msg) => {
+    let speakerKey = null;
+    let speakerRole = '';
+    let tone = 'Analytical & Structured';
+
+    if (msg.sender.includes('Rohan')) {
+      speakerKey = 'Rohan';
+      speakerRole = 'Aggressive Debater (DTU Delhi)';
+      tone = 'Challenging & Direct';
+    } else if (msg.sender.includes('Priya')) {
+      speakerKey = 'Priya';
+      speakerRole = 'Constructive Collaborator (PICT Pune)';
+      tone = 'Collaborative & Evidence-Based';
+    } else if (msg.sender.includes('Aditya')) {
+      speakerKey = 'Aditya';
+      speakerRole = 'Strategic Balancer (VIT Vellore)';
+      tone = 'Pragmatic & Synthesizing';
+    } else if (msg.sender.includes('Moderator')) {
+      speakerKey = 'Moderator AI';
+      speakerRole = 'Placement Evaluation Moderator';
+      tone = 'Authoritative & Guiding';
+    } else {
+      speakerKey = userProfile.name;
+      speakerRole = 'Candidate';
+      tone = 'Articulate & Persuasive';
+    }
+
+    // Toggle stop if already playing this speaker
+    if (activeTtsSpeaker === speakerKey) {
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      setActiveTtsSpeaker(null);
+      setActiveTtsInfo(null);
       return;
     }
 
+    setActiveTtsSpeaker(speakerKey);
+    setActiveTtsInfo({
+      speaker: msg.sender,
+      role: speakerRole,
+      tone,
+      snippet: msg.text.slice(0, 120) + (msg.text.length > 120 ? '...' : '')
+    });
+
+    playNaturalTTS(msg.text, {
+      rate: 1.05,
+      pitch: speakerKey === 'Priya' ? 1.15 : 0.98,
+      onStart: () => {},
+      onEnd: () => {
+        setActiveTtsSpeaker(null);
+        setActiveTtsInfo(null);
+      },
+      onError: () => {
+        setActiveTtsSpeaker(null);
+        setActiveTtsInfo(null);
+      }
+    });
+  };
+
+  // Toggle GD Speech Recognition with Live Diagnostic Analysis
+  const toggleGdSpeech = async () => {
     if (isGdMicListening) {
+      if (recognizerRef.current) recognizerRef.current.stop();
       setIsGdMicListening(false);
       return;
     }
 
-    if (!isMicActive) toggleMic(true);
-
+    // Acquire or verify audio mic stream
     try {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = 'en-IN';
-
-      recognition.onstart = () => setIsGdMicListening(true);
-      recognition.onresult = (event) => {
-        let transcript = '';
-        for (let i = 0; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
-        }
-        setCandidateGdInput(transcript);
-      };
-      recognition.onerror = () => setIsGdMicListening(false);
-      recognition.onend = () => setIsGdMicListening(false);
-      recognition.start();
+      await startMedia({ audio: true, video: isCameraActive });
     } catch (err) {
-      console.warn('GD Speech recognition error:', err);
-      setIsGdMicListening(false);
+      console.warn('Audio media permission check:', err);
+    }
+
+    if (!recognizerRef.current) {
+      recognizerRef.current = new LiveSpeechRecognizer({
+        onTranscript: ({ transcript, elapsedSeconds }) => {
+          setCandidateGdInput(transcript);
+          setSpeechElapsedSecs(elapsedSeconds);
+          const metrics = analyzeSpeechInRealTime(transcript, elapsedSeconds, {
+            keywords: ['curriculum', 'governance', 'AI', 'upskilling', 'integration', 'automation', 'nasscom', 'skills', 'engineering']
+          });
+          setLiveSpeechMetrics(metrics);
+        },
+        onStateChange: ({ isListening }) => {
+          setIsGdMicListening(isListening);
+          if (!isListening && !candidateGdInput) {
+            setLiveSpeechMetrics(null);
+          }
+        },
+        onError: (err) => {
+          console.warn('Live Speech Error:', err);
+          setIsGdMicListening(false);
+        }
+      });
+    }
+
+    const started = recognizerRef.current.start({ lang: 'en-IN', continuous: true });
+    if (!started) {
+      alert('Microphone speech recognition could not start. Please ensure microphone permissions are granted in your browser.');
     }
   };
 
-  // Live Speech Recording for Fluency Analyzer
+  // Live Speech Recording for Fluency Analyzer with Real-Time Metrics
   const toggleFluencyRecording = async () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('Speech recognition is not available in this browser. You can paste your text below!');
-      return;
-    }
-
     if (isFluencyRecording) {
+      if (fluencyRecognizerRef.current) fluencyRecognizerRef.current.stop();
       setIsFluencyRecording(false);
       handleAnalyzeFluency();
       return;
@@ -194,38 +288,34 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
 
     try {
       await startMedia({ audio: true, video: false });
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-IN';
-
-      let accumulated = '';
-      recognition.onstart = () => {
-        setIsFluencyRecording(true);
-        setSpeechText('');
-      };
-
-      recognition.onresult = (event) => {
-        let current = '';
-        for (let i = 0; i < event.results.length; i++) {
-          current += event.results[i][0].transcript + ' ';
-        }
-        setSpeechText(current.trim());
-      };
-
-      recognition.onerror = () => {
-        setIsFluencyRecording(false);
-      };
-
-      recognition.onend = () => {
-        setIsFluencyRecording(false);
-      };
-
-      recognition.start();
-    } catch (err) {
-      console.warn('Fluency mic start error:', err);
-      setIsFluencyRecording(false);
+    } catch (e) {
+      console.warn('Fluency mic permission check:', e);
     }
+
+    setSpeechText('');
+    setLiveFluencyMetrics(null);
+
+    if (!fluencyRecognizerRef.current) {
+      fluencyRecognizerRef.current = new LiveSpeechRecognizer({
+        onTranscript: ({ transcript, elapsedSeconds }) => {
+          setSpeechText(transcript);
+          const metrics = analyzeSpeechInRealTime(transcript, elapsedSeconds);
+          setLiveFluencyMetrics(metrics);
+        },
+        onStateChange: ({ isListening }) => {
+          setIsFluencyRecording(isListening);
+          if (!isListening) {
+            handleAnalyzeFluency();
+          }
+        },
+        onError: (err) => {
+          console.warn('Fluency mic error:', err);
+          setIsFluencyRecording(false);
+        }
+      });
+    }
+
+    fluencyRecognizerRef.current.start({ lang: 'en-IN', continuous: true });
   };
 
   // Analyze Fluency
@@ -248,7 +338,7 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
         'Replace "basically" with concise direct statements.',
         'Pause for 1 second instead of saying "um" to gather your thoughts.',
         'Use transition phrases like "Furthermore" or "In particular".',
-      ],
+      ]
     });
   };
 
@@ -327,31 +417,10 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
           ═════════════════════════════════════════════════════════════ */}
       {activeTool === 'gd' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* Roundtable Video Presence Strip */}
-          <div
-            className="card"
-            style={{
-              padding: '1rem',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: '1rem',
-              background: 'rgba(18, 18, 22, 0.8)',
-            }}
-          >
+          {/* Roundtable Video Presence Strip (Universal High-Contrast Stage) */}
+          <div className="video-conference-stage">
             {/* Candidate Live Tile */}
-            <div
-              style={{
-                position: 'relative',
-                height: '140px',
-                borderRadius: 'var(--radius-md)',
-                overflow: 'hidden',
-                background: '#09090b',
-                border: isSpeaking ? '2px solid #22c55e' : '1px solid var(--border-subtle)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
+            <div className={`video-participant-tile ${isSpeaking || isGdMicListening ? 'speaking' : ''}`}>
               {stream && isCameraActive ? (
                 <video
                   ref={gdVideoRef}
@@ -361,79 +430,156 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
                   className="media-video-feed"
                 />
               ) : (
-                <div style={{ textAlign: 'center', color: 'var(--text-dim)' }}>
+                <div style={{ textAlign: 'center', padding: '0.5rem' }}>
                   <div style={{ fontSize: '1.8rem' }}>🎓</div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-white)' }}>You ({userProfile.name})</div>
-                  <button onClick={() => startMedia({ video: true, audio: true })} className="btn btn-outline btn-sm" style={{ padding: '0.2rem 0.5rem', fontSize: '0.68rem', marginTop: '4px' }}>
+                  <div className="video-participant-name">You ({userProfile.name})</div>
+                  <button
+                    onClick={() => startMedia({ video: true, audio: true })}
+                    className="btn btn-sm"
+                    style={{
+                      background: '#ffffff',
+                      color: '#09090b',
+                      fontWeight: 700,
+                      padding: '0.2rem 0.6rem',
+                      fontSize: '0.68rem',
+                      marginTop: '6px',
+                      borderRadius: '4px',
+                    }}
+                  >
                     Turn On Video
                   </button>
                 </div>
               )}
 
               {/* Candidate bottom HUD */}
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: 4,
-                  left: 4,
-                  right: 4,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  background: 'rgba(9, 9, 11, 0.75)',
-                  backdropFilter: 'blur(4px)',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  fontSize: '0.68rem',
-                }}
-              >
-                <span style={{ color: isSpeaking ? '#4ade80' : 'var(--text-muted)', fontWeight: 600 }}>
-                  You {isSpeaking ? '🎙️ Speaking' : ''}
+              <div className="video-participant-hud">
+                <span className={isSpeaking ? 'video-status-active' : 'video-status-listening'}>
+                  <LiveAudioBarMeter level={audioLevel} active={isSpeaking || isGdMicListening} />
+                  <span>You {isSpeaking ? '🎙️ Speaking' : ''}</span>
                 </span>
-                <div style={{ display: 'flex', gap: '4px' }}>
-                  <button onClick={() => toggleCamera()} className="btn btn-ghost btn-sm" style={{ padding: '1px' }}>
-                    {isCameraActive ? <Video size={11} color="#22c55e" /> : <VideoOff size={11} color="#f87171" />}
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  <button onClick={() => toggleCamera()} className="btn btn-ghost btn-sm" style={{ padding: '2px', color: '#ffffff' }} title="Toggle Video">
+                    {isCameraActive ? <Video size={12} color="#22c55e" /> : <VideoOff size={12} color="#f87171" />}
                   </button>
-                  <button onClick={() => toggleMic()} className="btn btn-ghost btn-sm" style={{ padding: '1px' }}>
-                    {isMicActive ? <Mic size={11} color="#22c55e" /> : <MicOff size={11} color="#f87171" />}
+                  <button onClick={() => toggleMic()} className="btn btn-ghost btn-sm" style={{ padding: '2px', color: '#ffffff' }} title="Toggle Microphone">
+                    {isMicActive ? <Mic size={12} color="#22c55e" /> : <MicOff size={12} color="#f87171" />}
                   </button>
                 </div>
               </div>
             </div>
 
             {/* Simulated Participant 1: Rohan */}
-            <div style={{ height: '140px', borderRadius: 'var(--radius-md)', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            <div className={`video-participant-tile ${activeTtsSpeaker === 'Rohan' ? 'speaking' : ''}`}>
               <div style={{ fontSize: '2rem' }}>👨‍💻</div>
-              <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-white)' }}>Rohan</div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>DTU Delhi</div>
-              <div style={{ position: 'absolute', bottom: 4, left: 4, right: 4, display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-muted)', background: 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: '4px' }}>
-                <span>Active</span>
-                <span>🎧 Listening</span>
+              <div className="video-participant-name">Rohan</div>
+              <div className="video-participant-college">DTU Delhi</div>
+              <div className="video-participant-hud">
+                <span className={activeTtsSpeaker === 'Rohan' ? 'video-status-active' : 'video-status-listening'}>
+                  <span style={{ fontSize: '0.65rem' }}>{activeTtsSpeaker === 'Rohan' ? '●' : '○'}</span>
+                  <span>{activeTtsSpeaker === 'Rohan' ? 'Active Speaker' : 'Active'}</span>
+                </span>
+                <span className={activeTtsSpeaker === 'Rohan' ? 'video-status-active' : 'video-status-listening'}>
+                  {activeTtsSpeaker === 'Rohan' ? (
+                    <>
+                      <LiveAudioBarMeter level={75} active={true} />
+                      <span>🎙️ Speaking</span>
+                    </>
+                  ) : (
+                    <span>🎧 Listening</span>
+                  )}
+                </span>
               </div>
             </div>
 
             {/* Simulated Participant 2: Priya */}
-            <div style={{ height: '140px', borderRadius: 'var(--radius-md)', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            <div className={`video-participant-tile ${activeTtsSpeaker === 'Priya' ? 'speaking' : ''}`}>
               <div style={{ fontSize: '2rem' }}>👩‍🎓</div>
-              <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-white)' }}>Priya</div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>PICT Pune</div>
-              <div style={{ position: 'absolute', bottom: 4, left: 4, right: 4, display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-muted)', background: 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: '4px' }}>
-                <span>Active</span>
-                <span>🎧 Listening</span>
+              <div className="video-participant-name">Priya</div>
+              <div className="video-participant-college">PICT Pune</div>
+              <div className="video-participant-hud">
+                <span className={activeTtsSpeaker === 'Priya' ? 'video-status-active' : 'video-status-listening'}>
+                  <span style={{ fontSize: '0.65rem' }}>{activeTtsSpeaker === 'Priya' ? '●' : '○'}</span>
+                  <span>{activeTtsSpeaker === 'Priya' ? 'Active Speaker' : 'Active'}</span>
+                </span>
+                <span className={activeTtsSpeaker === 'Priya' ? 'video-status-active' : 'video-status-listening'}>
+                  {activeTtsSpeaker === 'Priya' ? (
+                    <>
+                      <LiveAudioBarMeter level={70} active={true} />
+                      <span>🎙️ Speaking</span>
+                    </>
+                  ) : (
+                    <span>🎧 Listening</span>
+                  )}
+                </span>
               </div>
             </div>
 
             {/* Simulated Participant 3: Aditya */}
-            <div style={{ height: '140px', borderRadius: 'var(--radius-md)', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            <div className={`video-participant-tile ${activeTtsSpeaker === 'Aditya' ? 'speaking' : ''}`}>
               <div style={{ fontSize: '2rem' }}>👨‍💼</div>
-              <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-white)' }}>Aditya</div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>VIT Vellore</div>
-              <div style={{ position: 'absolute', bottom: 4, left: 4, right: 4, display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-muted)', background: 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: '4px' }}>
-                <span>Active</span>
-                <span>🎧 Listening</span>
+              <div className="video-participant-name">Aditya</div>
+              <div className="video-participant-college">VIT Vellore</div>
+              <div className="video-participant-hud">
+                <span className={activeTtsSpeaker === 'Aditya' ? 'video-status-active' : 'video-status-listening'}>
+                  <span style={{ fontSize: '0.65rem' }}>{activeTtsSpeaker === 'Aditya' ? '●' : '○'}</span>
+                  <span>{activeTtsSpeaker === 'Aditya' ? 'Active Speaker' : 'Active'}</span>
+                </span>
+                <span className={activeTtsSpeaker === 'Aditya' ? 'video-status-active' : 'video-status-listening'}>
+                  {activeTtsSpeaker === 'Aditya' ? (
+                    <>
+                      <LiveAudioBarMeter level={65} active={true} />
+                      <span>🎙️ Speaking</span>
+                    </>
+                  ) : (
+                    <span>🎧 Listening</span>
+                  )}
+                </span>
               </div>
             </div>
           </div>
+
+          {/* Active Live TTS Speaker Subtitle & Tone HUD */}
+          {activeTtsInfo && (
+            <div
+              style={{
+                padding: '0.65rem 1rem',
+                borderRadius: 'var(--radius-md)',
+                background: 'linear-gradient(90deg, rgba(34, 197, 94, 0.15) 0%, rgba(14, 14, 18, 0.95) 100%)',
+                border: '1px solid rgba(34, 197, 94, 0.35)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '1rem',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#09090b', fontWeight: 800 }}>
+                  <Volume2 size={16} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span>Speaking: {activeTtsInfo.speaker}</span>
+                    <span className="badge badge-success" style={{ fontSize: '0.64rem' }}>{activeTtsInfo.tone}</span>
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: '#cbd5e1', fontStyle: 'italic', marginTop: '2px' }}>
+                    "{activeTtsInfo.snippet}"
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel();
+                  setActiveTtsSpeaker(null);
+                  setActiveTtsInfo(null);
+                }}
+                className="btn btn-ghost btn-sm"
+                style={{ color: '#f87171', padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
+              >
+                <VolumeX size={14} /> Stop Audio
+              </button>
+            </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(350px, 1.4fr) minmax(300px, 1fr)', gap: '1.5rem' }}>
             {/* Discussion Room Chat */}
@@ -462,9 +608,34 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
                       border: msg.sender.includes('Candidate') ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid var(--border-subtle)',
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 700, color: msg.sender.includes('Candidate') ? '#fafafa' : '#e4e4e7', marginBottom: '0.25rem' }}>
-                      <span>{msg.sender}</span>
-                      <span style={{ color: 'var(--text-dim)' }}>{msg.time}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', fontWeight: 700, color: msg.sender.includes('Candidate') ? '#fafafa' : '#e4e4e7', marginBottom: '0.35rem' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        {msg.sender}
+                        {activeTtsSpeaker && msg.sender.includes(activeTtsSpeaker) && (
+                          <span className="badge badge-success" style={{ fontSize: '0.6rem', padding: '0.1rem 0.35rem' }}>
+                            🎙️ Speaking
+                          </span>
+                        )}
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <button
+                          onClick={() => handlePlayGdMessageTts(msg)}
+                          className="btn btn-ghost btn-sm"
+                          style={{
+                            padding: '0.15rem 0.45rem',
+                            fontSize: '0.68rem',
+                            color: activeTtsSpeaker && msg.sender.includes(activeTtsSpeaker) ? '#22c55e' : 'var(--text-muted)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem'
+                          }}
+                          title="Listen with Natural Voice TTS"
+                        >
+                          <Volume2 size={12} />
+                          {activeTtsSpeaker && msg.sender.includes(activeTtsSpeaker) ? 'Pause' : 'Listen'}
+                        </button>
+                        <span style={{ color: 'var(--text-dim)', fontSize: '0.68rem' }}>{msg.time}</span>
+                      </div>
                     </div>
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', lineHeight: '1.5' }}>
                       {msg.text}
@@ -473,22 +644,84 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
                 ))}
               </div>
 
+              {/* Real-Time Live Speech Analysis HUD */}
+              {(isGdMicListening || candidateGdInput.length > 0) && liveSpeechMetrics && (
+                <div className="live-speech-hud" style={{ marginTop: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span className="pulse-dot" style={{ background: '#22c55e' }} />
+                      <strong style={{ fontSize: '0.78rem', color: '#ffffff' }}>
+                        Real-Time Speech Diagnostic Stream
+                      </strong>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <LiveAudioBarMeter level={audioLevel} active={isSpeaking || isGdMicListening} />
+                      <span style={{ fontSize: '0.68rem', color: '#a1a1aa' }}>
+                        {audioLevel}% Vol
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+                    <div style={{ padding: '0.45rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.64rem', color: '#a1a1aa' }}>Words / Sec</div>
+                      <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#ffffff' }}>{liveSpeechMetrics.wordCount} words</div>
+                    </div>
+
+                    <div style={{ padding: '0.45rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.64rem', color: '#a1a1aa' }}>Pace (WPM)</div>
+                      <div style={{ fontSize: '0.92rem', fontWeight: 700, color: liveSpeechMetrics.wpmStatus === 'optimal' ? '#4ade80' : liveSpeechMetrics.wpmStatus === 'fast' ? '#f87171' : '#facc15' }}>
+                        {liveSpeechMetrics.wpm} WPM
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '0.45rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.64rem', color: '#a1a1aa' }}>Filler Words</div>
+                      <div style={{ fontSize: '0.92rem', fontWeight: 700, color: liveSpeechMetrics.fillerCount === 0 ? '#4ade80' : '#facc15' }}>
+                        {liveSpeechMetrics.fillerCount} detected
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '0.45rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.64rem', color: '#a1a1aa' }}>Confidence</div>
+                      <div style={{ fontSize: '0.92rem', fontWeight: 700, color: liveSpeechMetrics.confidenceScore >= 80 ? '#4ade80' : '#eab308' }}>
+                        {liveSpeechMetrics.confidenceScore}%
+                      </div>
+                    </div>
+                  </div>
+
+                  {liveSpeechMetrics.liveTip && (
+                    <div style={{ fontSize: '0.72rem', color: '#e4e4e7', background: 'rgba(255, 255, 255, 0.03)', padding: '0.35rem 0.65rem', borderRadius: '4px', borderLeft: '3px solid #38bdf8' }}>
+                      💡 <strong>Live Coaching:</strong> {liveSpeechMetrics.liveTip}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Candidate Entry Input with Voice & Text */}
-              <div style={{ display: 'flex', gap: '0.65rem', marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '0.65rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)', alignItems: 'center' }}>
                 <button
                   onClick={toggleGdSpeech}
                   className={`btn ${isGdMicListening ? 'btn-accent audio-pulse-ring' : 'btn-outline'}`}
-                  title="Speak via Microphone"
-                  style={{ padding: '0.65rem' }}
+                  title="Speak via Microphone (Live Analysis Enabled)"
+                  style={{ padding: '0.65rem', background: isGdMicListening ? '#22c55e' : 'transparent', color: isGdMicListening ? '#09090b' : 'inherit' }}
                 >
                   {isGdMicListening ? <Mic className="pulse-dot" size={17} /> : <Mic size={17} />}
                 </button>
                 <input
                   type="text"
                   className="input"
-                  placeholder={isGdMicListening ? 'Listening to your speech...' : 'Pitch your viewpoint or counter someone\'s point...'}
+                  placeholder={isGdMicListening ? '🎙️ Listening live... Speak your viewpoint now' : 'Pitch your viewpoint or counter someone\'s point (or click mic)...'}
                   value={candidateGdInput}
-                  onChange={(e) => setCandidateGdInput(e.target.value)}
+                  onChange={(e) => {
+                    setCandidateGdInput(e.target.value);
+                    if (e.target.value) {
+                      const metrics = analyzeSpeechInRealTime(e.target.value, 15, {
+                        keywords: ['curriculum', 'governance', 'AI', 'upskilling', 'integration', 'automation', 'nasscom', 'skills']
+                      });
+                      setLiveSpeechMetrics(metrics);
+                    }
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleSendGdPoint();
                   }}
@@ -578,12 +811,50 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
 
             {/* Live Audio Visualizer when recording */}
             {isFluencyRecording && (
-              <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'rgba(9, 9, 11, 0.7)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '0.75rem', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'rgba(9, 9, 11, 0.85)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.75rem', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}>
                   <span className="pulse-dot" style={{ background: '#4ade80' }}></span>
-                  Microphone Listening: Speak your sample answer...
+                  Microphone Active • Live Stream Analysing...
                 </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Sensitivity: {audioLevel}%</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <LiveAudioBarMeter level={audioLevel} active={true} />
+                  <span style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>{audioLevel}% Vol</span>
+                </div>
+              </div>
+            )}
+
+            {/* Real-Time Live Speech Metrics HUD during Recording */}
+            {isFluencyRecording && liveFluencyMetrics && (
+              <div className="live-speech-hud" style={{ marginBottom: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+                  <div style={{ padding: '0.4rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.62rem', color: '#a1a1aa' }}>Words</div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#ffffff' }}>{liveFluencyMetrics.wordCount}</div>
+                  </div>
+                  <div style={{ padding: '0.4rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.62rem', color: '#a1a1aa' }}>Pace</div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: liveFluencyMetrics.wpmStatus === 'optimal' ? '#4ade80' : '#facc15' }}>
+                      {liveFluencyMetrics.wpm} WPM
+                    </div>
+                  </div>
+                  <div style={{ padding: '0.4rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.62rem', color: '#a1a1aa' }}>Fillers</div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: liveFluencyMetrics.fillerCount === 0 ? '#4ade80' : '#f87171' }}>
+                      {liveFluencyMetrics.fillerCount}
+                    </div>
+                  </div>
+                  <div style={{ padding: '0.4rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.62rem', color: '#a1a1aa' }}>Confidence</div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#4ade80' }}>
+                      {liveFluencyMetrics.confidenceScore}%
+                    </div>
+                  </div>
+                </div>
+                {liveFluencyMetrics.liveTip && (
+                  <div style={{ fontSize: '0.7rem', color: '#e4e4e7', background: 'rgba(255, 255, 255, 0.04)', padding: '0.35rem 0.65rem', borderRadius: '4px', borderLeft: '3px solid #38bdf8' }}>
+                    💡 <strong>Live Tip:</strong> {liveFluencyMetrics.liveTip}
+                  </div>
+                )}
               </div>
             )}
 
@@ -627,7 +898,7 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
                   </div>
                   <div className="stat-card" style={{ padding: '0.75rem' }}>
                     <div>
-                      <div className="stat-val" style={{ color: 'var(--text-white)', fontSize: '1.5rem' }}>{fluencyReport.wordsCount}</div>
+                      <div className="stat-val" style={{ color: 'var(--text-bright)', fontSize: '1.5rem' }}>{fluencyReport.wordsCount}</div>
                       <div className="stat-label">Total Words</div>
                     </div>
                   </div>
@@ -907,18 +1178,19 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
                 style={{
                   width: '100%',
                   maxWidth: '750px',
-                  background: 'rgba(18, 18, 22, 0.95)',
+                  background: 'var(--bg-card)',
                   border: '1px solid var(--border-glass)',
                   borderRadius: 'var(--radius-lg)',
                   padding: '1.5rem',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '1.25rem',
+                  boxShadow: 'var(--shadow-lg)',
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem' }}>
                   <div>
-                    <h3 style={{ fontSize: '1.2rem', color: 'var(--text-white)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <h3 style={{ fontSize: '1.2rem', color: 'var(--text-bright)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <Video size={18} color="#22c55e" />
                       1-on-1 Mentorship Session: {activeMentorCall.name}
                     </h3>
@@ -932,17 +1204,17 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
                 {/* 2-Pane Video Layout */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   {/* Mentor Window */}
-                  <div style={{ height: '230px', background: '#09090b', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-subtle)', position: 'relative' }}>
+                  <div style={{ height: '230px', background: '#09090b', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255, 255, 255, 0.15)', position: 'relative' }}>
                     <div style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}>{activeMentorCall.avatar}</div>
-                    <div style={{ fontWeight: 600, color: 'var(--text-white)', fontSize: '0.9rem' }}>{activeMentorCall.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>{activeMentorCall.company}</div>
-                    <div style={{ position: 'absolute', bottom: 8, left: 8, fontSize: '0.7rem', background: 'rgba(0,0,0,0.6)', padding: '2px 8px', borderRadius: '4px', color: '#4ade80' }}>
+                    <div style={{ fontWeight: 700, color: '#ffffff', fontSize: '0.95rem' }}>{activeMentorCall.name}</div>
+                    <div style={{ fontSize: '0.76rem', color: '#93c5fd', fontWeight: 600 }}>{activeMentorCall.company}</div>
+                    <div style={{ position: 'absolute', bottom: 8, left: 8, fontSize: '0.7rem', background: 'rgba(0,0,0,0.75)', padding: '2px 8px', borderRadius: '4px', color: '#4ade80', fontWeight: 600, border: '1px solid rgba(255, 255, 255, 0.1)' }}>
                       🟢 Audio Connected
                     </div>
                   </div>
 
                   {/* Candidate Real Webcam Window */}
-                  <div style={{ height: '230px', background: '#09090b', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--border-subtle)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ height: '230px', background: '#09090b', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.15)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {stream && isCameraActive ? (
                       <video
                         ref={mentorCallVideoRef}
@@ -953,14 +1225,14 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
                       />
                     ) : (
                       <div className="media-video-placeholder">
-                        <VideoOff size={24} color="var(--text-dim)" />
-                        <span style={{ fontSize: '0.75rem' }}>Camera Off</span>
-                        <button onClick={() => toggleCamera(true)} className="btn btn-outline btn-sm" style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}>
+                        <VideoOff size={24} color="#94a3b8" />
+                        <span style={{ fontSize: '0.78rem', color: '#ffffff' }}>Camera Off</span>
+                        <button onClick={() => toggleCamera(true)} className="btn btn-outline btn-sm" style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', color: '#ffffff', borderColor: 'rgba(255, 255, 255, 0.3)' }}>
                           Turn On
                         </button>
                       </div>
                     )}
-                    <div style={{ position: 'absolute', bottom: 8, left: 8, fontSize: '0.7rem', background: 'rgba(0,0,0,0.6)', padding: '2px 8px', borderRadius: '4px', color: isSpeaking ? '#4ade80' : 'var(--text-muted)' }}>
+                    <div style={{ position: 'absolute', bottom: 8, left: 8, fontSize: '0.7rem', background: 'rgba(0,0,0,0.75)', padding: '2px 8px', borderRadius: '4px', color: isSpeaking ? '#4ade80' : '#e4e4e7', border: '1px solid rgba(255, 255, 255, 0.1)', fontWeight: 600 }}>
                       You ({userProfile.name}) {isSpeaking ? '• 🎙️ Speaking' : ''}
                     </div>
                   </div>

@@ -29,6 +29,23 @@ import {
 import { MOCK_INTERVIEW_SESSIONS } from '../data/mockData';
 import { useMediaConnectivity } from '../hooks/useMediaConnectivity';
 import { recordInterviewEvaluation } from '../services/authDatabase';
+import {
+  analyzeSpeechInRealTime,
+  LiveSpeechRecognizer,
+  playNaturalTTS
+} from '../services/liveSpeechAnalyzer';
+
+const LiveAudioBarMeter = ({ level = 0, active = false }) => {
+  const bars = [0.35, 0.7, 1.0, 0.85, 0.5, 0.9, 0.4];
+  return (
+    <div className="live-audio-meter">
+      {bars.map((scale, i) => {
+        const h = active ? Math.max(3, Math.round((Math.max(18, level) / 100) * 16 * scale)) : 3;
+        return <div key={i} className="live-audio-bar" style={{ height: `${h}px` }} />;
+      })}
+    </div>
+  );
+};
 
 export const MockInterviewer = ({ userProfile }) => {
   const [selectedRound, setSelectedRound] = useState(MOCK_INTERVIEW_SESSIONS[0]);
@@ -46,6 +63,10 @@ export const MockInterviewer = ({ userProfile }) => {
   const [messages, setMessages] = useState([]);
   const [currentInput, setCurrentInput] = useState('');
   const [turnIndex, setTurnIndex] = useState(0);
+
+  // Live Speech Real-Time Analysis state
+  const [liveSpeechMetrics, setLiveSpeechMetrics] = useState(null);
+  const liveRecognizerRef = useRef(null);
 
   // Live metrics simulation
   const [confidenceScore, setConfidenceScore] = useState(84);
@@ -169,78 +190,56 @@ export const MockInterviewer = ({ userProfile }) => {
     }
   };
 
-  // Text-to-speech helper
+  // Text-to-speech helper with natural voice
   const speakText = (text) => {
-    if (!speechSynthesisEnabled || !window.speechSynthesis) return;
-    try {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
-      window.speechSynthesis.speak(utterance);
-    } catch (e) {
-      console.warn('Speech synthesis not available or blocked:', e);
-    }
+    if (!speechSynthesisEnabled) return;
+    playNaturalTTS(text, {
+      rate: 1.02,
+      pitch: 1.0,
+      onError: (e) => console.warn('Mock Interviewer TTS warning:', e)
+    });
   };
 
-  // Web Speech API Voice Input
-  const toggleSpeechRecognition = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('Speech Recognition is not supported by this browser. You can type your responses in the text box below!');
-      return;
-    }
-
+  // Web Speech API Voice Input with Live Real-Time Analysis
+  const toggleSpeechRecognition = async () => {
     if (isMicListening) {
+      if (liveRecognizerRef.current) liveRecognizerRef.current.stop();
       setIsMicListening(false);
       return;
     }
 
-    // Ensure mic is unmuted in stream
-    if (!isMicActive) {
-      toggleMic(true);
+    // Ensure audio track is acquired
+    try {
+      await startMedia({ audio: true, video: isCameraActive });
+    } catch (e) {
+      console.warn('Microphone permission check error:', e);
     }
 
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = 'en-IN';
-
-      recognition.onstart = () => {
-        setIsMicListening(true);
-      };
-
-      recognition.onresult = (event) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          } else {
-            interimTranscript += event.results[i][0].transcript;
+    if (!liveRecognizerRef.current) {
+      liveRecognizerRef.current = new LiveSpeechRecognizer({
+        onTranscript: ({ transcript, elapsedSeconds }) => {
+          setCurrentInput(transcript);
+          const metrics = analyzeSpeechInRealTime(transcript, elapsedSeconds, {
+            keywords: ['dsa', 'complexity', 'threads', 'acid', 'star', 'trade-off', 'latency', 'cache', 'system', 'concurrency', 'indexes', 'trees']
+          });
+          setLiveSpeechMetrics(metrics);
+        },
+        onStateChange: ({ isListening }) => {
+          setIsMicListening(isListening);
+          if (!isListening && !currentInput) {
+            setLiveSpeechMetrics(null);
           }
-        }
-        if (finalTranscript) {
-          setCurrentInput(prev => (prev ? prev + ' ' : '') + finalTranscript);
+        },
+        onError: (err) => {
+          console.warn('Interviewer speech recognition error:', err);
           setIsMicListening(false);
-        } else if (interimTranscript) {
-          setCurrentInput(prev => (prev ? prev.replace(/ [^ ]*$/, '') + ' ' : '') + interimTranscript);
         }
-      };
+      });
+    }
 
-      recognition.onerror = () => {
-        setIsMicListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsMicListening(false);
-      };
-
-      recognition.start();
-    } catch (err) {
-      console.error('Speech recognition error:', err);
-      setIsMicListening(false);
+    const started = liveRecognizerRef.current.start({ lang: 'en-IN', continuous: true });
+    if (!started) {
+      alert('Microphone speech recognition could not start. Please grant microphone access in your browser.');
     }
   };
 
@@ -489,9 +488,9 @@ export const MockInterviewer = ({ userProfile }) => {
                       />
                     ) : (
                       <div className="media-video-placeholder">
-                        <VideoOff size={28} color="var(--text-dim)" />
-                        <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Camera Preview Paused</span>
-                        <button onClick={() => toggleCamera(true)} className="btn btn-outline btn-sm" style={{ marginTop: '0.35rem' }}>
+                        <VideoOff size={28} color="#94a3b8" />
+                        <span style={{ fontSize: '0.82rem', color: '#ffffff', fontWeight: 600 }}>Camera Preview Paused</span>
+                        <button onClick={() => toggleCamera(true)} className="btn btn-outline btn-sm" style={{ marginTop: '0.35rem', color: '#ffffff', borderColor: 'rgba(255, 255, 255, 0.3)' }}>
                           Enable Camera
                         </button>
                       </div>
@@ -584,16 +583,16 @@ export const MockInterviewer = ({ userProfile }) => {
                       </label>
                       <select
                         className="input"
-                        style={{ fontSize: '0.78rem', padding: '0.4rem 0.6rem', height: 'auto', background: 'rgba(12, 12, 15, 0.9)' }}
+                        style={{ fontSize: '0.78rem', padding: '0.4rem 0.6rem', height: 'auto', background: 'var(--bg-card)', color: 'var(--text-main)' }}
                         value={selectedVideoDeviceId}
                         onChange={(e) => switchCamera(e.target.value)}
                       >
                         {videoDevices.length > 0 ? (
                           videoDevices.map(d => (
-                            <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
+                            <option key={d.deviceId} value={d.deviceId} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>{d.label}</option>
                           ))
                         ) : (
-                          <option value="">Default Integrated Camera</option>
+                          <option value="" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Default Integrated Camera</option>
                         )}
                       </select>
                     </div>
@@ -604,16 +603,16 @@ export const MockInterviewer = ({ userProfile }) => {
                       </label>
                       <select
                         className="input"
-                        style={{ fontSize: '0.78rem', padding: '0.4rem 0.6rem', height: 'auto', background: 'rgba(12, 12, 15, 0.9)' }}
+                        style={{ fontSize: '0.78rem', padding: '0.4rem 0.6rem', height: 'auto', background: 'var(--bg-card)', color: 'var(--text-main)' }}
                         value={selectedAudioDeviceId}
                         onChange={(e) => switchMic(e.target.value)}
                       >
                         {audioDevices.length > 0 ? (
                           audioDevices.map(d => (
-                            <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
+                            <option key={d.deviceId} value={d.deviceId} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>{d.label}</option>
                           ))
                         ) : (
-                          <option value="">Default Microphone</option>
+                          <option value="" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Default Microphone</option>
                         )}
                       </select>
                     </div>
@@ -796,12 +795,12 @@ export const MockInterviewer = ({ userProfile }) => {
                       <span style={{ color: 'var(--text-dim)', display: 'block', marginBottom: '2px' }}>Camera</span>
                       <select
                         className="input"
-                        style={{ fontSize: '0.72rem', padding: '0.3rem', height: 'auto', background: '#09090b' }}
+                        style={{ fontSize: '0.72rem', padding: '0.3rem', height: 'auto', background: 'var(--bg-card)', color: 'var(--text-main)' }}
                         value={selectedVideoDeviceId}
                         onChange={(e) => switchCamera(e.target.value)}
                       >
                         {videoDevices.map(d => (
-                          <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
+                          <option key={d.deviceId} value={d.deviceId} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>{d.label}</option>
                         ))}
                       </select>
                     </div>
@@ -809,12 +808,12 @@ export const MockInterviewer = ({ userProfile }) => {
                       <span style={{ color: 'var(--text-dim)', display: 'block', marginBottom: '2px' }}>Mic</span>
                       <select
                         className="input"
-                        style={{ fontSize: '0.72rem', padding: '0.3rem', height: 'auto', background: '#09090b' }}
+                        style={{ fontSize: '0.72rem', padding: '0.3rem', height: 'auto', background: 'var(--bg-card)', color: 'var(--text-main)' }}
                         value={selectedAudioDeviceId}
                         onChange={(e) => switchMic(e.target.value)}
                       >
                         {audioDevices.map(d => (
-                          <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
+                          <option key={d.deviceId} value={d.deviceId} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>{d.label}</option>
                         ))}
                       </select>
                     </div>
@@ -847,10 +846,10 @@ export const MockInterviewer = ({ userProfile }) => {
                 ) : (
                   <div className="media-video-placeholder">
                     <div style={{ fontSize: '2.4rem' }}>🎓</div>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#ffffff' }}>
                       {userProfile.name}
                     </div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+                    <div style={{ fontSize: '0.74rem', color: '#93c5fd', fontWeight: 600 }}>
                       {permissionStatus === 'denied'
                         ? 'Camera blocked by browser'
                         : 'Webcam feed paused'}
@@ -858,7 +857,7 @@ export const MockInterviewer = ({ userProfile }) => {
                     <button
                       onClick={() => toggleCamera(true)}
                       className="btn btn-outline btn-sm"
-                      style={{ marginTop: '0.3rem', padding: '0.25rem 0.65rem', fontSize: '0.72rem' }}
+                      style={{ marginTop: '0.3rem', padding: '0.25rem 0.65rem', fontSize: '0.72rem', color: '#ffffff', borderColor: 'rgba(255, 255, 255, 0.3)' }}
                     >
                       {permissionStatus === 'denied' ? 'Retry Permissions' : 'Turn On Camera'}
                     </button>
@@ -977,18 +976,71 @@ export const MockInterviewer = ({ userProfile }) => {
               <div ref={messagesEndRef} />
             </div>
 
+            {/* Live Speech Diagnostic Stream Overlay */}
+            {(isMicListening || currentInput.length > 0) && liveSpeechMetrics && (
+              <div className="live-speech-hud" style={{ marginTop: '0.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span className="pulse-dot" style={{ background: '#22c55e' }} />
+                    <strong style={{ fontSize: '0.78rem', color: '#ffffff' }}>
+                      Live Response Speech Analysis
+                    </strong>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <LiveAudioBarMeter level={audioLevel} active={isSpeaking || isMicListening} />
+                    <span style={{ fontSize: '0.68rem', color: '#a1a1aa' }}>
+                      {audioLevel}% Mic Vol
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+                  <div style={{ padding: '0.45rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.64rem', color: '#a1a1aa' }}>Pace</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: liveSpeechMetrics.wpmStatus === 'optimal' ? '#4ade80' : '#facc15' }}>
+                      {liveSpeechMetrics.wpm} WPM
+                    </div>
+                  </div>
+                  <div style={{ padding: '0.45rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.64rem', color: '#a1a1aa' }}>Fillers</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: liveSpeechMetrics.fillerCount === 0 ? '#4ade80' : '#f87171' }}>
+                      {liveSpeechMetrics.fillerCount} found
+                    </div>
+                  </div>
+                  <div style={{ padding: '0.45rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.64rem', color: '#a1a1aa' }}>STAR Signals</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#38bdf8' }}>
+                      {liveSpeechMetrics.starSignals?.length || 0} hits
+                    </div>
+                  </div>
+                  <div style={{ padding: '0.45rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.64rem', color: '#a1a1aa' }}>Confidence</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: liveSpeechMetrics.confidenceScore >= 80 ? '#4ade80' : '#eab308' }}>
+                      {liveSpeechMetrics.confidenceScore}%
+                    </div>
+                  </div>
+                </div>
+
+                {liveSpeechMetrics.liveTip && (
+                  <div style={{ fontSize: '0.72rem', color: '#e4e4e7', background: 'rgba(255, 255, 255, 0.03)', padding: '0.35rem 0.65rem', borderRadius: '4px', borderLeft: '3px solid #38bdf8' }}>
+                    💡 <strong>Live Tip:</strong> {liveSpeechMetrics.liveTip}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Candidate Voice/Text Input Bar */}
-            <div style={{ display: 'flex', gap: '0.65rem', marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '0.65rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)', alignItems: 'center' }}>
               <button
                 onClick={toggleSpeechRecognition}
                 className={`btn ${isMicListening ? 'btn-accent audio-pulse-ring' : 'btn-outline'}`}
-                title="Speak Answer (Web Speech API + Mic Stream)"
+                title="Speak Answer (Live Speech Analysis Enabled)"
                 style={{
                   padding: '0.65rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  background: isMicListening ? '#ffffff' : 'transparent',
+                  background: isMicListening ? '#22c55e' : 'transparent',
                   color: isMicListening ? '#09090b' : 'inherit',
                 }}
               >

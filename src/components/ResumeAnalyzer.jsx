@@ -458,11 +458,11 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                 cursor: 'pointer',
               }}
             >
-              <option value="sde_amazon" style={{ background: '#09090b' }}>Amazon SDE 1 (₹44.5 LPA)</option>
-              <option value="sde_microsoft" style={{ background: '#09090b' }}>Microsoft SWE (₹45.0 LPA)</option>
-              <option value="flipkart_ase" style={{ background: '#09090b' }}>Flipkart Assoc. SDE (₹32.0 LPA)</option>
-              <option value="tcs_digital" style={{ background: '#09090b' }}>TCS Digital (₹7.5 LPA)</option>
-              <option value="infosys_sp" style={{ background: '#09090b' }}>Infosys SP (₹9.5 LPA)</option>
+              <option value="sde_amazon" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Amazon SDE 1 (₹44.5 LPA)</option>
+              <option value="sde_microsoft" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Microsoft SWE (₹45.0 LPA)</option>
+              <option value="flipkart_ase" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Flipkart Assoc. SDE (₹32.0 LPA)</option>
+              <option value="tcs_digital" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>TCS Digital (₹7.5 LPA)</option>
+              <option value="infosys_sp" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Infosys SP (₹9.5 LPA)</option>
             </select>
           </div>
 
@@ -1022,7 +1022,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
           <pre
             style={{
               padding: '0.75rem',
-              background: '#09090b',
+              background: 'var(--bg-main)',
               borderRadius: 'var(--radius-sm)',
               border: '1px solid var(--border-subtle)',
               fontSize: '0.74rem',

@@ -270,7 +270,7 @@ export const LoginPage = ({ onLoginSuccess, lang }) => {
                   lineHeight: 1.1,
                 }}
               >
-                Place<span style={{ color: 'var(--text-muted)' }}>IQ</span>
+                Place<span style={{ color: '#cbd5e1' }}>IQ</span>
               </h1>
               <span style={{ fontSize: '0.78rem', color: '#a1a1aa' }}>
                 Campus-to-Career Placement LMS
