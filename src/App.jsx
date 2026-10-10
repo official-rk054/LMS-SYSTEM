@@ -31,7 +31,7 @@ export function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [theme, setTheme] = useState('dark');
-  const [lang, setLang] = useState('en');
+  const lang = 'en';
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [resumeDataForAudit, setResumeDataForAudit] = useState(null);
   const [selectedProblemIdForArena, setSelectedProblemIdForArena] = useState(null);
@@ -143,7 +143,6 @@ export function App() {
         userProfile={currentUser}
         onLogout={handleLogout}
         lang={lang}
-        setLang={setLang}
         isMobileOpen={isMobileOpen}
         setIsMobileOpen={setIsMobileOpen}
       />

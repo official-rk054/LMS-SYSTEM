@@ -15,7 +15,6 @@ import {
   CreditCard,
   Briefcase,
   ShieldCheck,
-  Globe2,
   GraduationCap,
   Layers,
   LogOut,
@@ -31,7 +30,6 @@ export const Sidebar = ({
   userProfile,
   onLogout,
   lang,
-  setLang,
   isMobileOpen,
   setIsMobileOpen
 }) => {
@@ -96,14 +94,6 @@ export const Sidebar = ({
           </div>
         </div>
 
-        <button
-          onClick={() => setLang(lang === 'en' ? 'hi' : 'en')}
-          className="role-selector-pill"
-          title="Toggle English / Hindi"
-        >
-          <Globe2 size={13} />
-          {lang === 'en' ? 'हिन्दी' : 'EN'}
-        </button>
       </div>
 
       {/* Role Indicator Banner */}

@@ -326,7 +326,7 @@ input, textarea, select, option {
 }
 
 input::placeholder, textarea::placeholder {
-  color: var(--text-dim);
+  color: var(--text-muted);
   opacity: 1;
 }
 
@@ -908,7 +908,8 @@ a:hover {
 }
 
 .input::placeholder, .textarea::placeholder {
-  color: var(--text-dim);
+  color: var(--text-muted);
+  opacity: 1;
 }
 
 .textarea {
