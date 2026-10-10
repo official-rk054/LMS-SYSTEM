@@ -97,30 +97,210 @@
    ═══════════════════════════════════════════════════════════ */
 
 [data-theme="light"] {
-  --bg-app: #eef2f7;
-  --bg-surface: rgba(255, 255, 255, 0.5);
-  --bg-card: rgba(255, 255, 255, 0.55);
-  --bg-card-hover: rgba(255, 255, 255, 0.7);
-  --bg-glass: rgba(255, 255, 255, 0.45);
-  --bg-glass-strong: rgba(255, 255, 255, 0.65);
-  --bg-sidebar: rgba(255, 255, 255, 0.6);
-  --bg-input: rgba(241, 245, 249, 0.7);
-  --bg-input-focus: rgba(241, 245, 249, 0.9);
-  --border-subtle: rgba(0, 0, 0, 0.06);
-  --border-glass: rgba(0, 0, 0, 0.08);
-  --border-glass-hover: rgba(0, 0, 0, 0.14);
-  --border-card: rgba(0, 0, 0, 0.06);
-  --text-main: #1e293b;
-  --text-bright: #0f172a;
-  --text-muted: #475569;
-  --text-dim: #94a3b8;
-  --text-white: #0f172a;
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
-  --primary-light: rgba(99, 102, 241, 0.1);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.1);
-  --shadow-glow: 0 0 30px rgba(99, 102, 241, 0.15);
+  --bg-app: #f1f5f9;
+  --bg-surface: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --bg-glass: rgba(255, 255, 255, 0.9);
+  --bg-glass-strong: #ffffff;
+  --bg-sidebar: #ffffff;
+  --bg-input: #f8fafc;
+  --bg-input-focus: #ffffff;
+  --border-subtle: #cbd5e1;
+  --border-glass: #cbd5e1;
+  --border-glass-hover: #94a3b8;
+  --border-card: #e2e8f0;
+  --border-focus: #4f46e5;
+  --text-main: #0f172a;
+  --text-bright: #020617;
+  --text-muted: #334155;
+  --text-dim: #475569;
+  --text-white: #020617;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-light: rgba(79, 70, 229, 0.12);
+  --secondary: #475569;
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.12);
+  --shadow-glow: 0 0 20px rgba(79, 70, 229, 0.2);
+}
+
+/* ─── Light Mode Element Contrast Overrides ─── */
+[data-theme="light"] .sidebar {
+  background: #ffffff !important;
+  border-right: 1px solid #cbd5e1 !important;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .brand-badge {
+  color: #020617 !important;
+}
+
+[data-theme="light"] .role-selector-pill {
+  background: #e0e7ff !important;
+  border: 1px solid #c7d2fe !important;
+  color: #3730a3 !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="light"] .role-selector-pill:hover {
+  background: #c7d2fe !important;
+  color: #1e1b4b !important;
+}
+
+[data-theme="light"] .nav-section-title {
+  color: #334155 !important;
+  font-weight: 800 !important;
+}
+
+[data-theme="light"] .nav-item {
+  color: #1e293b !important;
+  font-weight: 600 !important;
+}
+
+[data-theme="light"] .nav-item:hover {
+  background-color: #f1f5f9 !important;
+  color: #020617 !important;
+  border-color: #cbd5e1 !important;
+}
+
+[data-theme="light"] .nav-item.active {
+  background: #4f46e5 !important;
+  color: #ffffff !important;
+  border-color: #4338ca !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25) !important;
+}
+
+[data-theme="light"] .nav-item.active::before {
+  background: #ffffff !important;
+}
+
+[data-theme="light"] .nav-badge {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="light"] .nav-item.active .nav-badge {
+  background: rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+[data-theme="light"] .user-profile-widget {
+  background: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+[data-theme="light"] .user-name {
+  color: #020617 !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="light"] .user-college {
+  color: #334155 !important;
+  font-weight: 600 !important;
+}
+
+/* Light Theme Badges High Contrast */
+[data-theme="light"] .badge-primary {
+  background: #e0e7ff !important;
+  color: #3730a3 !important;
+  border-color: #c7d2fe !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="light"] .badge-success {
+  background: #dcfce7 !important;
+  color: #15803d !important;
+  border-color: #bbf7d0 !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="light"] .badge-warning {
+  background: #fef3c7 !important;
+  color: #b45309 !important;
+  border-color: #fde68a !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="light"] .badge-danger {
+  background: #ffe4e6 !important;
+  color: #be123c !important;
+  border-color: #fecdd3 !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="light"] .badge-info {
+  background: #e0f2fe !important;
+  color: #0369a1 !important;
+  border-color: #bae6fd !important;
+  font-weight: 700 !important;
+}
+
+/* ─── Light Mode Cards & Modals ─── */
+[data-theme="light"] .card {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+}
+
+[data-theme="light"] .card::before {
+  background: linear-gradient(90deg, transparent 10%, rgba(255, 255, 255, 0.8) 50%, transparent 90%) !important;
+}
+
+[data-theme="light"] .modal-overlay {
+  background: rgba(15, 23, 42, 0.5) !important;
+}
+
+[data-theme="light"] .modal-content-card,
+[data-theme="light"] .tpo-modal-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
+}
+
+/* ─── Light Mode Button Contrast Fixes ─── */
+[data-theme="light"] .btn-primary {
+  background: #4f46e5 !important;
+  color: #ffffff !important;
+  border: 1px solid #4338ca !important;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3) !important;
+}
+
+[data-theme="light"] .btn-primary:hover {
+  background: #4338ca !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4) !important;
+}
+
+[data-theme="light"] .btn-accent {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid #4338ca !important;
+}
+
+[data-theme="light"] .btn-outline {
+  background: #ffffff !important;
+  color: #1e293b !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+[data-theme="light"] .btn-outline:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: #94a3b8 !important;
+}
+
+[data-theme="light"] .btn-ghost {
+  color: #475569 !important;
+}
+
+[data-theme="light"] .btn-ghost:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -426,6 +606,9 @@ a:hover {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .user-profile-widget {
@@ -438,6 +621,9 @@ a:hover {
   border-radius: var(--radius-md);
   border: 1px solid var(--border-glass);
   transition: var(--transition);
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .user-profile-widget:hover {
@@ -458,6 +644,7 @@ a:hover {
   font-size: 0.85rem;
   box-shadow: 0 0 16px rgba(129, 140, 248, 0.3);
   position: relative;
+  flex-shrink: 0;
 }
 
 /* Glow ring around avatar */
@@ -475,15 +662,18 @@ a:hover {
 .user-details {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .user-name {
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-bright);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
 }
 
 .user-college {
@@ -492,6 +682,8 @@ a:hover {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
 }
 
 /* ═══════════════════════════════════════════════════════════
