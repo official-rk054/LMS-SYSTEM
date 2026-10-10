@@ -31,9 +31,7 @@ import {
 export function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('placeiq_theme') || 'light';
-  });
+  const [theme, setTheme] = useState('dark');
   const [lang, setLang] = useState('en');
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [resumeDataForAudit, setResumeDataForAudit] = useState(null);
@@ -54,9 +52,8 @@ export function App() {
     setActiveTab('coding_arena');
   };
 
-  // Apply theme to document element and persist in localStorage
+  // Apply theme to document element
   useEffect(() => {
-    localStorage.setItem('placeiq_theme', theme);
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 

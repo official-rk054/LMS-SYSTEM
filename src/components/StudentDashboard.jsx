@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   TrendingUp,
   Award,
@@ -8,6 +8,7 @@ import {
   Clock,
   ArrowRight,
   Flame,
+  Zap,
   Target,
   Sparkles,
   Building,
@@ -194,6 +195,29 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
               </div>
             </div>
 
+            {/* Karma XP */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                padding: '0.35rem 0.65rem',
+                borderRadius: 'var(--radius-md)',
+              }}
+              title="Preparation Karma XP Points"
+            >
+              <Zap size={16} color="#d4d4d8" fill="#d4d4d8" />
+              <div>
+                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-bright)', lineHeight: 1 }}>
+                  {userProfile.xpPoints}
+                </div>
+                <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 600 }}>
+                  Karma XP
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Right: Quick Launch CTAs */}
@@ -216,15 +240,14 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
         </div>
       </div>
 
-
       {/* ============================================================== */}
-      {/* 2. ROW 1: READINESS BREAKDOWN + AI NEXT ACTIONS (SIDE BY SIDE) */}
+      {/* 2. MAIN ERGONOMIC 3-COLUMN BENTO GRID                         */}
       {/* ============================================================== */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '1rem',
+          gridTemplateColumns: '1.05fr 1.15fr 1.2fr',
+          gap: '0.85rem',
           alignItems: 'stretch',
         }}
       >
@@ -234,71 +257,71 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
         <div
           className="card"
           style={{
-            padding: '1.5rem 1.75rem',
+            padding: '1rem 1.15rem',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
           }}
         >
           <div>
-            <div className="card-header" style={{ marginBottom: '1.25rem' }}>
-              <h3 className="card-title" style={{ fontSize: '1.05rem' }}>
-                <Target size={19} color="var(--primary)" />
+            <div className="card-header" style={{ marginBottom: '0.75rem' }}>
+              <h3 className="card-title" style={{ fontSize: '0.98rem' }}>
+                <Target size={17} color="var(--primary)" />
                 Readiness Index Breakdown
               </h3>
-              <span className="badge badge-success" style={{ fontSize: '0.75rem', padding: '0.2rem 0.65rem' }}>
+              <span className="badge badge-success" style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem' }}>
                 84/100 Total
               </span>
             </div>
 
             {/* 5 Progress Bars */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
-                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>Quantitative &amp; Logical Aptitude</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', fontSize: '0.76rem' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>Quantitative & Logical Aptitude</span>
                   <strong style={{ color: 'var(--text-bright)' }}>{breakdown.aptitude}%</strong>
                 </div>
-                <div className="progress-container" style={{ height: '8px' }}>
+                <div className="progress-container" style={{ height: '6px' }}>
                   <div className="progress-fill" style={{ width: `${breakdown.aptitude}%`, background: 'var(--cyan-gradient)' }}></div>
                 </div>
               </div>
 
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
-                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>Coding &amp; Problem Solving (DSA)</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', fontSize: '0.76rem' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>Coding & Problem Solving (DSA)</span>
                   <strong style={{ color: 'var(--text-bright)' }}>{breakdown.coding}%</strong>
                 </div>
-                <div className="progress-container" style={{ height: '8px' }}>
+                <div className="progress-container" style={{ height: '6px' }}>
                   <div className="progress-fill" style={{ width: `${breakdown.coding}%`, background: 'var(--accent-gradient)' }}></div>
                 </div>
               </div>
 
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', fontSize: '0.76rem' }}>
                   <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>Core CS (OS / DBMS / Networks)</span>
                   <strong style={{ color: '#34d399' }}>{breakdown.coreCS}%</strong>
                 </div>
-                <div className="progress-container" style={{ height: '8px' }}>
+                <div className="progress-container" style={{ height: '6px' }}>
                   <div className="progress-fill" style={{ width: `${breakdown.coreCS}%`, background: 'var(--emerald-gradient)' }}></div>
                 </div>
               </div>
 
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
-                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>AI Mock Interview &amp; Communication</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', fontSize: '0.76rem' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>AI Mock Interview & Communication</span>
                   <strong style={{ color: '#fbbf24' }}>{breakdown.interviewHR}%</strong>
                 </div>
-                <div className="progress-container" style={{ height: '8px' }}>
+                <div className="progress-container" style={{ height: '6px' }}>
                   <div className="progress-fill" style={{ width: `${breakdown.interviewHR}%`, background: 'var(--gold-gradient)' }}></div>
                 </div>
               </div>
 
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
-                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>ATS Resume Score &amp; Impact</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', fontSize: '0.76rem' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>ATS Resume Score & Impact</span>
                   <strong style={{ color: '#ec4899' }}>{breakdown.resumeATS}%</strong>
                 </div>
-                <div className="progress-container" style={{ height: '8px' }}>
+                <div className="progress-container" style={{ height: '6px' }}>
                   <div className="progress-fill" style={{ width: `${breakdown.resumeATS}%`, background: 'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)' }}></div>
                 </div>
               </div>
@@ -308,18 +331,18 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
           {/* Detected Weak Spots Box */}
           <div
             style={{
-              marginTop: '1.5rem',
-              padding: '0.75rem 1rem',
+              marginTop: '0.85rem',
+              padding: '0.55rem 0.75rem',
               background: 'rgba(245, 158, 11, 0.08)',
               border: '1px solid rgba(245, 158, 11, 0.25)',
               borderRadius: 'var(--radius-md)',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.65rem',
+              gap: '0.5rem',
             }}
           >
-            <AlertCircle size={17} color="var(--warning)" style={{ flexShrink: 0 }} />
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.35, flex: 1 }}>
+            <AlertCircle size={15} color="var(--warning)" style={{ flexShrink: 0 }} />
+            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', lineHeight: 1.25, flex: 1 }}>
               Weak Spots: <strong style={{ color: 'var(--text-main)' }}>DP, OS Deadlocks</strong>
             </div>
             <button
@@ -327,13 +350,13 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
               className="btn btn-ghost btn-sm"
               style={{
                 color: 'var(--primary)',
-                padding: '0.2rem 0.6rem',
-                fontSize: '0.8rem',
+                padding: '0.15rem 0.45rem',
+                fontSize: '0.72rem',
                 fontWeight: 600,
                 whiteSpace: 'nowrap',
               }}
             >
-              30-Day Plan â†’
+              30-Day Plan →
             </button>
           </div>
         </div>
@@ -344,22 +367,22 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
         <div
           className="card"
           style={{
-            padding: '1.5rem 1.75rem',
+            padding: '1rem 1.15rem',
             display: 'flex',
             flexDirection: 'column',
           }}
         >
-          <div className="card-header" style={{ marginBottom: '1.25rem' }}>
-            <h3 className="card-title" style={{ fontSize: '1.05rem' }}>
-              <Sparkles size={19} color="#d4d4d8" />
+          <div className="card-header" style={{ marginBottom: '0.65rem' }}>
+            <h3 className="card-title" style={{ fontSize: '0.98rem' }}>
+              <Sparkles size={17} color="#d4d4d8" />
               AI Recommended Next Actions
             </h3>
-            <span className="badge badge-primary" style={{ fontSize: '0.75rem', padding: '0.2rem 0.65rem' }}>
+            <span className="badge badge-primary" style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem' }}>
               Personalized
             </span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
             {recommendedActions.map((action) => {
               const ActionIcon = action.icon;
               return (
@@ -369,20 +392,19 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '0.85rem 1rem',
+                    padding: '0.55rem 0.75rem',
                     background: 'rgba(255, 255, 255, 0.02)',
                     borderRadius: 'var(--radius-md)',
                     border: '1px solid var(--border-subtle)',
-                    gap: '0.85rem',
-                    transition: 'var(--transition)',
+                    gap: '0.65rem',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0 }}>
                     <div
                       style={{
-                        width: '42px',
-                        height: '42px',
-                        borderRadius: 'var(--radius-md)',
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: 'var(--radius-sm)',
                         background: 'rgba(255, 255, 255, 0.06)',
                         color: 'var(--text-bright)',
                         display: 'flex',
@@ -391,29 +413,29 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
                         flexShrink: 0,
                       }}
                     >
-                      <ActionIcon size={20} />
+                      <ActionIcon size={16} />
                     </div>
                     <div style={{ minWidth: 0 }}>
                       <div
                         style={{
-                          fontSize: '0.88rem',
+                          fontSize: '0.8rem',
                           fontWeight: 700,
                           color: 'var(--text-main)',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
-                          maxWidth: '280px',
+                          maxWidth: '190px',
                         }}
                         title={action.title}
                       >
                         {action.title}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginTop: '0.3rem', flexWrap: 'wrap' }}>
-                        <span className={`badge ${action.badgeColor}`} style={{ fontSize: '0.72rem', padding: '0.12rem 0.45rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.15rem', flexWrap: 'wrap' }}>
+                        <span className={`badge ${action.badgeColor}`} style={{ fontSize: '0.65rem', padding: '0.08rem 0.35rem' }}>
                           {action.badge}
                         </span>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-                          â±ï¸ {action.duration}
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>
+                          ⏱️ {action.duration}
                         </span>
                       </div>
                     </div>
@@ -424,109 +446,102 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
                     className="btn btn-outline btn-sm"
                     style={{
                       whiteSpace: 'nowrap',
-                      fontSize: '0.8rem',
-                      padding: '0.35rem 0.75rem',
+                      fontSize: '0.72rem',
+                      padding: '0.25rem 0.55rem',
                       fontWeight: 600,
                       flexShrink: 0,
                     }}
                   >
-                    Start <ArrowRight size={14} />
+                    Start <ArrowRight size={12} />
                   </button>
                 </div>
               );
             })}
           </div>
         </div>
-      </div>
 
-      {/* ============================================================== */}
-      {/* 3. ROW 2: UPCOMING CAMPUS PLACEMENT DRIVES (FULL WIDTH)        */}
-      {/* ============================================================== */}
-      <div
-        className="card"
-        style={{
-          padding: '1.5rem 1.75rem',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        <div className="card-header" style={{ marginBottom: '1.25rem' }}>
-          <div>
-            <h3 className="card-title" style={{ fontSize: '1.05rem', marginBottom: '0.2rem' }}>
-              <Building size={19} color="var(--primary)" />
-              {t.upcomingDrives}
-            </h3>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-dim)', margin: 0 }}>
-                  🎓 2026 Batch on-boarding roadmaps â€” Live placement schedule from College TPO
-            </p>
+        {/* ------------------------------------------------------------ */}
+        {/* COLUMN 3: UPCOMING CAMPUS PLACEMENT DRIVES                   */}
+        {/* ------------------------------------------------------------ */}
+        <div
+          className="card"
+          style={{
+            padding: '1rem 1.15rem',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <div className="card-header" style={{ marginBottom: '0.65rem' }}>
+            <div>
+              <h3 className="card-title" style={{ fontSize: '0.98rem', marginBottom: '0.1rem' }}>
+                <Building size={17} color="var(--primary)" />
+                {t.upcomingDrives}
+              </h3>
+              <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)', margin: 0 }}>
+                2026 Batch on-boarding roadmaps
+              </p>
+            </div>
+            <button
+              onClick={() => setActiveTab('job_board')}
+              className="btn btn-ghost btn-sm"
+              style={{ color: 'var(--primary)', fontSize: '0.72rem', padding: '0.2rem 0.45rem' }}
+            >
+              View All (5) →
+            </button>
           </div>
-          <button
-            onClick={() => setActiveTab('job_board')}
-            className="btn btn-ghost btn-sm"
-            style={{ color: 'var(--primary)', fontSize: '0.8rem', padding: '0.3rem 0.65rem', fontWeight: 600 }}
-          >
-            View All (5) â†’
-          </button>
-        </div>
 
-        {/* 3-column horizontal drive cards grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-          {UPCOMING_DRIVES.slice(0, 3).map((drive) => {
-            const userApp = (userProfile.appliedDrives || []).find(a => (a.id || a.driveId) === drive.id);
-            const isApplied = Boolean(userApp) || drive.applied;
-            const displayStage = userApp?.stage || drive.applicationStage || 'Registered';
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+            {UPCOMING_DRIVES.slice(0, 3).map((drive) => {
+              const userApp = (userProfile.appliedDrives || []).find(a => (a.id || a.driveId) === drive.id);
+              const isApplied = Boolean(userApp) || drive.applied;
+              const displayStage = userApp?.stage || drive.applicationStage || 'Registered';
 
-            return (
+              return (
               <div
                 key={drive.id}
                 style={{
-                  padding: '1rem 1.15rem',
+                  padding: '0.6rem 0.75rem',
                   borderRadius: 'var(--radius-md)',
                   background: 'rgba(255, 255, 255, 0.02)',
-                  border: isApplied ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid var(--border-subtle)',
+                  border: isApplied ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid var(--border-subtle)',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '0.6rem',
+                  gap: '0.35rem',
                 }}
               >
                 {/* Company Name & CTC Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                    <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>{drive.logo}</span>
-                    <div>
-                      <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)', margin: 0, lineHeight: 1.2 }}>
-                        {drive.company}
-                      </h4>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>{drive.tier}</span>
-                    </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h4 style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)', margin: 0, lineHeight: 1.1 }}>
+                      {drive.company}
+                    </h4>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>{drive.tier}</span>
                   </div>
                   <span
                     className="badge"
                     style={{
                       background: 'rgba(16, 185, 129, 0.15)',
                       color: '#34d399',
-                      fontWeight: 800,
-                      fontSize: '0.82rem',
-                      padding: '0.2rem 0.55rem',
-                      flexShrink: 0,
+                      fontWeight: 700,
+                      fontSize: '0.76rem',
+                      padding: '0.15rem 0.45rem',
                     }}
                   >
                     {drive.packageCTC}
                   </span>
                 </div>
 
-                {/* Role */}
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                {/* Role & Requirements Metadata */}
+                <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-main)', marginTop: '0.1rem' }}>
                   {drive.role}
                 </div>
 
-                {/* Metadata */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  <span>ðŸ“ {drive.location}</span>
-                  <span>â€¢</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                  <span>{drive.location}</span>
+                  <span>•</span>
                   <span>CGPA: <strong>{drive.minCGPA}</strong></span>
-                  <span>â€¢</span>
-                  <span>ðŸ“… {drive.date}</span>
+                  <span>•</span>
+                  <span>{drive.date}</span>
                 </div>
 
                 {/* Action & Status Row */}
@@ -535,14 +550,14 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    paddingTop: '0.6rem',
-                    borderTop: '1px solid var(--border-subtle)',
+                    paddingTop: '0.35rem',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.05)',
                     marginTop: '0.15rem',
                   }}
                 >
                   <span
                     className={`badge ${isApplied ? 'badge-success' : 'badge-primary'}`}
-                    style={{ fontSize: '0.72rem', padding: '0.15rem 0.5rem' }}
+                    style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}
                   >
                     {isApplied ? `Applied: ${displayStage}` : 'Eligible'}
                   </span>
@@ -550,17 +565,17 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
                   <button
                     onClick={() => setActiveTab('company_prep')}
                     className="btn btn-outline btn-sm"
-                    style={{ fontSize: '0.78rem', padding: '0.3rem 0.65rem', fontWeight: 600 }}
+                    style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', fontWeight: 600 }}
                   >
-                    Rounds Prep â†’
+                    Rounds Prep →
                   </button>
                 </div>
               </div>
             );
-          })}
+            })}
+          </div>
         </div>
       </div>
     </div>
   );
 };
-

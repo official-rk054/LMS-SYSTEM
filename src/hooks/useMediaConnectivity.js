@@ -149,9 +149,11 @@ export const useMediaConnectivity = ({
 
   // Start or restart media stream
   const startMedia = useCallback(async (opts = {}) => {
+    const { throwOnError = false } = opts;
     if (!isSupported) {
       setPermissionStatus('unsupported');
       setErrorMessage('Media devices (WebRTC) are not supported in this browser.');
+      if (throwOnError) throw new Error('Media devices (WebRTC) are not supported in this browser.');
       return null;
     }
 
@@ -262,6 +264,7 @@ export const useMediaConnectivity = ({
         setPermissionStatus('error');
         setErrorMessage(`Media connectivity error: ${err.message || 'Unknown error'}`);
       }
+      if (throwOnError) throw err;
       return null;
     }
   }, [

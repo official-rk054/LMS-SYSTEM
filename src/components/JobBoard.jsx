@@ -158,14 +158,11 @@ export const JobBoard = ({ userProfile, onApplyDrive }) => {
             >
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span style={{ fontSize: '2.2rem' }}>{drive.logo}</span>
-                    <div>
-                      <h3 style={{ fontSize: '1.15rem', color: 'var(--text-white)', margin: 0 }}>
-                        {drive.company}
-                      </h3>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>{drive.tier}</span>
-                    </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.15rem', color: 'var(--text-bright)', margin: 0 }}>
+                      {drive.company}
+                    </h3>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>{drive.tier}</span>
                   </div>
 
                   <span className="badge badge-success" style={{ fontWeight: 700, fontSize: '0.85rem' }}>
@@ -178,9 +175,9 @@ export const JobBoard = ({ userProfile, onApplyDrive }) => {
                 </h4>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  <div>📍 <strong>Location:</strong> {drive.location}</div>
+                  <div><strong>Location:</strong> {drive.location}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    🎓 <strong>Cutoff:</strong> Min CGPA {drive.minCGPA}
+                    <strong>Cutoff:</strong> Min CGPA {drive.minCGPA}
                     {isCgpaEligible ? (
                       <span className="badge badge-success" style={{ fontSize: '0.65rem', padding: '0.05rem 0.35rem' }}>
                         Eligible (You: {studentCgpa.toFixed(2)})
@@ -191,8 +188,8 @@ export const JobBoard = ({ userProfile, onApplyDrive }) => {
                       </span>
                     )}
                   </div>
-                  <div>📅 <strong>Drive Date:</strong> {drive.date}</div>
-                  <div>🏢 <strong>Eligible:</strong> {drive.eligibleBranches.join(', ')}</div>
+                  <div><strong>Drive Date:</strong> {drive.date}</div>
+                  <div><strong>Eligible:</strong> {drive.eligibleBranches.join(', ')}</div>
                 </div>
 
                 <div style={{ marginTop: '0.85rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)' }}>
@@ -249,47 +246,42 @@ export const JobBoard = ({ userProfile, onApplyDrive }) => {
       {/* Official TPO Application Acknowledgement Modal */}
       {selectedApplicationModal && (
         <div
-          className="modal-overlay"
           style={{
             position: 'fixed',
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(0, 0, 0, 0.65)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(8px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 9999,
             padding: '1rem',
           }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setSelectedApplicationModal(null);
-          }}
         >
           <div
-            className="card modal-content-card tpo-modal-card"
+            className="card"
             style={{
               maxWidth: '560px',
               width: '100%',
-              padding: '1.75rem',
+              padding: '1.5rem',
               border: '1px solid var(--border-glass)',
-              background: 'var(--bg-surface)',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+              background: 'var(--bg-card)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: 'var(--radius-md)', background: 'rgba(34, 197, 94, 0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
-                  <ShieldCheck size={26} color="#16a34a" />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{ width: '42px', height: '42px', borderRadius: 'var(--radius-sm)', background: 'rgba(34, 197, 94, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ShieldCheck size={24} color="#22c55e" />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '1.2rem', margin: 0, color: 'var(--text-bright)', fontWeight: 800 }}>
+                  <h3 style={{ fontSize: '1.1rem', margin: 0, color: 'var(--text-bright)' }}>
                     Official TPO Placement Application
                   </h3>
-                  <span style={{ fontSize: '0.76rem', color: 'var(--text-dim)', fontWeight: 500 }}>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
                     Vellore Institute of Technology Training & Placement Cell
                   </span>
                 </div>
@@ -297,54 +289,51 @@ export const JobBoard = ({ userProfile, onApplyDrive }) => {
               <button
                 onClick={() => setSelectedApplicationModal(null)}
                 className="btn btn-ghost btn-sm"
-                style={{ padding: '0.35rem 0.5rem', color: 'var(--text-dim)', borderRadius: 'var(--radius-full)' }}
-                aria-label="Close"
+                style={{ padding: '0.2rem 0.4rem', color: 'var(--text-muted)' }}
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div style={{ padding: '1.15rem 1.25rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', marginBottom: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.84rem' }}>
-                <span style={{ color: 'var(--text-dim)', fontWeight: 500 }}>Application ID:</span>
-                <strong style={{ color: 'var(--text-bright)', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em', background: 'rgba(125, 125, 125, 0.08)', padding: '0.15rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border-subtle)' }}>
+            <div style={{ padding: '1rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.82rem' }}>
+                <span style={{ color: 'var(--text-dim)' }}>Application ID:</span>
+                <strong style={{ color: 'var(--text-bright)', fontFamily: 'var(--font-mono)' }}>
                   {selectedApplicationModal.applicationId}
                 </strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.84rem' }}>
-                <span style={{ color: 'var(--text-dim)', fontWeight: 500 }}>Company & Role:</span>
-                <strong style={{ color: 'var(--text-bright)', fontWeight: 700 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.82rem' }}>
+                <span style={{ color: 'var(--text-dim)' }}>Company & Role:</span>
+                <strong style={{ color: 'var(--text-bright)' }}>
                   {selectedApplicationModal.company} — {selectedApplicationModal.role}
                 </strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.84rem' }}>
-                <span style={{ color: 'var(--text-dim)', fontWeight: 500 }}>Offered Package:</span>
-                <span className="badge badge-success" style={{ fontWeight: 800, fontSize: '0.85rem' }}>
-                  {selectedApplicationModal.packageCTC}
-                </span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.82rem' }}>
+                <span style={{ color: 'var(--text-dim)' }}>Offered Package:</span>
+                <strong style={{ color: '#34d399' }}>{selectedApplicationModal.packageCTC}</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.84rem' }}>
-                <span style={{ color: 'var(--text-dim)', fontWeight: 500 }}>Candidate:</span>
-                <strong style={{ color: 'var(--text-bright)', fontWeight: 700 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
+                <span style={{ color: 'var(--text-dim)' }}>Candidate:</span>
+                <strong style={{ color: 'var(--text-bright)' }}>
                   {userProfile?.name || 'Aarav Sharma'} (CGPA: {studentCgpa.toFixed(2)})
                 </strong>
               </div>
             </div>
 
-            <div style={{ padding: '0.9rem 1.15rem', background: 'rgba(34, 197, 94, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(34, 197, 94, 0.3)', marginBottom: '1.5rem' }}>
-              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#16a34a', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div style={{ padding: '0.75rem', background: 'rgba(34, 197, 94, 0.05)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(34, 197, 94, 0.2)', marginBottom: '1.25rem' }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#4ade80', marginBottom: '0.25rem' }}>
                 ✓ Status: {selectedApplicationModal.stage || 'Registered'}
               </div>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-main)', margin: 0, lineHeight: 1.5, opacity: 0.9 }}>
+              <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
                 Your resume and academic transcript have been dispatched to the {selectedApplicationModal.company} campus recruitment committee. Online assessment link will be activated 24 hours prior to drive date.
               </p>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
               <button
                 onClick={() => setSelectedApplicationModal(null)}
-                className="btn btn-primary"
-                style={{ padding: '0.55rem 1.35rem', fontWeight: 700 }}
+                className="btn btn-primary btn-sm"
+                style={{ padding: '0.4rem 1rem' }}
               >
                 Acknowledge & Close
               </button>

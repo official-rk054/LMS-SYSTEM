@@ -15,11 +15,11 @@ INSERT INTO users (id, name, email, password_hash, role, college, degree, cgpa, 
 ON CONFLICT (id) DO NOTHING;
 
 -- 2. SEED COURSES & LEARNING MODULES
-INSERT INTO courses (id, title, category, description, duration_hours, modules_count, instructor_name, level) VALUES
-('c1', 'Data Structures & Algorithms Mastery', 'DSA', 'Comprehensive guide to Arrays, Linked Lists, Trees, Graphs, and Dynamic Programming for Product Companies.', 40, 16, 'Dr. Rajesh Kumar', 'Advanced'),
-('c2', 'System Design & Distributed Systems', 'Core CS', 'High Level & Low Level Design fundamentals for Tier-1 Product Companies like Amazon & Google.', 30, 12, 'Prof. Suresh Nair', 'Advanced'),
-('c3', 'Quantitative & Logical Aptitude Sprint', 'Aptitude', 'Shortcuts, speed math, logical reasoning, and data interpretation for TCS NQT, Infosys & Wipro.', 25, 10, 'Aptitude Cell VIT', 'Intermediate'),
-('c4', 'AI Mock Technical & HR Interview Prep', 'Interview Prep', 'Behavioral interview frameworks (STAR method), resume walkthroughs, and OS/DBMS core fundamentals.', 20, 8, 'Corporate HR Cell', 'Intermediate')
+INSERT INTO courses (id, title, category, description, duration_hours, modules_count, instructor_name, level, youtube_playlist_url, youtube_channel) VALUES
+('c1', 'Data Structures & Algorithms Mastery', 'DSA', 'Comprehensive guide to Arrays, Linked Lists, Trees, Graphs, and Dynamic Programming for Product Companies.', 40, 36, 'take U forward (Striver) & NeetCode', 'Advanced', 'https://www.youtube.com/playlist?list=PLgUwDviBIf0oF6QL8m22w1hIDC1vJ_st8', 'take U forward'),
+('c2', 'Core CS Fundamentals (OS, DBMS, Computer Networks)', 'Core CS', 'Gate Smashers interview booster covering CPU Scheduling, Virtual Memory, SQL Normalization, and TCP/IP.', 24, 22, 'Gate Smashers (Varun Singla)', 'Advanced', 'https://www.youtube.com/playlist?list=PLxCzCOWd7aiGz9donHRrE9I3Mwn6XdP8p', 'Gate Smashers'),
+('c3', 'Quantitative & Logical Aptitude Sprint', 'Aptitude', 'Shortcuts, speed math, logical reasoning, and data interpretation for TCS NQT, Infosys & Wipro.', 32, 28, 'CareerRide & Feel Free to Learn', 'Intermediate', 'https://www.youtube.com/playlist?list=PLpyc33gOcbVA4qXMoQ5FAMUMBRVMnbDBU', 'CareerRide'),
+('c4', 'Campus to Corporate: HR Rounds & GD Mastery', 'Interview Prep', 'Behavioral interview frameworks (STAR method), resume pitch, and Group Discussion moderation techniques.', 16, 18, 'Jeff Su & Corporate HR Coaches', 'Intermediate', 'https://www.youtube.com/playlist?list=PLpyc33gOcbVA4qXMoQ5FAMUMBRVMnbDBU', 'Jeff Su')
 ON CONFLICT (id) DO NOTHING;
 
 -- 3. SEED ASSESSMENTS
@@ -31,11 +31,15 @@ INSERT INTO assessments (id, title, category, duration_minutes, total_questions,
 ON CONFLICT (id) DO NOTHING;
 
 -- 4. SEED CODING PROBLEMS
-INSERT INTO coding_problems (id, title, difficulty, category, description, sample_input, sample_output, points) VALUES
-('p1', 'Subarray with Given Sum', 'Easy', 'Arrays & Two Pointers', 'Given an unsorted array A of size N that contains only non-negative integers, find a continuous sub-array which adds to a given number S.', 'N = 5, S = 12\nA[] = {1, 2, 3, 7, 5}', '2 4', 100),
-('p2', 'Lowest Common Ancestor in Binary Tree', 'Medium', 'Trees & Recursion', 'Given a Binary Tree and two nodes value n1 and n2. The task is to find the Lowest Common Ancestor of the two nodes.', 'Tree = [1, 2, 3, 4, 5, 6, 7], n1 = 4, n2 = 5', '2', 150),
-('p3', 'Longest Increasing Subsequence (LIS)', 'Hard', 'Dynamic Programming', 'Given an integer array nums, return the length of the longest strictly increasing subsequence.', 'nums = [10, 9, 2, 5, 3, 7, 101, 18]', '4', 200),
-('p4', 'Detect Cycle in Undirected Graph', 'Medium', 'Graphs & BFS/DFS', 'Given an undirected graph with V vertices and E edges, check whether it contains any cycle.', 'V = 5, E = 5\nEdges = [[0,1],[1,2],[2,3],[3,4],[4,1]]', '1 (True)', 150)
+INSERT INTO coding_problems (id, title, difficulty, category, description, sample_input, sample_output, points, leetcode_url, gfg_url, company_tags) VALUES
+('prob_01', 'Two Sum (Target Pair Search)', 'Easy', 'Arrays & Two Pointers', 'Given an array of integers nums and an integer target, return indices of the two numbers that add up to target.', 'nums = [2, 7, 11, 15], target = 9', '[0, 1]', 100, 'https://leetcode.com/problems/two-sum/', 'https://www.geeksforgeeks.org/problems/key-pair5616/1', 'Amazon, Google, Flipkart, TCS Digital'),
+('prob_02', 'Subarray with Given Sum', 'Medium', 'Two Pointers & Sliding Window', 'Find continuous sub-array which adds to a given number S in an unsorted array.', 'A = [1, 2, 3, 7, 5], S = 12', '[2, 4]', 150, 'https://leetcode.com/problems/minimum-size-subarray-sum/', 'https://www.geeksforgeeks.org/problems/subarray-with-given-sum-1587115621/1', 'TCS NQT, Infosys, Wipro, Amazon'),
+('prob_03', 'Longest Substring Without Repeating Characters', 'Medium', 'Strings & Hash Set', 'Find length of the longest substring without duplicate characters.', 's = "abcabcbb"', '3', 150, 'https://leetcode.com/problems/longest-substring-without-repeating-characters/', 'https://www.geeksforgeeks.org/problems/length-of-the-longest-substring3036/1', 'Microsoft, Amazon, Flipkart, Goldman Sachs'),
+('prob_04', 'Reverse Linked List', 'Easy', 'Linked Lists & Pointers', 'Given head of a singly linked list, reverse the list and return its head.', 'head = [1, 2, 3, 4, 5]', '[5, 4, 3, 2, 1]', 100, 'https://leetcode.com/problems/reverse-linked-list/', 'https://www.geeksforgeeks.org/problems/reverse-a-linked-list/1', 'Amazon, Google, Microsoft, Adobe'),
+('prob_05', 'Search in Rotated Sorted Array', 'Medium', 'Binary Search Paradigms', 'Search for target in rotated sorted array with O(log n) runtime complexity.', 'nums = [4, 5, 6, 7, 0, 1, 2], target = 0', '4', 150, 'https://leetcode.com/problems/search-in-rotated-sorted-array/', 'https://www.geeksforgeeks.org/problems/search-in-a-rotated-array4618/1', 'Google, Meta, Amazon, Flipkart'),
+('prob_06', 'Invert Binary Tree', 'Easy', 'Trees & BST In-Depth', 'Invert binary tree mirror image and return its root.', 'root = [4, 2, 7, 1, 3, 6, 9]', '[4, 7, 2, 9, 6, 3, 1]', 100, 'https://leetcode.com/problems/invert-binary-tree/', 'https://www.geeksforgeeks.org/problems/mirror-tree/1', 'Google, Amazon, Infosys, Oracle'),
+('prob_07', 'Number of Islands', 'Medium', 'Graph Traversal (BFS/DFS)', 'Return the number of islands formed by connected 1s in a 2D binary grid.', 'grid = [["1","1","0"],["0","1","0"],["0","0","1"]]', '2', 150, 'https://leetcode.com/problems/number-of-islands/', 'https://www.geeksforgeeks.org/problems/find-the-number-of-islands/1', 'Amazon, Microsoft, Bloomberg, Uber'),
+('prob_08', 'Climbing Stairs', 'Easy', 'Dynamic Programming Top-Down & Bottom-Up', 'Count distinct ways to climb n stairs taking 1 or 2 steps.', 'n = 3', '3', 100, 'https://leetcode.com/problems/climbing-stairs/', 'https://www.geeksforgeeks.org/problems/count-ways-to-reach-the-nth-stair-1587115620/1', 'Amazon, Adobe, Apple, TCS Digital')
 ON CONFLICT (id) DO NOTHING;
 
 -- 5. SEED PLACEMENT DRIVES

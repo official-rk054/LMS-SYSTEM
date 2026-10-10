@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   FileCheck,
   Upload,
@@ -25,8 +25,19 @@ import {
   X,
   Layers,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  ListChecks,
+  Eye,
+  CheckCircle2,
+  SlidersHorizontal,
+  Info,
+  Wand2
 } from 'lucide-react';
+import {
+  runResumeAuditAgent,
+  ROLE_PROFILES,
+  extractCandidateMetadata
+} from '../services/resumeAuditAgent';
 
 const PRESET_JDS = {
   sde_amazon: {
@@ -121,31 +132,37 @@ Projects: PlaceIQ LMS - Architected full-stack placement portal with React, Node
 Achievements: LeetCode Knight (Rating 1890+), Smart India Hackathon (SIH) National Finalist 2024.`
 };
 
-export const ResumeAnalyzer = ({ resumeFromBuilder }) => {
+export const ResumeAnalyzer = ({ userProfile, resumeFromBuilder }) => {
   const [targetRole, setTargetRole] = useState('sde_amazon');
   const [showCustomJD, setShowCustomJD] = useState(false);
   const [customJDText, setCustomJDText] = useState(PRESET_JDS.sde_amazon.text);
-  
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('keywords'); // 'keywords', 'sections', 'checklist'
+
   // File Import State
   const [uploadedResume, setUploadedResume] = useState(() => {
     if (resumeFromBuilder) {
+      const candidateName = resumeFromBuilder.personal?.fullName || userProfile?.name || 'Candidate';
+      const text = `${candidateName} | ${resumeFromBuilder.education?.[0]?.institution || userProfile?.college || 'Engineering College'} | Computer Science
+Email: ${resumeFromBuilder.personal?.email || userProfile?.email || 'email@domain.com'} | Phone: ${resumeFromBuilder.personal?.phone || userProfile?.phone || '+91 98765 43210'} | LinkedIn: ${resumeFromBuilder.personal?.linkedin || 'linkedin.com/in/candidate'} | GitHub: ${resumeFromBuilder.personal?.github || 'github.com/candidate'}
+Summary: ${resumeFromBuilder.personal?.summary || 'Engineering student focused on high-scale systems.'}
+Skills: ${resumeFromBuilder.skills?.languages || ''}, ${resumeFromBuilder.skills?.frameworks || ''}, ${resumeFromBuilder.skills?.developerTools || ''}, ${resumeFromBuilder.skills?.coreSubjects || ''}
+Experience: ${resumeFromBuilder.experience?.map(e => `${e.title} at ${e.company}: ${e.bullets?.join(' ')}`).join('\n') || ''}
+Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bullets?.join(' ')}`).join('\n') || ''}`;
+
+      const meta = extractCandidateMetadata(text, userProfile, `${candidateName.replace(/\s+/g, '_')}_Resume.json`);
+
       return {
-        fileName: `${resumeFromBuilder.personal.fullName.replace(/\s+/g, '_')}_Resume.json`,
-        fileSize: '42 KB',
+        fileName: `${candidateName.replace(/\s+/g, '_')}_Resume.json`,
+        fileSize: `${Math.max(12, Math.round(text.length / 30))} KB`,
         fileType: 'application/json',
         uploadSource: 'builder',
         lastModified: 'Synced from PlaceIQ Resume Builder',
-        parsedName: resumeFromBuilder.personal.fullName,
-        parsedCollege: 'Vellore Institute of Technology (VIT)',
-        parsedDegree: `${resumeFromBuilder.education?.[0]?.degree || 'B.Tech'} in ${resumeFromBuilder.education?.[0]?.field || 'CSE'}`,
-        parsedCgpa: `${resumeFromBuilder.education?.[0]?.cgpa || '8.85'} / 10.0`,
-        skillsCount: 18,
-        rawText: `${resumeFromBuilder.personal.fullName}
-${resumeFromBuilder.personal.email} | ${resumeFromBuilder.personal.phone} | ${resumeFromBuilder.personal.linkedin}
-Summary: ${resumeFromBuilder.personal.summary}
-Skills: ${resumeFromBuilder.skills?.languages || ''}, ${resumeFromBuilder.skills?.frameworks || ''}, ${resumeFromBuilder.skills?.developerTools || ''}, ${resumeFromBuilder.skills?.coreSubjects || ''}
-Experience: ${resumeFromBuilder.experience?.map(e => `${e.title} at ${e.company}: ${e.bullets?.join(' ')}`).join('\n') || ''}
-Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bullets?.join(' ')}`).join('\n') || ''}`
+        parsedName: candidateName,
+        parsedCollege: resumeFromBuilder.education?.[0]?.institution || meta.parsedCollege,
+        parsedDegree: `${resumeFromBuilder.education?.[0]?.degree || 'B.Tech'} in ${resumeFromBuilder.education?.[0]?.field || 'Computer Science'}`,
+        parsedCgpa: resumeFromBuilder.education?.[0]?.cgpa ? `${resumeFromBuilder.education[0].cgpa} / 10.0` : meta.parsedCgpa,
+        skillsCount: meta.skillsCount,
+        rawText: text
       };
     }
     return DEFAULT_RESUME_INFO;
@@ -155,126 +172,60 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [scanStep, setScanStep] = useState(0);
   const [copiedKeyword, setCopiedKeyword] = useState(null);
-  const [checklistFilter, setChecklistFilter] = useState('all');
-
-  // Resolved Checklist items
-  const [resolvedChecklist, setResolvedChecklist] = useState({
-    item1: false,
-    item2: true,
-    item3: false,
-    item4: true,
-    item5: false,
-  });
 
   const fileInputRef = useRef(null);
 
-  // Current JD data
-  const currentJD = PRESET_JDS[targetRole] || PRESET_JDS.sde_amazon;
-
-  // Analysis result state
-  const [analysisResult, setAnalysisResult] = useState({
-    atsScore: 89,
-    jdMatchRate: 86,
-    formatScore: 98,
-    hardSkillsScore: 91,
-    impactMetricScore: 84,
-    matchedKeywords: [
-      'Data Structures & Algorithms',
-      'C++',
-      'Python',
-      'SQL',
-      'Docker',
-      'REST APIs',
-      'AWS S3',
-      'Microservices',
-      'Unit Testing',
-      'Git',
-    ],
-    missingKeywords: [
-      { name: 'CI/CD Pipelines (GitHub Actions / Jenkins)', priority: 'High', category: 'DevOps' },
-      { name: 'AWS Lambda / Serverless', priority: 'High', category: 'Cloud' },
-      { name: 'System Design (LLD / HLD)', priority: 'Medium', category: 'Architecture' },
-      { name: 'DynamoDB / NoSQL Databases', priority: 'Medium', category: 'Database' },
-    ],
-    sectionAudit: [
-      {
-        section: 'Contact Info & Profile Links',
-        status: 'pass',
-        score: '100%',
-        summary: 'Complete header with email, Indian mobile (+91), active LinkedIn and GitHub links.',
-        tip: 'All contact hyperlinks are recognized as clickable ATS-safe URLs.'
-      },
-      {
-        section: 'Academics & CGPA Cutoff Compliance',
-        status: 'pass',
-        score: '96%',
-        summary: 'B.Tech CSE at VIT Vellore with CGPA 8.85 comfortably clears company 7.0 eligibility.',
-        tip: 'Standardized degree naming adheres to Fortune 500 recruiting filters.'
-      },
-      {
-        section: 'Technical Skills Categorization',
-        status: 'pass',
-        score: '92%',
-        summary: 'Clear division into Languages, Web, Cloud, and Core CS subjects.',
-        tip: 'Includes high-demand campus recruiting skills: C++, Python, SQL, Docker.'
-      },
-      {
-        section: 'Quantifiable Metrics & Scale Indicators',
-        status: 'pass',
-        score: '88%',
-        summary: 'Excellent usage of numbers: "150k daily events", "32% latency reduction", "400+ peers".',
-        tip: 'Recruiters prioritize candidates with tangible business & performance metrics.'
-      },
-      {
-        section: 'Cloud & Systems Architecture',
-        status: 'warning',
-        score: '76%',
-        summary: 'AWS S3 is mentioned, but CI/CD automation & serverless components are omitted.',
-        tip: 'Amazon SDE-1 JD specifically looks for continuous integration pipeline exposure.'
-      },
-      {
-        section: 'ATS Formatting & Typography Hygiene',
-        status: 'pass',
-        score: '100%',
-        summary: 'Single-column structure, standard bullet points, 0 unparseable icons/tables.',
-        tip: 'Clean linear parse stream guaranteed across Workday, Taleo, and Greenhouse.'
-      }
-    ],
-    checklist: [
-      {
-        id: 'item1',
-        impact: 'High',
-        title: 'Include CI/CD Pipeline Keyword in Skills/Projects',
-        description: 'Amazon automated ATS parsers search specifically for "CI/CD" or "GitHub Actions" in backend roles.',
-      },
-      {
-        id: 'item2',
-        impact: 'High',
-        title: 'Include Indian Mobile Code (+91) with WhatsApp Accessibility',
-        description: 'Recruiters send interview shortlisting links and drive schedules directly via SMS/WhatsApp.',
-      },
-      {
-        id: 'item3',
-        impact: 'High',
-        title: 'Specify Serverless AWS Stack (e.g. Lambda, S3, API Gateway)',
-        description: 'Mentioning serverless deployment elevates cloud score by +8% for cloud-first tier-1 firms.',
-      },
-      {
-        id: 'item4',
-        impact: 'Medium',
-        title: 'Single-Column Linear Reading Format Verified',
-        description: 'Two-column tables often scramble parse order in older university ATS systems.',
-      },
-      {
-        id: 'item5',
-        impact: 'Medium',
-        title: 'Include Live GitHub Demo Links for Top 2 Projects',
-        description: 'Helps technical interviewers directly inspect clean commit history and test coverage.',
-      }
-    ]
+  // Real Agent Analysis State
+  const [analysisResult, setAnalysisResult] = useState(() => {
+    const initialText = uploadedResume?.rawText || DEFAULT_RESUME_INFO.rawText;
+    return runResumeAuditAgent(initialText, 'sde_amazon', PRESET_JDS.sde_amazon.text, userProfile);
   });
 
-  // Handle external file upload
+  // Resolved Checklist items initialized from live audit
+  const [resolvedChecklist, setResolvedChecklist] = useState(() => {
+    const initial = {};
+    if (analysisResult?.checklist) {
+      analysisResult.checklist.forEach(item => {
+        initial[item.id] = !!item.isInitialResolved;
+      });
+    }
+    return initial;
+  });
+
+  // Current JD metadata
+  const currentJD = PRESET_JDS[targetRole] || PRESET_JDS.sde_amazon;
+
+  // Run audit agent whenever resume text or target role changes
+  const executeAgentAudit = (rawText, roleKey) => {
+    setIsAnalyzing(true);
+    setScanStep(1);
+
+    setTimeout(() => {
+      setScanStep(2);
+    }, 280);
+
+    setTimeout(() => {
+      setScanStep(3);
+    }, 560);
+
+    setTimeout(() => {
+      const result = runResumeAuditAgent(rawText, roleKey, customJDText, userProfile);
+      setAnalysisResult(result);
+      setResolvedChecklist(prev => {
+        const next = { ...prev };
+        result.checklist.forEach(item => {
+          if (next[item.id] === undefined) {
+            next[item.id] = !!item.isInitialResolved;
+          }
+        });
+        return next;
+      });
+      setIsAnalyzing(false);
+      setScanStep(0);
+    }, 850);
+  };
+
+  // Handle external file upload with real text extraction & dynamic metadata
   const handleFileUpload = (file) => {
     if (!file) return;
 
@@ -282,43 +233,69 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
     const fileSize = `${(file.size / 1024).toFixed(1)} KB`;
     const fileType = file.type || 'application/pdf';
 
-    // If text or json, read text directly
-    if (file.name.endsWith('.txt') || file.name.endsWith('.json')) {
-      const reader = new FileReader();
+    const reader = new FileReader();
+
+    if (file.name.endsWith('.txt') || file.name.endsWith('.json') || file.name.endsWith('.md')) {
       reader.onload = (e) => {
-        const content = e.target.result;
+        const text = e.target.result;
+        const meta = extractCandidateMetadata(text, userProfile, fileName);
         setUploadedResume({
           fileName,
           fileSize,
           fileType,
           uploadSource: 'external',
           lastModified: 'Uploaded just now',
-          parsedName: 'Aarav Sharma',
-          parsedCollege: 'Vellore Institute of Technology (VIT)',
-          parsedDegree: 'B.Tech Computer Science & Engineering',
-          parsedCgpa: '8.85 / 10.0',
-          skillsCount: 17,
-          rawText: content
+          parsedName: meta.parsedName,
+          parsedCollege: meta.parsedCollege,
+          parsedDegree: meta.parsedDegree,
+          parsedCgpa: meta.parsedCgpa,
+          skillsCount: meta.skillsCount,
+          rawText: text
         });
-        triggerScanSimulation();
+        executeAgentAudit(text, targetRole);
       };
       reader.readAsText(file);
     } else {
-      // PDF or DOCX file
-      setUploadedResume({
-        fileName,
-        fileSize,
-        fileType,
-        uploadSource: 'external',
-        lastModified: 'Uploaded just now',
-        parsedName: 'Aarav Sharma',
-        parsedCollege: 'Vellore Institute of Technology (VIT)',
-        parsedDegree: 'B.Tech Computer Science & Engineering',
-        parsedCgpa: '8.85 / 10.0',
-        skillsCount: 16,
-        rawText: DEFAULT_RESUME_INFO.rawText
-      });
-      triggerScanSimulation();
+      // PDF or DOCX parsing
+      reader.onload = (e) => {
+        const buffer = e.target.result;
+        let extractedText = '';
+        try {
+          const uint8 = new Uint8Array(buffer);
+          let rawChars = '';
+          for (let i = 0; i < Math.min(uint8.length, 50000); i++) {
+            const charCode = uint8[i];
+            if ((charCode >= 32 && charCode <= 126) || charCode === 10 || charCode === 13) {
+              rawChars += String.fromCharCode(charCode);
+            }
+          }
+          const cleanWords = rawChars.replace(/[^a-zA-Z0-9\s.,@+\-:/]/g, ' ').replace(/\s+/g, ' ').trim();
+          if (cleanWords.length > 150) {
+            extractedText = cleanWords;
+          } else {
+            extractedText = DEFAULT_RESUME_INFO.rawText;
+          }
+        } catch (err) {
+          extractedText = DEFAULT_RESUME_INFO.rawText;
+        }
+
+        const meta = extractCandidateMetadata(extractedText, userProfile, fileName);
+        setUploadedResume({
+          fileName,
+          fileSize,
+          fileType,
+          uploadSource: 'external',
+          lastModified: 'Uploaded just now',
+          parsedName: meta.parsedName,
+          parsedCollege: meta.parsedCollege,
+          parsedDegree: meta.parsedDegree,
+          parsedCgpa: meta.parsedCgpa,
+          skillsCount: meta.skillsCount,
+          rawText: extractedText
+        });
+        executeAgentAudit(extractedText, targetRole);
+      };
+      reader.readAsArrayBuffer(file);
     }
   };
 
@@ -343,523 +320,520 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
     if (file) handleFileUpload(file);
   };
 
-  // 1-Click Load Demo Resume
   const handleLoadDemoResume = () => {
     setUploadedResume(DEFAULT_RESUME_INFO);
-    triggerScanSimulation();
+    executeAgentAudit(DEFAULT_RESUME_INFO.rawText, targetRole);
   };
 
-  // 1-Click Load from Builder
   const handleLoadFromBuilder = () => {
     if (resumeFromBuilder) {
-      setUploadedResume({
-        fileName: `${resumeFromBuilder.personal.fullName.replace(/\s+/g, '_')}_Resume.json`,
-        fileSize: '42 KB',
+      const candidateName = resumeFromBuilder.personal?.fullName || userProfile?.name || 'Candidate';
+      const text = `${candidateName} | ${resumeFromBuilder.education?.[0]?.institution || userProfile?.college || 'Engineering College'} | Computer Science
+Email: ${resumeFromBuilder.personal?.email || userProfile?.email || 'email@domain.com'} | Phone: ${resumeFromBuilder.personal?.phone || userProfile?.phone || '+91 98765 43210'} | LinkedIn: ${resumeFromBuilder.personal?.linkedin || 'linkedin.com/in/candidate'} | GitHub: ${resumeFromBuilder.personal?.github || 'github.com/candidate'}
+Summary: ${resumeFromBuilder.personal?.summary || 'Engineering student focused on high-scale systems.'}
+Skills: ${resumeFromBuilder.skills?.languages || ''}, ${resumeFromBuilder.skills?.frameworks || ''}, ${resumeFromBuilder.skills?.developerTools || ''}, ${resumeFromBuilder.skills?.coreSubjects || ''}
+Experience: ${resumeFromBuilder.experience?.map(e => `${e.title} at ${e.company}: ${e.bullets?.join(' ')}`).join('\n') || ''}
+Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bullets?.join(' ')}`).join('\n') || ''}`;
+
+      const meta = extractCandidateMetadata(text, userProfile, `${candidateName.replace(/\s+/g, '_')}_Resume.json`);
+
+      const generated = {
+        fileName: `${candidateName.replace(/\s+/g, '_')}_Resume.json`,
+        fileSize: `${Math.max(12, Math.round(text.length / 30))} KB`,
         fileType: 'application/json',
         uploadSource: 'builder',
         lastModified: 'Synced from PlaceIQ Resume Builder',
-        parsedName: resumeFromBuilder.personal.fullName,
-        parsedCollege: 'Vellore Institute of Technology (VIT)',
-        parsedDegree: `${resumeFromBuilder.education?.[0]?.degree || 'B.Tech'} in ${resumeFromBuilder.education?.[0]?.field || 'CSE'}`,
-        parsedCgpa: `${resumeFromBuilder.education?.[0]?.cgpa || '8.85'} / 10.0`,
-        skillsCount: 18,
-        rawText: `${resumeFromBuilder.personal.fullName}
-${resumeFromBuilder.personal.email} | ${resumeFromBuilder.personal.phone} | ${resumeFromBuilder.personal.linkedin}
-Summary: ${resumeFromBuilder.personal.summary}
-Skills: ${resumeFromBuilder.skills?.languages || ''}, ${resumeFromBuilder.skills?.frameworks || ''}, ${resumeFromBuilder.skills?.developerTools || ''}, ${resumeFromBuilder.skills?.coreSubjects || ''}
-Experience: ${resumeFromBuilder.experience?.map(e => `${e.title} at ${e.company}: ${e.bullets?.join(' ')}`).join('\n') || ''}
-Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bullets?.join(' ')}`).join('\n') || ''}`
-      });
+        parsedName: candidateName,
+        parsedCollege: resumeFromBuilder.education?.[0]?.institution || meta.parsedCollege,
+        parsedDegree: `${resumeFromBuilder.education?.[0]?.degree || 'B.Tech'} in ${resumeFromBuilder.education?.[0]?.field || 'Computer Science'}`,
+        parsedCgpa: resumeFromBuilder.education?.[0]?.cgpa ? `${resumeFromBuilder.education[0].cgpa} / 10.0` : meta.parsedCgpa,
+        skillsCount: meta.skillsCount,
+        rawText: text
+      };
+      setUploadedResume(generated);
+      executeAgentAudit(generated.rawText, targetRole);
     } else {
       handleLoadDemoResume();
     }
-    triggerScanSimulation();
   };
 
-  // Trigger scanning simulation with progress animation
-  const triggerScanSimulation = () => {
-    setIsAnalyzing(true);
-    setScanStep(1);
-
-    setTimeout(() => {
-      setScanStep(2);
-    }, 400);
-
-    setTimeout(() => {
-      setScanStep(3);
-    }, 800);
-
-    setTimeout(() => {
-      setIsAnalyzing(false);
-      setScanStep(0);
-      // Recalculate dynamic scores
-      setAnalysisResult(prev => ({
-        ...prev,
-        atsScore: 91,
-        jdMatchRate: 88,
-        hardSkillsScore: 94,
-        impactMetricScore: 89,
-      }));
-    }, 1200);
-  };
-
-  // Copy keyword to clipboard
   const handleCopyKeyword = (keyword) => {
     navigator.clipboard?.writeText(keyword);
     setCopiedKeyword(keyword);
     setTimeout(() => setCopiedKeyword(null), 2000);
   };
 
-  // Toggle checklist item
   const toggleChecklistItem = (id) => {
     setResolvedChecklist(prev => {
       const next = { ...prev, [id]: !prev[id] };
+      const baseScore = analysisResult.baseAtsScore || analysisResult.atsScore;
+      const totalItems = analysisResult.checklist?.length || 5;
       const resolvedCount = Object.values(next).filter(Boolean).length;
-      const bonusScore = Math.min(84 + resolvedCount * 3, 98);
+      const bonus = Math.round((resolvedCount / totalItems) * 10);
+      const updatedScore = Math.min(99, Math.max(baseScore, baseScore + bonus));
       setAnalysisResult(curr => ({
         ...curr,
-        atsScore: bonusScore,
+        atsScore: updatedScore,
       }));
       return next;
     });
   };
 
-  // Filter checklist
-  const filteredChecklist = analysisResult.checklist.filter(item => {
-    if (checklistFilter === 'all') return true;
-    if (checklistFilter === 'high') return item.impact === 'High';
-    if (checklistFilter === 'medium') return item.impact === 'Medium';
-    return true;
-  });
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       {/* Hidden File Input */}
       <input
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
-        accept=".pdf,.docx,.txt,.json"
+        accept=".pdf,.docx,.txt,.json,.md"
         style={{ display: 'none' }}
       />
 
-      {/* Top Banner & Audit Controls */}
-      <div className="card" style={{ padding: '1.75rem', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem' }}>
+      {/* ═════════════════════════════════════════════════════════════
+          1. COMPACT COMMAND HEADER WITH ROLE BENCHMARK & ACTIONS
+          ═════════════════════════════════════════════════════════════ */}
+      <div
+        className="card"
+        style={{
+          padding: '1.15rem 1.5rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+          <div
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: 'var(--radius-md)',
+              background: 'rgba(255, 255, 255, 0.06)',
+              border: '1px solid var(--border-subtle)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--text-bright)',
+            }}
+          >
+            <Wand2 size={22} />
+          </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
-              <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>
-                <ShieldCheck size={14} /> Fortune 500 ATS Simulation
-              </span>
-              <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>
-                Workday • Taleo • Greenhouse • iCIMS
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0 }}>
+                AI Resume Audit Agent & Feedback Engine
+              </h2>
+              <span className="badge badge-success" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
+                Multi-Factor Loop Active
               </span>
             </div>
-            <h2 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <FileCheck color="var(--primary)" size={28} />
-              AI Resume Analyzer & ATS Benchmark
-            </h2>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', maxWidth: '780px', marginTop: '0.2rem' }}>
-              Import your external resume to run semantic ATS extraction, keyword density auditing, and placement readiness verification tailored to top Indian campus recruitment drives.
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0.15rem 0 0' }}>
+              Autonomous 2026 Tech Trend Analysis • Target JD Keyword Benchmarking • Actionable Section Audit
             </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.85rem', flexWrap: 'wrap' }}>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="btn btn-outline"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-            >
-              <Upload size={16} /> Import New Resume
-            </button>
-
-            <button
-              onClick={triggerScanSimulation}
-              className="btn btn-primary"
-              disabled={isAnalyzing}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', fontWeight: 700 }}
-            >
-              {isAnalyzing ? (
-                <>
-                  <RefreshCw className="pulse-dot" size={17} style={{ animation: 'spin 1s linear infinite' }} />
-                  {scanStep === 1 && 'Tokenizing Layout...'}
-                  {scanStep === 2 && 'Matching JD Keywords...'}
-                  {scanStep === 3 && 'Generating Audit Report...'}
-                </>
-              ) : (
-                <>
-                  <Sparkles size={17} /> Run In-Depth AI Audit
-                </>
-              )}
-            </button>
           </div>
         </div>
 
-        {/* Live Scan Step Progress Bar */}
-        {isAnalyzing && (
-          <div style={{ marginTop: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
-              <span>Phase {scanStep} of 3: ATS Parser & Semantic Engine</span>
-              <span>{scanStep === 1 ? '33%' : scanStep === 2 ? '66%' : '95%'}</span>
-            </div>
-            <div style={{ width: '100%', height: '6px', background: 'var(--border-subtle)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
-              <div
-                style={{
-                  height: '100%',
-                  width: scanStep === 1 ? '33%' : scanStep === 2 ? '66%' : '95%',
-                  background: 'var(--accent-gradient)',
-                  transition: 'width 0.4s ease',
-                  borderRadius: 'var(--radius-full)'
-                }}
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Resume Import Status & External Drag/Drop Station */}
-      <div
-        className="card"
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        style={{
-          border: isDragOver ? '2px dashed var(--primary)' : '1px solid var(--border-card)',
-          background: isDragOver ? 'rgba(99, 102, 241, 0.08)' : 'var(--bg-card)',
-          transition: 'all 0.2s ease',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.25rem' }}>
-          {/* Active File Summary */}
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-            <div
+        {/* Global Action Strip */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+          {/* Target Role Dropdown */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--bg-glass-strong)', padding: '0.25rem 0.65rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-glass)' }}>
+            <Target size={14} color="var(--primary)" />
+            <select
+              value={targetRole}
+              onChange={(e) => {
+                const newRole = e.target.value;
+                setTargetRole(newRole);
+                setCustomJDText(PRESET_JDS[newRole].text);
+                executeAgentAudit(uploadedResume.rawText, newRole);
+              }}
               style={{
-                width: '52px',
-                height: '52px',
-                borderRadius: 'var(--radius-md)',
-                background: 'rgba(99, 102, 241, 0.12)',
-                border: '1px solid rgba(99, 102, 241, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--primary)',
-                flexShrink: 0,
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-main)',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                outline: 'none',
+                cursor: 'pointer',
               }}
             >
-              <FileText size={28} />
-            </div>
+              <option value="sde_amazon" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Amazon SDE 1 (₹44.5 LPA)</option>
+              <option value="sde_microsoft" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Microsoft SWE (₹45.0 LPA)</option>
+              <option value="flipkart_ase" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Flipkart Assoc. SDE (₹32.0 LPA)</option>
+              <option value="tcs_digital" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>TCS Digital (₹7.5 LPA)</option>
+              <option value="infosys_sp" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Infosys SP (₹9.5 LPA)</option>
+            </select>
+          </div>
 
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                  {uploadedResume.fileName}
-                </h3>
-                <span className="badge badge-success" style={{ fontSize: '0.72rem' }}>
-                  <Check size={12} /> Successfully Parsed
-                </span>
-                <span className="badge badge-info" style={{ fontSize: '0.72rem' }}>
-                  {uploadedResume.fileSize}
-                </span>
-                {uploadedResume.uploadSource === 'builder' && (
-                  <span className="badge badge-primary" style={{ fontSize: '0.72rem' }}>
-                    Synced from Builder
-                  </span>
-                )}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="btn btn-outline btn-sm"
+            style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}
+          >
+            <Upload size={14} /> Upload Resume
+          </button>
+
+          <button
+            onClick={handleLoadFromBuilder}
+            className="btn btn-outline btn-sm"
+            style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}
+          >
+            <RefreshCw size={13} /> Sync Builder
+          </button>
+
+          <button
+            onClick={() => executeAgentAudit(uploadedResume.rawText, targetRole)}
+            className="btn btn-primary btn-sm"
+            disabled={isAnalyzing}
+            style={{ fontSize: '0.78rem', padding: '0.4rem 0.9rem', fontWeight: 700 }}
+          >
+            {isAnalyzing ? (
+              <>
+                <RefreshCw size={13} className="pulse-dot" style={{ animation: 'spin 1s linear infinite' }} />
+                Auditing...
+              </>
+            ) : (
+              <>
+                <Sparkles size={14} /> Re-run Agent Loop
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Live Scan Step Progress Bar */}
+      {isAnalyzing && (
+        <div style={{ padding: '0.75rem 1rem', background: 'var(--bg-glass-strong)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-glass)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
+            <span>
+              {scanStep === 1 && 'Ingesting & parsing candidate resume profile...'}
+              {scanStep === 2 && 'Evaluating 2026 tech trends, metric density, and ATS hygiene...'}
+              {scanStep === 3 && 'Finalizing ATS audit metrics and actionable checklist...'}
+            </span>
+            <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{scanStep === 1 ? '33%' : scanStep === 2 ? '66%' : '100%'}</span>
+          </div>
+          <div style={{ width: '100%', height: '5px', background: 'var(--bg-glass-subtle)', borderRadius: '999px', overflow: 'hidden' }}>
+            <div
+              style={{
+                height: '100%',
+                width: scanStep === 1 ? '33%' : scanStep === 2 ? '66%' : '100%',
+                background: 'var(--primary)',
+                transition: 'width 0.3s ease',
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ═════════════════════════════════════════════════════════════
+          2. UNIFIED BENTO ROW: DOCUMENT HUB + ATS READINESS GAUGE
+          ═════════════════════════════════════════════════════════════ */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: '1.25rem' }}>
+        {/* Card A: Active Document Station & Drag-Drop Hub */}
+        <div
+          className="card"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          style={{
+            padding: '1.25rem',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            border: isDragOver ? '2px dashed #fafafa' : '1px solid var(--border-glass)',
+            background: isDragOver ? 'rgba(255, 255, 255, 0.04)' : 'var(--bg-card)',
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: 'var(--radius-sm)', background: 'rgba(255, 255, 255, 0.06)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <FileText size={20} color="var(--text-bright)" />
+                </div>
+                <div>
+                  <h4 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0 }}>
+                    {uploadedResume.fileName}
+                  </h4>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                    {uploadedResume.fileSize} • {uploadedResume.lastModified}
+                  </div>
+                </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '1.25rem', marginTop: '0.4rem', fontSize: '0.82rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
-                <span><strong>Candidate:</strong> {uploadedResume.parsedName}</span>
-                <span>•</span>
-                <span><strong>College:</strong> {uploadedResume.parsedCollege}</span>
-                <span>•</span>
-                <span><strong>CGPA:</strong> {uploadedResume.parsedCgpa}</span>
-                <span>•</span>
-                <span><strong>Identified Skills:</strong> {uploadedResume.skillsCount} Technical Competencies</span>
+              <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>
+                <Check size={11} /> Agent Processed
+              </span>
+            </div>
+
+            {/* Candidate Metadata Strip */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: '0.5rem',
+                padding: '0.65rem 0.85rem',
+                background: 'var(--bg-glass-strong)',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-glass)',
+                fontSize: '0.75rem',
+              }}
+            >
+              <div>
+                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>Candidate</span>
+                <strong style={{ color: 'var(--text-main)', fontWeight: 700 }}>{uploadedResume.parsedName}</strong>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>College</span>
+                <strong style={{ color: 'var(--text-main)', fontWeight: 700 }}>{uploadedResume.parsedCollege || 'VIT Vellore'}</strong>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>CGPA</span>
+                <strong style={{ color: '#10b981', fontWeight: 800 }}>{uploadedResume.parsedCgpa}</strong>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.68rem', fontWeight: 600 }}>Extracted Skills</span>
+                <strong style={{ color: 'var(--text-main)', fontWeight: 700 }}>{uploadedResume.skillsCount} Technical</strong>
               </div>
             </div>
           </div>
 
-          {/* Quick Upload Buttons */}
-          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="btn btn-outline btn-sm"
-              style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
-              title="Upload PDF or Word Document"
-            >
-              <FileUp size={15} /> Upload PDF / Word
-            </button>
-
-            <button
-              onClick={handleLoadFromBuilder}
-              className="btn btn-outline btn-sm"
-              style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
-              title="Import current data from Resume Builder"
-            >
-              <RefreshCw size={14} /> Import from Builder
-            </button>
-
+          {/* Embedded Dropzone Subtext */}
+          <div
+            style={{
+              marginTop: '0.85rem',
+              paddingTop: '0.65rem',
+              borderTop: '1px solid var(--border-subtle)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              fontSize: '0.74rem',
+              color: 'var(--text-dim)',
+            }}
+          >
+            <span>Drag & drop <code>.pdf</code>, <code>.docx</code>, <code>.json</code> to audit any resume</span>
             <button
               onClick={handleLoadDemoResume}
               className="btn btn-ghost btn-sm"
-              style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem', color: 'var(--text-muted)' }}
-              title="Reset to default VIT candidate profile"
+              style={{ padding: '0.15rem 0.4rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}
             >
-              Load Demo VIT Profile
+              Reset to Demo Profile
             </button>
           </div>
         </div>
 
-        {/* Drag and Drop Subtext */}
+        {/* Card B: Executive ATS Gauge & 5-Factor Score Strip */}
         <div
+          className="card"
           style={{
-            marginTop: '1rem',
-            paddingTop: '0.85rem',
-            borderTop: '1px solid var(--border-subtle)',
+            padding: '1.25rem',
             display: 'flex',
-            justifyContent: 'space-between',
             alignItems: 'center',
-            fontSize: '0.78rem',
-            color: 'var(--text-dim)',
-            flexWrap: 'wrap',
-            gap: '0.5rem',
+            justifyContent: 'space-between',
+            gap: '1.25rem',
           }}
         >
-          <span>
-            💡 <strong>Pro Tip:</strong> Drag and drop any <code>.pdf</code>, <code>.docx</code>, or <code>.json</code> directly onto this card to instant-audit.
-          </span>
-          <span style={{ color: 'var(--text-muted)' }}>
-            Status: {uploadedResume.lastModified}
-          </span>
-        </div>
-      </div>
-
-      {/* Executive Scoreboard: 4 Key Pillars */}
-      <div className="grid-4">
-        {/* Overall ATS Score */}
-        <div className="stat-card" style={{ padding: '1.25rem', position: 'relative' }}>
-          <div
-            style={{
-              width: '58px',
-              height: '58px',
-              borderRadius: '50%',
-              background: 'conic-gradient(#10b981 0% 89%, rgba(255, 255, 255, 0.1) 89% 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
+          {/* Numerical ATS Circular Gauge */}
+          <div style={{ textAlign: 'center', minWidth: '110px' }}>
             <div
               style={{
-                width: '46px',
-                height: '46px',
+                width: '74px',
+                height: '74px',
                 borderRadius: '50%',
-                background: 'var(--bg-surface)',
+                border: '3px solid #22c55e',
+                margin: '0 auto 0.4rem',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '0.95rem',
-                fontWeight: 800,
-                color: '#10b981',
+                background: 'rgba(34, 197, 94, 0.08)',
               }}
             >
-              {analysisResult.atsScore}
+              <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1 }}>
+                {analysisResult.atsScore}
+              </span>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-dim)', fontWeight: 600 }}>
+                / 100
+              </span>
             </div>
-          </div>
-          <div>
-            <div className="stat-val" style={{ color: '#10b981', fontSize: '1.5rem', lineHeight: 1.1 }}>
-              {analysisResult.atsScore} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500 }}>/ 100</span>
+            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-bright)' }}>
+              Overall ATS Score
             </div>
-            <div className="stat-label" style={{ fontWeight: 600 }}>Overall ATS Readiness</div>
-            <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 600 }}>
-              Top 12% Candidate Rank
+            <span style={{ fontSize: '0.68rem', color: analysisResult.atsScore >= 80 ? '#22c55e' : analysisResult.atsScore >= 70 ? '#eab308' : '#f87171', fontWeight: 600 }}>
+              {analysisResult.candidateRank || (
+                analysisResult.atsScore >= 90 ? 'Top 5% Candidate Rank' :
+                analysisResult.atsScore >= 80 ? 'Top 15% Candidate Rank' :
+                analysisResult.atsScore >= 70 ? 'Top 30% Candidate Rank' :
+                analysisResult.atsScore >= 60 ? 'Top 50% Candidate Rank' :
+                'Developing Candidate Tier'
+              )}
             </span>
           </div>
-        </div>
 
-        {/* JD Keyword Match */}
-        <div className="stat-card" style={{ padding: '1.25rem' }}>
-          <div
-            style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: 'var(--radius-md)',
-              background: 'rgba(6, 182, 212, 0.12)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--secondary)',
-              flexShrink: 0,
-            }}
-          >
-            <Target size={24} />
-          </div>
-          <div>
-            <div className="stat-val" style={{ color: '#06b6d4', fontSize: '1.5rem', lineHeight: 1.1 }}>
-              {analysisResult.jdMatchRate}%
+          {/* 3 Metric Pillar Progress Bars */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.2rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Target JD Relevance</span>
+                <strong style={{ color: 'var(--text-bright)' }}>{analysisResult.jdMatchRate}%</strong>
+              </div>
+              <div style={{ width: '100%', height: '5px', background: 'var(--bg-glass-subtle)', borderRadius: '999px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${analysisResult.jdMatchRate}%`, background: 'var(--primary)', borderRadius: '999px' }} />
+              </div>
             </div>
-            <div className="stat-label" style={{ fontWeight: 600 }}>Target JD Relevance</div>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-              Benchmarked for {currentJD.company}
-            </span>
-          </div>
-        </div>
 
-        {/* Format & Structure Hygiene */}
-        <div className="stat-card" style={{ padding: '1.25rem' }}>
-          <div
-            style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: 'var(--radius-md)',
-              background: 'rgba(168, 85, 247, 0.12)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--accent-purple)',
-              flexShrink: 0,
-            }}
-          >
-            <ShieldCheck size={24} />
-          </div>
-          <div>
-            <div className="stat-val" style={{ color: '#a855f7', fontSize: '1.5rem', lineHeight: 1.1 }}>
-              {analysisResult.formatScore}%
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.2rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Google XYZ Impact & Metrics</span>
+                <strong style={{ color: '#22c55e' }}>{analysisResult.impactMetricScore}%</strong>
+              </div>
+              <div style={{ width: '100%', height: '5px', background: 'rgba(255, 255, 255, 0.07)', borderRadius: '999px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${analysisResult.impactMetricScore}%`, background: '#22c55e', borderRadius: '999px' }} />
+              </div>
             </div>
-            <div className="stat-label" style={{ fontWeight: 600 }}>ATS Formatting Hygiene</div>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-              Linear single-column parse
-            </span>
-          </div>
-        </div>
 
-        {/* Impact & Metric Density */}
-        <div className="stat-card" style={{ padding: '1.25rem' }}>
-          <div
-            style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: 'var(--radius-md)',
-              background: 'rgba(245, 158, 11, 0.12)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--warning)',
-              flexShrink: 0,
-            }}
-          >
-            <TrendingUp size={24} />
-          </div>
-          <div>
-            <div className="stat-val" style={{ color: '#f59e0b', fontSize: '1.5rem', lineHeight: 1.1 }}>
-              {analysisResult.impactMetricScore}%
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.2rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>ATS Structure & Hygiene</span>
+                <strong style={{ color: '#eab308' }}>{analysisResult.formatScore}%</strong>
+              </div>
+              <div style={{ width: '100%', height: '5px', background: 'rgba(255, 255, 255, 0.07)', borderRadius: '999px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${analysisResult.formatScore}%`, background: '#eab308', borderRadius: '999px' }} />
+              </div>
             </div>
-            <div className="stat-label" style={{ fontWeight: 600 }}>Quantifiable Impact</div>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-              6 Numbers / Scale metrics found
-            </span>
           </div>
         </div>
       </div>
 
-      {/* Main Grid: Left Column (Target Role & Keywords) + Right Column (Diagnostics & Checklist) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 1.35fr', gap: '1.75rem' }}>
-        {/* Left Column: Target Company Profile & Keyword Matrix */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Target Role Selector Card */}
-          <div className="card">
-            <div className="card-header" style={{ marginBottom: '1rem' }}>
-              <h3 className="card-title">
-                <Target size={19} color="var(--primary)" />
-                Target Company & Role Benchmarking
+      {/* ═════════════════════════════════════════════════════════════
+          3. WORKSPACE SEGMENTED TAB NAVIGATION
+          ═════════════════════════════════════════════════════════════ */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderBottom: '1px solid var(--border-subtle)',
+          paddingBottom: '0.5rem',
+          marginTop: '0.25rem',
+          flexWrap: 'wrap',
+          gap: '0.75rem',
+        }}
+      >
+        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+
+          <button
+            onClick={() => setActiveWorkspaceTab('keywords')}
+            className={`btn btn-sm ${activeWorkspaceTab === 'keywords' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', gap: '0.35rem' }}
+          >
+            <Zap size={13} /> Keywords ({analysisResult.matchedKeywords.length + analysisResult.missingKeywords.length})
+          </button>
+
+          <button
+            onClick={() => setActiveWorkspaceTab('sections')}
+            className={`btn btn-sm ${activeWorkspaceTab === 'sections' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', gap: '0.35rem' }}
+          >
+            <Layers size={13} /> Section Audit (6)
+          </button>
+
+          <button
+            onClick={() => setActiveWorkspaceTab('checklist')}
+            className={`btn btn-sm ${activeWorkspaceTab === 'checklist' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', gap: '0.35rem' }}
+          >
+            <ListChecks size={13} /> Checklist ({analysisResult.checklist.length})
+          </button>
+        </div>
+
+        <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
+          Target: <strong>{currentJD.company} ({currentJD.package})</strong>
+        </span>
+      </div>
+
+      {/* ═════════════════════════════════════════════════════════════
+          4. WORKSPACE TAB CONTENTS (COMPACT & PRECISE)
+          ═════════════════════════════════════════════════════════════ */}
+
+      {/* TAB: KEYWORD INTELLIGENCE & JD MATCH MATRIX */}
+      {activeWorkspaceTab === 'keywords' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.35fr', gap: '1.25rem' }}>
+          {/* Left Column: Target Role Benchmark & Custom JD */}
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
+              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <Target size={16} /> Role Requirements
               </h3>
               <span className="badge badge-primary">{currentJD.package}</span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', display: 'block' }}>
-                  Select Placement Drive Profile:
-                </label>
-                <select
-                  className="select"
-                  value={targetRole}
-                  onChange={(e) => {
-                    setTargetRole(e.target.value);
-                    setCustomJDText(PRESET_JDS[e.target.value].text);
-                    triggerScanSimulation();
-                  }}
-                  style={{ fontSize: '0.88rem', fontWeight: 600 }}
-                >
-                  <option value="sde_amazon">Amazon India - SDE 1 (₹44.5 LPA)</option>
-                  <option value="sde_microsoft">Microsoft India - Software Engineer (₹45.0 LPA)</option>
-                  <option value="flipkart_ase">Flipkart - Associate SDE (₹32.0 LPA)</option>
-                  <option value="tcs_digital">TCS Digital - System Engineer (₹7.5 LPA)</option>
-                  <option value="infosys_sp">Infosys - Specialist Programmer (₹9.5 LPA)</option>
-                </select>
-              </div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.5', marginBottom: '1rem', whiteSpace: 'pre-line', background: 'var(--bg-glass-strong)', padding: '0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-glass)' }}>
+              {currentJD.text}
+            </div>
 
-              {/* Collapsible Custom JD Toggle */}
-              <div>
-                <button
-                  onClick={() => setShowCustomJD(!showCustomJD)}
-                  className="btn btn-ghost btn-sm"
-                  style={{ fontSize: '0.78rem', color: 'var(--primary)', padding: '0.2rem 0', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                >
-                  {showCustomJD ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  {showCustomJD ? 'Hide Job Description Details' : 'View / Edit Job Description Requirements'}
-                </button>
+            {/* Custom JD Editor Accordion */}
+            <div>
+              <button
+                onClick={() => setShowCustomJD(!showCustomJD)}
+                className="btn btn-ghost btn-sm"
+                style={{ fontSize: '0.76rem', color: 'var(--text-muted)', padding: '0.2rem 0', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                {showCustomJD ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                {showCustomJD ? 'Close Custom JD Editor' : 'Paste Custom Job Description'}
+              </button>
 
-                {showCustomJD && (
-                  <div style={{ marginTop: '0.65rem' }}>
-                    <textarea
-                      className="textarea"
-                      rows={5}
-                      value={customJDText}
-                      onChange={(e) => setCustomJDText(e.target.value)}
-                      placeholder="Paste target Job Description here..."
-                      style={{ fontSize: '0.8rem', fontFamily: 'var(--font-mono)' }}
-                    />
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.4rem' }}>
-                      <button
-                        onClick={triggerScanSimulation}
-                        className="btn btn-primary btn-sm"
-                        style={{ fontSize: '0.75rem' }}
-                      >
-                        Re-scan Against Custom JD
-                      </button>
-                    </div>
+              {showCustomJD && (
+                <div style={{ marginTop: '0.65rem' }}>
+                  <textarea
+                    className="textarea"
+                    rows={5}
+                    value={customJDText}
+                    onChange={(e) => setCustomJDText(e.target.value)}
+                    placeholder="Paste job description requirements here..."
+                    style={{ fontSize: '0.78rem', fontFamily: 'var(--font-mono)' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.4rem' }}>
+                    <button
+                      onClick={() => executeAgentAudit(uploadedResume.rawText, targetRole)}
+                      className="btn btn-primary btn-sm"
+                      style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
+                    >
+                      Audit Against Custom JD
+                    </button>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Keyword Match Matrix */}
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">
-                <Zap size={19} color="var(--primary)" />
-                ATS Keyword Density Matrix
-              </h3>
-              <span className="badge badge-success">
-                {analysisResult.matchedKeywords.length} Matched • {analysisResult.missingKeywords.length} Missing
-              </span>
-            </div>
-
-            {/* Matched Keywords */}
-            <div style={{ marginBottom: '1.25rem' }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
-                <CheckCircle size={15} />
-                High-Value Keywords Found in Resume ({analysisResult.matchedKeywords.length})
+          {/* Right Column: Keyword Match vs Missing Matrix */}
+          <div className="card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {/* Matched Keywords Grid */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
+                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <CheckCircle size={15} />
+                  Found in Your Resume ({analysisResult.matchedKeywords.length})
+                </div>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>High-Frequency JD Match</span>
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                 {analysisResult.matchedKeywords.map((kw, i) => (
                   <span
                     key={i}
-                    className="badge badge-success"
-                    style={{ fontSize: '0.76rem', padding: '0.3rem 0.65rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                    style={{
+                      fontSize: '0.75rem',
+                      padding: '0.25rem 0.6rem',
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'rgba(16, 185, 129, 0.1)',
+                      border: '1px solid rgba(16, 185, 129, 0.25)',
+                      color: '#10b981',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                    }}
                   >
                     <Check size={12} /> {kw}
                   </span>
@@ -867,16 +841,20 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
               </div>
             </div>
 
-            {/* Missing Critical Keywords */}
-            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1.1rem' }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f87171', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
-                <AlertTriangle size={15} />
-                Critical Missing Keywords Required for Shortlisting
+            {/* Critical Missing Keywords */}
+            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#f87171', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <AlertTriangle size={15} />
+                  Missing Required Keywords ({analysisResult.missingKeywords.length})
+                </div>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Click chip to copy</span>
               </div>
-              <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginBottom: '0.65rem' }}>
-                Click any keyword chip to copy and integrate into your Experience or Projects section:
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                Adding these keywords into your Projects or Skills section increases shortlisting probability:
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.55rem' }}>
                 {analysisResult.missingKeywords.map((kw, i) => (
                   <div
                     key={i}
@@ -886,29 +864,34 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '0.55rem 0.75rem',
-                      borderRadius: 'var(--radius-md)',
+                      borderRadius: 'var(--radius-sm)',
                       background: 'rgba(239, 68, 68, 0.08)',
-                      border: '1px solid rgba(239, 68, 68, 0.22)',
+                      border: '1px solid rgba(239, 68, 68, 0.2)',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
                     }}
-                    title="Click to copy keyword"
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span className="badge badge-danger" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', overflow: 'hidden' }}>
+                      <span
+                        style={{
+                          fontSize: '0.65rem',
+                          padding: '1px 5px',
+                          borderRadius: '3px',
+                          background: kw.priority === 'High' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(234, 179, 8, 0.2)',
+                          color: kw.priority === 'High' ? '#f87171' : '#f59e0b',
+                          fontWeight: 700,
+                        }}
+                      >
                         {kw.priority}
                       </span>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-main)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                         + {kw.name}
                       </span>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-muted)', fontSize: '0.74rem' }}>
-                      <span style={{ opacity: 0.7 }}>{kw.category}</span>
+                    <div style={{ color: 'var(--text-muted)', flexShrink: 0, marginLeft: '0.4rem' }}>
                       {copiedKeyword === kw.name ? (
-                        <span style={{ color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '2px' }}>
-                          <Check size={13} /> Copied!
-                        </span>
+                        <span style={{ color: '#10b981', fontSize: '0.72rem', fontWeight: 700 }}>Copied!</span>
                       ) : (
                         <Copy size={13} />
                       )}
@@ -919,161 +902,135 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
             </div>
           </div>
         </div>
+      )}
 
-        {/* Right Column: Section-by-Section ATS Diagnostic & Actionable Checklist */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Section-by-Section ATS Diagnostic */}
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">
-                <Layers size={19} color="var(--secondary)" />
-                Section-by-Section ATS Health Audit
-              </h3>
-              <span className="badge badge-info">6 Sections Audited</span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              {analysisResult.sectionAudit.map((sec, i) => (
-                <div
-                  key={i}
-                  style={{
-                    padding: '0.85rem 1rem',
-                    borderRadius: 'var(--radius-md)',
-                    background: sec.status === 'pass' ? 'rgba(16, 185, 129, 0.04)' : 'rgba(245, 158, 11, 0.06)',
-                    border: sec.status === 'pass' ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid rgba(245, 158, 11, 0.25)',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '0.85rem',
-                  }}
-                >
-                  {sec.status === 'pass' ? (
-                    <CheckCircle size={20} color="#10b981" style={{ marginTop: '2px', flexShrink: 0 }} />
-                  ) : (
-                    <AlertTriangle size={20} color="#f59e0b" style={{ marginTop: '2px', flexShrink: 0 }} />
-                  )}
-
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
-                      <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                        {sec.section}
-                      </span>
-                      <span
-                        className={sec.status === 'pass' ? 'badge badge-success' : 'badge badge-warning'}
-                        style={{ fontSize: '0.7rem' }}
-                      >
-                        {sec.score}
-                      </span>
-                    </div>
-
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-                      {sec.summary}
-                    </div>
-
-                    <div style={{ fontSize: '0.74rem', color: sec.status === 'pass' ? '#10b981' : '#f59e0b', marginTop: '0.3rem', fontWeight: 500 }}>
-                      💡 {sec.tip}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Actionable Recruiter & ATS Optimization Checklist */}
-          <div className="card">
-            <div className="card-header" style={{ marginBottom: '0.85rem' }}>
+      {/* TAB 3: SECTION AUDIT */}
+      {activeWorkspaceTab === 'sections' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+          {analysisResult.sectionAudit.map((sec, i) => (
+            <div
+              key={i}
+              className="card"
+              style={{
+                padding: '0.85rem',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                border: sec.status === 'pass' ? '1px solid var(--border-subtle)' : '1px solid rgba(234, 179, 8, 0.3)',
+                background: 'var(--bg-card)',
+                gap: '0.5rem',
+              }}
+            >
               <div>
-                <h3 className="card-title">
-                  <CheckCircle size={19} color="#10b981" />
-                  Recruiter Optimization Action Items
-                </h3>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                  Resolve these items to maximize your probability of passing the automated screening round:
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                  <h4 style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0 }}>
+                    {sec.section}
+                  </h4>
+                  <span
+                    className={sec.status === 'pass' ? 'badge badge-success' : 'badge badge-warning'}
+                    style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}
+                  >
+                    {sec.score}
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', lineHeight: '1.4', margin: 0 }}>
+                  {sec.summary}
                 </p>
               </div>
 
-              {/* Filter Tabs */}
-              <div style={{ display: 'flex', gap: '0.35rem' }}>
-                <button
-                  onClick={() => setChecklistFilter('all')}
-                  className={`btn btn-sm ${checklistFilter === 'all' ? 'btn-primary' : 'btn-ghost'}`}
-                  style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem' }}
-                >
-                  All ({analysisResult.checklist.length})
-                </button>
-                <button
-                  onClick={() => setChecklistFilter('high')}
-                  className={`btn btn-sm ${checklistFilter === 'high' ? 'btn-primary' : 'btn-ghost'}`}
-                  style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem' }}
-                >
-                  High Impact
-                </button>
-                <button
-                  onClick={() => setChecklistFilter('medium')}
-                  className={`btn btn-sm ${checklistFilter === 'medium' ? 'btn-primary' : 'btn-ghost'}`}
-                  style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem' }}
-                >
-                  Medium
-                </button>
+              <div
+                style={{
+                  padding: '0.35rem 0.5rem',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--bg-glass-strong)',
+                  border: '1px solid var(--border-glass)',
+                  fontSize: '0.72rem',
+                  color: sec.status === 'pass' ? 'var(--text-main)' : '#f59e0b',
+                }}
+              >
+                💡 {sec.tip}
               </div>
             </div>
+          ))}
+        </div>
+      )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-              {filteredChecklist.map((item) => {
-                const isResolved = resolvedChecklist[item.id];
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => toggleChecklistItem(item.id)}
+      {/* TAB 4: CHECKLIST */}
+      {activeWorkspaceTab === 'checklist' && (
+        <div className="card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <CheckCircle2 size={15} color="#22c55e" /> Actionable Fixes ({analysisResult.checklist.length})
+            </h3>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+              Check to apply
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+            {analysisResult.checklist.map((item) => {
+              const isResolved = resolvedChecklist[item.id];
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => toggleChecklistItem(item.id)}
+                  style={{
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: 'var(--radius-sm)',
+                    background: isResolved ? 'rgba(16, 185, 129, 0.08)' : 'var(--bg-glass-strong)',
+                    border: isResolved ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-glass)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.65rem',
+                    cursor: 'pointer',
+                    transition: 'var(--transition-fast)',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isResolved}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      toggleChecklistItem(item.id);
+                    }}
+                    style={{ cursor: 'pointer', accentColor: '#22c55e' }}
+                  />
+
+                  <span
                     style={{
-                      padding: '0.75rem 0.9rem',
-                      borderRadius: 'var(--radius-md)',
-                      background: isResolved ? 'rgba(16, 185, 129, 0.08)' : 'rgba(255, 255, 255, 0.02)',
-                      border: isResolved ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-subtle)',
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '0.75rem',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
+                      fontSize: '0.62rem',
+                      padding: '1px 5px',
+                      borderRadius: '3px',
+                      background: item.impact === 'High' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(234, 179, 8, 0.15)',
+                      color: item.impact === 'High' ? '#f87171' : '#facc15',
+                      fontWeight: 700,
+                      flexShrink: 0,
                     }}
                   >
-                    <input
-                      type="checkbox"
-                      checked={isResolved}
-                      onChange={() => toggleChecklistItem(item.id)}
-                      style={{ marginTop: '3px', cursor: 'pointer', accentColor: 'var(--primary)' }}
-                    />
+                    {item.impact}
+                  </span>
 
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.15rem' }}>
-                        <span
-                          className={item.impact === 'High' ? 'badge badge-danger' : 'badge badge-warning'}
-                          style={{ fontSize: '0.68rem', padding: '0.15rem 0.4rem' }}
-                        >
-                          {item.impact} Impact
-                        </span>
-                        <span
-                          style={{
-                            fontSize: '0.84rem',
-                            fontWeight: 700,
-                            color: isResolved ? '#10b981' : 'var(--text-main)',
-                            textDecoration: isResolved ? 'line-through' : 'none',
-                          }}
-                        >
-                          {item.title}
-                        </span>
-                      </div>
-
-                      <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                        {item.description}
-                      </div>
-                    </div>
+                  <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+                    <strong
+                      style={{
+                        fontSize: '0.78rem',
+                        color: isResolved ? '#4ade80' : 'var(--text-bright)',
+                        textDecoration: isResolved ? 'line-through' : 'none',
+                      }}
+                    >
+                      {item.title}
+                    </strong>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textAlign: 'right' }}>
+                      {item.description}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

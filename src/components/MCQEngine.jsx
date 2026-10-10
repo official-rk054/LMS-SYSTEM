@@ -343,11 +343,11 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
           }}
         >
           <div
-            className="card modal-content-card"
+            className="card"
             style={{
               maxWidth: '640px',
               width: '100%',
-              background: 'var(--bg-surface)',
+              background: '#0d1117',
               border: '2px solid #f59e0b',
               padding: '2rem',
               boxShadow: '0 25px 50px -12px rgba(245, 158, 11, 0.3)',

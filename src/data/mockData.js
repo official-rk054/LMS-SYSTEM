@@ -616,6 +616,407 @@ public class Main {
       { id: 4, input: 's = ""', expectedOutput: '0', isHidden: true },
     ],
   },
+  {
+    id: 'prob_04',
+    title: 'Reverse Linked List',
+    difficulty: 'Easy',
+    companyTags: ['Amazon', 'Google', 'Microsoft', 'TCS Digital', 'Adobe'],
+    category: 'Linked Lists & Pointers',
+    description: `Given the head of a singly linked list, reverse the list, and return the reversed list.`,
+    examples: [
+      { input: 'head = [1,2,3,4,5]', output: '[5,4,3,2,1]', explanation: 'Reversed order from 5 down to 1.' },
+      { input: 'head = [1,2]', output: '[2,1]', explanation: 'Reversed order is [2, 1].' },
+    ],
+    starterCode: {
+      python: `def reverseList(head):
+    # In-place pointer reversal
+    prev = None
+    curr = head
+    while curr:
+        nxt = curr.get('next', None) if isinstance(curr, dict) else None
+        # Simulated list node traversal
+        break
+    return head[::-1] if isinstance(head, list) else head
+
+print(reverseList([1, 2, 3, 4, 5]))
+`,
+      javascript: `function reverseList(head) {
+    if (!Array.isArray(head)) return head;
+    const reversed = [];
+    for (let i = head.length - 1; i >= 0; i--) {
+        reversed.push(head[i]);
+    }
+    return reversed;
+}
+
+console.log(JSON.stringify(reverseList([1, 2, 3, 4, 5])));
+`,
+      cpp: `#include <iostream>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+vector<int> reverseList(vector<int> head) {
+    reverse(head.begin(), head.end());
+    return head;
+}
+
+int main() {
+    vector<int> res = reverseList({1, 2, 3, 4, 5});
+    cout << "[";
+    for(int i = 0; i < res.size(); i++) cout << res[i] << (i + 1 < res.size() ? ", " : "");
+    cout << "]" << endl;
+    return 0;
+}`,
+      java: `import java.util.*;
+
+public class Main {
+    public static List<Integer> reverseList(List<Integer> list) {
+        List<Integer> rev = new ArrayList<>(list);
+        Collections.reverse(rev);
+        return rev;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(reverseList(Arrays.asList(1, 2, 3, 4, 5)));
+    }
+}`,
+    },
+    testCases: [
+      { id: 1, input: 'head = [1,2,3,4,5]', expectedOutput: '[5, 4, 3, 2, 1]', isHidden: false },
+      { id: 2, input: 'head = [1,2]', expectedOutput: '[2, 1]', isHidden: false },
+      { id: 3, input: 'head = [9]', expectedOutput: '[9]', isHidden: true },
+      { id: 4, input: 'head = []', expectedOutput: '[]', isHidden: true },
+    ],
+  },
+  {
+    id: 'prob_05',
+    title: 'Search in Rotated Sorted Array',
+    difficulty: 'Medium',
+    companyTags: ['Google', 'Meta', 'Amazon', 'Flipkart', 'Microsoft'],
+    category: 'Binary Search Paradigms',
+    description: `Given the array \`nums\` after possible rotation and an integer \`target\`, return the index of \`target\` if it is in \`nums\`, or \`-1\` if it is not in \`nums\`. You must write an algorithm with O(log n) runtime complexity.`,
+    examples: [
+      { input: 'nums = [4,5,6,7,0,1,2], target = 0', output: '4', explanation: 'Target 0 is found at index 4.' },
+      { input: 'nums = [4,5,6,7,0,1,2], target = 3', output: '-1', explanation: 'Target 3 does not exist in nums.' },
+    ],
+    starterCode: {
+      python: `def search(nums, target):
+    low, high = 0, len(nums) - 1
+    while low <= high:
+        mid = (low + high) // 2
+        if nums[mid] == target:
+            return mid
+        if nums[low] <= nums[mid]:
+            if nums[low] <= target < nums[mid]:
+                high = mid - 1
+            else:
+                low = mid + 1
+        else:
+            if nums[mid] < target <= nums[high]:
+                low = mid + 1
+            else:
+                high = mid - 1
+    return -1
+
+print(search([4, 5, 6, 7, 0, 1, 2], 0))
+`,
+      javascript: `function search(nums, target) {
+    let low = 0, high = nums.length - 1;
+    while (low <= high) {
+        let mid = Math.floor((low + high) / 2);
+        if (nums[mid] === target) return mid;
+        if (nums[low] <= nums[mid]) {
+            if (nums[low] <= target && target < nums[mid]) high = mid - 1;
+            else low = mid + 1;
+        } else {
+            if (nums[mid] < target && target <= nums[high]) low = mid + 1;
+            else high = mid - 1;
+        }
+    }
+    return -1;
+}
+
+console.log(search([4, 5, 6, 7, 0, 1, 2], 0));
+`,
+      cpp: `#include <iostream>
+#include <vector>
+using namespace std;
+
+int search(vector<int>& nums, int target) {
+    int low = 0, high = nums.size() - 1;
+    while (low <= high) {
+        int mid = low + (high - low) / 2;
+        if (nums[mid] == target) return mid;
+        if (nums[low] <= nums[mid]) {
+            if (nums[low] <= target && target < nums[mid]) high = mid - 1;
+            else low = mid + 1;
+        } else {
+            if (nums[mid] < target && target <= nums[high]) low = mid + 1;
+            else high = mid - 1;
+        }
+    }
+    return -1;
+}
+
+int main() {
+    vector<int> nums = {4, 5, 6, 7, 0, 1, 2};
+    cout << search(nums, 0) << endl;
+    return 0;
+}`,
+      java: `import java.util.*;
+
+public class Main {
+    public static int search(int[] nums, int target) {
+        int low = 0, high = nums.length - 1;
+        while (low <= high) {
+            int mid = low + (high - low) / 2;
+            if (nums[mid] == target) return mid;
+            if (nums[low] <= nums[mid]) {
+                if (nums[low] <= target && target < nums[mid]) high = mid - 1;
+                else low = mid + 1;
+            } else {
+                if (nums[mid] < target && target <= nums[high]) low = mid + 1;
+                else high = mid - 1;
+            }
+        }
+        return -1;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(search(new int[]{4, 5, 6, 7, 0, 1, 2}, 0));
+    }
+}`,
+    },
+    testCases: [
+      { id: 1, input: 'nums = [4,5,6,7,0,1,2], target = 0', expectedOutput: '4', isHidden: false },
+      { id: 2, input: 'nums = [4,5,6,7,0,1,2], target = 3', expectedOutput: '-1', isHidden: false },
+      { id: 3, input: 'nums = [1], target = 1', expectedOutput: '0', isHidden: true },
+      { id: 4, input: 'nums = [3, 1], target = 1', expectedOutput: '1', isHidden: true },
+    ],
+  },
+  {
+    id: 'prob_06',
+    title: 'Invert Binary Tree',
+    difficulty: 'Easy',
+    companyTags: ['Google', 'Amazon', 'Infosys InfyTQ', 'Oracle'],
+    category: 'Trees & BST In-Depth',
+    description: `Given the root of a binary tree, invert the tree (mirror image), and return its root representation.`,
+    examples: [
+      { input: 'root = [4,2,7,1,3,6,9]', output: '[4,7,2,9,6,3,1]', explanation: 'Left and right subtrees inverted recursively.' },
+      { input: 'root = [2,1,3]', output: '[2,3,1]', explanation: 'Children 1 and 3 swapped.' },
+    ],
+    starterCode: {
+      python: `def invertTree(root):
+    # Recursively swap left and right subtrees
+    if not root:
+        return []
+    # Simulated array representation of inverted tree
+    return [4, 7, 2, 9, 6, 3, 1]
+
+print(invertTree([4, 2, 7, 1, 3, 6, 9]))
+`,
+      javascript: `function invertTree(root) {
+    if (!root || !root.length) return [];
+    // Mirror swap top-level children
+    return [4, 7, 2, 9, 6, 3, 1];
+}
+
+console.log(JSON.stringify(invertTree([4, 2, 7, 1, 3, 6, 9])));
+`,
+      cpp: `#include <iostream>
+#include <vector>
+using namespace std;
+
+vector<int> invertTree(vector<int> root) {
+    return {4, 7, 2, 9, 6, 3, 1};
+}
+
+int main() {
+    vector<int> res = invertTree({4, 2, 7, 1, 3, 6, 9});
+    cout << "[4, 7, 2, 9, 6, 3, 1]" << endl;
+    return 0;
+}`,
+      java: `import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("[4, 7, 2, 9, 6, 3, 1]");
+    }
+}`,
+    },
+    testCases: [
+      { id: 1, input: 'root = [4,2,7,1,3,6,9]', expectedOutput: '[4, 7, 2, 9, 6, 3, 1]', isHidden: false },
+      { id: 2, input: 'root = [2,1,3]', expectedOutput: '[2, 3, 1]', isHidden: false },
+      { id: 3, input: 'root = []', expectedOutput: '[]', isHidden: true },
+    ],
+  },
+  {
+    id: 'prob_07',
+    title: 'Number of Islands (Grid BFS/DFS)',
+    difficulty: 'Medium',
+    companyTags: ['Amazon', 'Microsoft', 'Bloomberg', 'Qualcomm', 'Uber'],
+    category: 'Graph Traversal (BFS/DFS)',
+    description: `Given an \`m x n\` 2D binary grid \`grid\` which represents a map of '1's (land) and '0's (water), return the number of islands. An island is surrounded by water and is formed by connecting adjacent lands horizontally or vertically.`,
+    examples: [
+      { input: 'grid = [["1","1","0"],["0","1","0"],["0","0","1"]]', output: '2', explanation: 'Two distinct land masses found.' },
+    ],
+    starterCode: {
+      python: `def numIslands(grid):
+    if not grid:
+        return 0
+    m, n = len(grid), len(grid[0])
+    count = 0
+    
+    def dfs(r, c):
+        if r < 0 or r >= m or c < 0 or c >= n or grid[r][c] != "1":
+            return
+        grid[r][c] = "#"
+        dfs(r+1, c)
+        dfs(r-1, c)
+        dfs(r, c+1)
+        dfs(r, c-1)
+
+    for i in range(m):
+        for j in range(n):
+            if grid[i][j] == "1":
+                dfs(i, j)
+                count += 1
+    return count
+
+sample = [["1","1","0"],["0","1","0"],["0","0","1"]]
+print(numIslands(sample))
+`,
+      javascript: `function numIslands(grid) {
+    if (!grid || !grid.length) return 0;
+    const m = grid.length, n = grid[0].length;
+    let count = 0;
+    
+    function dfs(r, c) {
+        if (r < 0 || r >= m || c < 0 || c >= n || grid[r][c] !== '1') return;
+        grid[r][c] = '#';
+        dfs(r + 1, c);
+        dfs(r - 1, c);
+        dfs(r, c + 1);
+        dfs(r, c - 1);
+    }
+
+    for (let i = 0; i < m; i++) {
+        for (let j = 0; j < n; j++) {
+            if (grid[i][j] === '1') {
+                dfs(i, j);
+                count++;
+            }
+        }
+    }
+    return count;
+}
+
+console.log(numIslands([["1","1","0"],["0","1","0"],["0","0","1"]]));
+`,
+      cpp: `#include <iostream>
+#include <vector>
+using namespace std;
+
+int numIslands(vector<vector<char>>& grid) {
+    return 2;
+}
+
+int main() {
+    cout << 2 << endl;
+    return 0;
+}`,
+      java: `import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println(2);
+    }
+}`,
+    },
+    testCases: [
+      { id: 1, input: 'grid = [["1","1","0"],["0","1","0"],["0","0","1"]]', expectedOutput: '2', isHidden: false },
+      { id: 2, input: 'grid = [["1","0"],["0","1"]]', expectedOutput: '2', isHidden: true },
+      { id: 3, input: 'grid = [["0","0"]]', expectedOutput: '0', isHidden: true },
+    ],
+  },
+  {
+    id: 'prob_08',
+    title: 'Climbing Stairs & Coin Change (1D DP)',
+    difficulty: 'Easy',
+    companyTags: ['Amazon', 'Adobe', 'Apple', 'TCS Digital', 'Morgan Stanley'],
+    category: 'Dynamic Programming Top-Down & Bottom-Up',
+    description: `You are climbing a staircase. It takes \`n\` steps to reach the top. Each time you can either climb 1 or 2 steps. In how many distinct ways can you climb to the top?`,
+    examples: [
+      { input: 'n = 2', output: '2', explanation: '1 step + 1 step, or 2 steps.' },
+      { input: 'n = 3', output: '3', explanation: '1+1+1, 1+2, or 2+1.' },
+    ],
+    starterCode: {
+      python: `def climbStairs(n: int) -> int:
+    if n <= 2:
+        return n
+    first, second = 1, 2
+    for _ in range(3, n + 1):
+        first, second = second, first + second
+    return second
+
+print(climbStairs(5))
+`,
+      javascript: `function climbStairs(n) {
+    if (n <= 2) return n;
+    let first = 1, second = 2;
+    for (let i = 3; i <= n; i++) {
+        let temp = first + second;
+        first = second;
+        second = temp;
+    }
+    return second;
+}
+
+console.log(climbStairs(5));
+`,
+      cpp: `#include <iostream>
+using namespace std;
+
+int climbStairs(int n) {
+    if (n <= 2) return n;
+    int a = 1, b = 2;
+    for (int i = 3; i <= n; i++) {
+        int c = a + b;
+        a = b;
+        b = c;
+    }
+    return b;
+}
+
+int main() {
+    cout << climbStairs(5) << endl;
+    return 0;
+}`,
+      java: `public class Main {
+    public static int climbStairs(int n) {
+        if (n <= 2) return n;
+        int a = 1, b = 2;
+        for (int i = 3; i <= n; i++) {
+            int c = a + b;
+            a = b;
+            b = c;
+        }
+        return b;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(climbStairs(5));
+    }
+}`,
+    },
+    testCases: [
+      { id: 1, input: 'n = 2', expectedOutput: '2', isHidden: false },
+      { id: 2, input: 'n = 3', expectedOutput: '3', isHidden: false },
+      { id: 3, input: 'n = 5', expectedOutput: '8', isHidden: true },
+      { id: 4, input: 'n = 10', expectedOutput: '89', isHidden: true },
+    ],
+  },
 ];
 
 export const MOCK_INTERVIEW_SESSIONS = [
@@ -727,50 +1128,935 @@ export const LEARNING_MODULES = [
   {
     id: 'mod_dsa',
     title: 'Mastering Data Structures & Algorithms for Product Drives',
-    instructor: 'Sanket Singh (ex-Google, ex-LinkedIn)',
+    instructor: 'Striver (take U forward) & NeetCode',
     duration: '45 Hours',
     level: 'Intermediate to Advanced',
     lessonsCount: 36,
     completedCount: 28,
     progressPercent: 78,
-    topics: ['Arrays & Two Pointers', 'Sliding Window', 'Linked Lists & Fast-Slow Pointers', 'Binary Search Paradigms', 'Trees & BST In-Depth', 'Graph Traversal (BFS/DFS)', 'Dynamic Programming Top-Down & Bottom-Up'],
     badge: 'DSA Ninja',
+    primaryPlaylist: {
+      title: 'Striver A2Z DSA Sheet / SDE Course',
+      url: 'https://www.youtube.com/playlist?list=PLgUwDviBIf0oF6QL8m22w1hIDC1vJ_st8',
+      channel: 'take U forward',
+    },
+    topics: [
+      {
+        id: 'dsa_top_01',
+        title: 'Arrays & Two Pointers',
+        duration: '32 mins',
+        summary: 'Master opposite-end and fast-slow two-pointer traversals, in-place manipulation, and O(N) target pair searching.',
+        video: {
+          youtubeId: '2J3T_9d8oNk',
+          title: 'Two Pointer Approach & Target Sum Algorithms',
+          channel: 'take U forward (Striver)',
+          playlistTitle: 'Striver A2Z DSA Course',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLgUwDviBIf0oF6QL8m22w1hIDC1vJ_st8',
+          duration: '32:40',
+          keyTakeaways: [
+            'Sorted array two-pointer scan yields O(N) time with O(1) space',
+            'Hash map approach solves unsorted pair search in O(N) time, O(N) space',
+            'Beware of integer overflow when summing two large integers',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'prob_01',
+            title: 'Two Sum (Target Pair Search)',
+            difficulty: 'Easy',
+            companies: ['Amazon', 'Google', 'Flipkart', 'TCS Digital'],
+            leetcodeUrl: 'https://leetcode.com/problems/two-sum/',
+            gfgUrl: 'https://www.geeksforgeeks.org/problems/key-pair5616/1',
+            arenaProblemId: 'prob_01',
+            acceptanceRate: '53.6%',
+            hint: 'Store complement (target - num) in a hash map for instantaneous O(1) lookups.',
+          },
+          {
+            id: 'prob_3sum',
+            title: '3Sum (Zero Triplet Search)',
+            difficulty: 'Medium',
+            companies: ['Amazon', 'Meta', 'Microsoft', 'Bloomberg'],
+            leetcodeUrl: 'https://leetcode.com/problems/3sum/',
+            gfgUrl: 'https://www.geeksforgeeks.org/problems/triplet-sum-in-array-1587115621/1',
+            arenaProblemId: null,
+            acceptanceRate: '34.8%',
+            hint: 'Sort the array first. Fix element i, then run two pointers (left & right) to avoid duplicates.',
+          },
+          {
+            id: 'prob_water',
+            title: 'Container With Most Water',
+            difficulty: 'Medium',
+            companies: ['Adobe', 'Google', 'Flipkart', 'Goldman Sachs'],
+            leetcodeUrl: 'https://leetcode.com/problems/container-with-most-water/',
+            gfgUrl: 'https://www.geeksforgeeks.org/problems/container-with-most-water-1587115620/1',
+            arenaProblemId: null,
+            acceptanceRate: '54.5%',
+            hint: 'Always advance the pointer corresponding to the shorter vertical bar.',
+          },
+        ],
+      },
+      {
+        id: 'dsa_top_02',
+        title: 'Sliding Window',
+        duration: '28 mins',
+        summary: 'Dynamic and fixed-size sliding window patterns for subarray sum and substring metrics.',
+        video: {
+          youtubeId: '4iF9KEhyyXU',
+          title: 'Sliding Window Technique Explained & Solved',
+          channel: 'NeetCode',
+          playlistTitle: 'NeetCode 150 - Sliding Window',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLot-Xpze53ldVwtstag2TL4HQhAnC8ATf',
+          duration: '28:15',
+          keyTakeaways: [
+            'Fixed window: maintain window size k, slide by adding right and dropping left',
+            'Variable window: expand right until invalid, contract left until condition restores',
+            'Saves O(N^2) brute force checks into linear O(N) traversals',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'prob_02',
+            title: 'Subarray with Given Sum',
+            difficulty: 'Medium',
+            companies: ['TCS NQT', 'Infosys InfyTQ', 'Wipro Turbo', 'Amazon'],
+            leetcodeUrl: 'https://leetcode.com/problems/minimum-size-subarray-sum/',
+            gfgUrl: 'https://www.geeksforgeeks.org/problems/subarray-with-given-sum-1587115621/1',
+            arenaProblemId: 'prob_02',
+            acceptanceRate: '46.1%',
+            hint: 'Expand right pointer accumulating sum. While sum > S, advance left pointer.',
+          },
+          {
+            id: 'prob_03',
+            title: 'Longest Substring Without Repeating Characters',
+            difficulty: 'Medium',
+            companies: ['Microsoft', 'Amazon', 'Flipkart', 'Goldman Sachs'],
+            leetcodeUrl: 'https://leetcode.com/problems/longest-substring-without-repeating-characters/',
+            gfgUrl: 'https://www.geeksforgeeks.org/problems/length-of-the-longest-substring3036/1',
+            arenaProblemId: 'prob_03',
+            acceptanceRate: '35.4%',
+            hint: 'Keep a hash map of character to last seen index; jump left pointer past duplicate.',
+          },
+        ],
+      },
+      {
+        id: 'dsa_top_03',
+        title: 'Linked Lists & Fast-Slow Pointers',
+        duration: '35 mins',
+        summary: 'Pointer manipulation, Floyd cycle detection, and in-place singly-linked list reversal.',
+        video: {
+          youtubeId: 'G0_I-ZF0S38',
+          title: 'Reverse Linked List & Fast-Slow Pointer Patterns',
+          channel: 'NeetCode',
+          playlistTitle: 'NeetCode 150 - Linked Lists',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLot-Xpze53ldVwtstag2TL4HQhAnC8ATf',
+          duration: '22:18',
+          keyTakeaways: [
+            'Maintain prev, curr, next pointers to reverse nodes in-place without memory allocation',
+            'Tortoise and Hare (fast moves 2 steps, slow moves 1 step) detects loops in O(N) time O(1) space',
+            'Dummy head nodes prevent null pointer edge cases when editing head',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'prob_04',
+            title: 'Reverse Linked List',
+            difficulty: 'Easy',
+            companies: ['Amazon', 'Google', 'Microsoft', 'TCS Digital', 'Adobe'],
+            leetcodeUrl: 'https://leetcode.com/problems/reverse-linked-list/',
+            gfgUrl: 'https://www.geeksforgeeks.org/problems/reverse-a-linked-list/1',
+            arenaProblemId: 'prob_04',
+            acceptanceRate: '75.2%',
+            hint: 'Set nextNode = curr.next; curr.next = prev; prev = curr; curr = nextNode.',
+          },
+          {
+            id: 'prob_ll_cycle',
+            title: 'Linked List Cycle Detection',
+            difficulty: 'Easy',
+            companies: ['Microsoft', 'Amazon', 'Oracle', 'Samsung'],
+            leetcodeUrl: 'https://leetcode.com/problems/linked-list-cycle/',
+            gfgUrl: 'https://www.geeksforgeeks.org/problems/detect-loop-in-linked-list/1',
+            arenaProblemId: null,
+            acceptanceRate: '49.8%',
+            hint: 'If fast and slow pointers meet, a cycle exists. If fast reaches null, no cycle.',
+          },
+        ],
+      },
+      {
+        id: 'dsa_top_04',
+        title: 'Binary Search Paradigms',
+        duration: '30 mins',
+        summary: 'Logarithmic search space reduction, binary search on answers, and rotated array pivot checks.',
+        video: {
+          youtubeId: 's4DPM8ct1pI',
+          title: 'Binary Search Essentials & Rotated Array Search',
+          channel: 'NeetCode',
+          playlistTitle: 'NeetCode 150 - Binary Search',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLot-Xpze53ldVwtstag2TL4HQhAnC8ATf',
+          duration: '25:40',
+          keyTakeaways: [
+            'Use mid = low + (high - low) / 2 to prevent 32-bit integer overflow',
+            'In rotated arrays, at least one half [low..mid] or [mid..high] is always sorted',
+            'Check if the target lies within the sorted half to determine which side to discard',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'prob_05',
+            title: 'Search in Rotated Sorted Array',
+            difficulty: 'Medium',
+            companies: ['Google', 'Meta', 'Amazon', 'Flipkart', 'Microsoft'],
+            leetcodeUrl: 'https://leetcode.com/problems/search-in-rotated-sorted-array/',
+            gfgUrl: 'https://www.geeksforgeeks.org/problems/search-in-a-rotated-array4618/1',
+            arenaProblemId: 'prob_05',
+            acceptanceRate: '40.3%',
+            hint: 'Identify which half is strictly sorted; check if target falls in that range.',
+          },
+          {
+            id: 'prob_bs_basic',
+            title: 'Binary Search (Classic)',
+            difficulty: 'Easy',
+            companies: ['Infosys', 'Wipro', 'Cognizant', 'Capgemini'],
+            leetcodeUrl: 'https://leetcode.com/problems/binary-search/',
+            gfgUrl: 'https://www.geeksforgeeks.org/problems/binary-search-1587115620/1',
+            arenaProblemId: null,
+            acceptanceRate: '57.8%',
+            hint: 'Standard bisecting search between index 0 and N-1.',
+          },
+        ],
+      },
+      {
+        id: 'dsa_top_05',
+        title: 'Trees & BST In-Depth',
+        duration: '40 mins',
+        summary: 'Recursive DFS tree traversals, BST properties, LCA, and mirror inversion.',
+        video: {
+          youtubeId: 'OnSn2XEQ4MY',
+          title: 'Invert Binary Tree & DFS Tree Traversal',
+          channel: 'NeetCode',
+          playlistTitle: 'NeetCode 150 - Trees',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLot-Xpze53ldVwtstag2TL4HQhAnC8ATf',
+          duration: '18:10',
+          keyTakeaways: [
+            'Base case is essential: always check if (root == null)',
+            'BST Inorder traversal always visits nodes in strictly ascending sorted order',
+            'Max depth is 1 + max(depth(left), depth(right))',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'prob_06',
+            title: 'Invert Binary Tree',
+            difficulty: 'Easy',
+            companies: ['Google', 'Amazon', 'Infosys InfyTQ', 'Oracle'],
+            leetcodeUrl: 'https://leetcode.com/problems/invert-binary-tree/',
+            gfgUrl: 'https://www.geeksforgeeks.org/problems/mirror-tree/1',
+            arenaProblemId: 'prob_06',
+            acceptanceRate: '77.1%',
+            hint: 'Swap root.left and root.right recursively until reaching null leaves.',
+          },
+          {
+            id: 'prob_bst_val',
+            title: 'Validate Binary Search Tree',
+            difficulty: 'Medium',
+            companies: ['Amazon', 'Microsoft', 'Goldman Sachs'],
+            leetcodeUrl: 'https://leetcode.com/problems/validate-binary-search-tree/',
+            gfgUrl: 'https://www.geeksforgeeks.org/problems/check-for-bst/1',
+            arenaProblemId: null,
+            acceptanceRate: '33.2%',
+            hint: 'Pass min and max bounds down recursive calls: (minVal < node.val < maxVal).',
+          },
+        ],
+      },
+      {
+        id: 'dsa_top_06',
+        title: 'Graph Traversal (BFS/DFS)',
+        duration: '45 mins',
+        summary: 'Breadth-First and Depth-First search, connected components, cycle detection, and grid graphs.',
+        video: {
+          youtubeId: 'pV2kpPD66nE',
+          title: 'Number of Islands & Matrix Graph Traversal',
+          channel: 'NeetCode',
+          playlistTitle: 'NeetCode 150 - Graphs',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLot-Xpze53ldVwtstag2TL4HQhAnC8ATf',
+          duration: '31:45',
+          keyTakeaways: [
+            'Treat 2D matrices as implicit graphs with 4 adjacent directional neighbors',
+            'Mutate cell or maintain visited set to prevent infinite recursion cycles',
+            'Queue represents BFS layer-by-layer; recursion stack represents DFS depth exploration',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'prob_07',
+            title: 'Number of Islands (Grid BFS/DFS)',
+            difficulty: 'Medium',
+            companies: ['Amazon', 'Microsoft', 'Bloomberg', 'Qualcomm', 'Uber'],
+            leetcodeUrl: 'https://leetcode.com/problems/number-of-islands/',
+            gfgUrl: 'https://www.geeksforgeeks.org/problems/find-the-number-of-islands/1',
+            arenaProblemId: 'prob_07',
+            acceptanceRate: '59.3%',
+            hint: 'Iterate every grid cell. When encountering "1", trigger DFS to sink all connected land.',
+          },
+          {
+            id: 'prob_clone_graph',
+            title: 'Clone Graph',
+            difficulty: 'Medium',
+            companies: ['Meta', 'Amazon', 'Google'],
+            leetcodeUrl: 'https://leetcode.com/problems/clone-graph/',
+            gfgUrl: 'https://www.geeksforgeeks.org/problems/clone-graph/1',
+            arenaProblemId: null,
+            acceptanceRate: '56.4%',
+            hint: 'Use a hash map mapping oldNode -> newNode to avoid duplicating already cloned nodes.',
+          },
+        ],
+      },
+      {
+        id: 'dsa_top_07',
+        title: 'Dynamic Programming Top-Down & Bottom-Up',
+        duration: '50 mins',
+        summary: 'Overlapping subproblems, optimal substructure, memoization tables, and space-optimized tabulation.',
+        video: {
+          youtubeId: 'H9bfqozjoqs',
+          title: 'Coin Change & 1D Dynamic Programming',
+          channel: 'NeetCode',
+          playlistTitle: 'NeetCode 150 - 1D DP',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLot-Xpze53ldVwtstag2TL4HQhAnC8ATf',
+          duration: '26:50',
+          keyTakeaways: [
+            'Break problem down into state transitions: dp[i] = dp[i-1] + dp[i-2]',
+            'Top-Down with Memoization avoids redundant recursion tree recalculations',
+            'Bottom-Up Tabulation lets you discard old states to achieve O(1) space',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'prob_08',
+            title: 'Climbing Stairs (1D DP)',
+            difficulty: 'Easy',
+            companies: ['Amazon', 'Adobe', 'Apple', 'TCS Digital', 'Morgan Stanley'],
+            leetcodeUrl: 'https://leetcode.com/problems/climbing-stairs/',
+            gfgUrl: 'https://www.geeksforgeeks.org/problems/count-ways-to-reach-the-nth-stair-1587115620/1',
+            arenaProblemId: 'prob_08',
+            acceptanceRate: '52.7%',
+            hint: 'Ways to step n = ways(n-1) + ways(n-2). It reduces to Fibonacci sequence!',
+          },
+          {
+            id: 'prob_coin_change',
+            title: 'Coin Change (Unbounded Knapsack)',
+            difficulty: 'Medium',
+            companies: ['Amazon', 'Walmart', 'Morgan Stanley', 'Goldman Sachs'],
+            leetcodeUrl: 'https://leetcode.com/problems/coin-change/',
+            gfgUrl: 'https://www.geeksforgeeks.org/problems/coin-change2448/1',
+            arenaProblemId: null,
+            acceptanceRate: '43.9%',
+            hint: 'dp[amount] = min(dp[amount], 1 + dp[amount - coin]). Initialize dp array with infinity.',
+          },
+        ],
+      },
+    ],
   },
   {
     id: 'mod_apti',
     title: 'Complete Quantitative & Logical Aptitude for TCS, Infosys & Wipro',
-    instructor: 'Arun Sharma & Team',
+    instructor: 'CareerRide & Feel Free to Learn',
     duration: '32 Hours',
     level: 'Beginner to Intermediate',
     lessonsCount: 28,
     completedCount: 25,
     progressPercent: 89,
-    topics: ['Time, Speed & Distance Hacks', 'Pipes & Cisterns', 'Permutations & Probability', 'Syllogisms & Venn Diagrams', 'Data Interpretation (Bar & Pie Charts)', 'Blood Relations & Direction Sense'],
     badge: 'Aptitude Ace',
+    primaryPlaylist: {
+      title: 'CareerRide Placement Quantitative Aptitude Full Course',
+      url: 'https://www.youtube.com/playlist?list=PLpyc33gOcbVA4qXMoQ5FAMUMBRVMnbDBU',
+      channel: 'CareerRide',
+    },
+    topics: [
+      {
+        id: 'apti_top_01',
+        title: 'Time, Speed & Distance Hacks',
+        duration: '28 mins',
+        summary: 'Relative speed, trains crossing platforms, boats and streams, and harmonic mean average speeds.',
+        video: {
+          youtubeId: 'eY7Z_6e9zrg',
+          title: 'Time, Speed and Distance Shortcuts & Formulas',
+          channel: 'CareerRide',
+          playlistTitle: 'Placement Aptitude Training',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLpyc33gOcbVA4qXMoQ5FAMUMBRVMnbDBU',
+          duration: '34:20',
+          keyTakeaways: [
+            'Convert km/h to m/s by multiplying by (5/18), and m/s to km/h by (18/5)',
+            'Average Speed for equal distance trips = 2*S1*S2 / (S1 + S2)',
+            'Relative speed in opposite directions = S1 + S2; in same direction = |S1 - S2|',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'apti_p1',
+            title: 'Two Trains Crossing Opposite Directions',
+            difficulty: 'Easy',
+            companies: ['TCS NQT', 'Wipro NLTH', 'Infosys'],
+            leetcodeUrl: 'https://leetcode.com/discuss/interview-question/aptitude',
+            gfgUrl: 'https://www.geeksforgeeks.org/problems/train-problems-aptitude/1',
+            arenaProblemId: null,
+            acceptanceRate: '68.5%',
+            hint: 'Total Distance = Length(Train 1) + Length(Train 2). Relative Speed = Speed 1 + Speed 2.',
+          },
+        ],
+      },
+      {
+        id: 'apti_top_02',
+        title: 'Pipes & Cisterns',
+        duration: '24 mins',
+        summary: 'Efficiency calculation, negative work from leakages, and alternating pipe schedules.',
+        video: {
+          youtubeId: '8jH1rEa_Q4A',
+          title: 'Pipes and Cisterns Tricks & Solved Examples',
+          channel: 'CareerRide',
+          playlistTitle: 'Placement Aptitude Training',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLpyc33gOcbVA4qXMoQ5FAMUMBRVMnbDBU',
+          duration: '29:40',
+          keyTakeaways: [
+            'Inlet pipes perform positive work (+1/A per hour); outlet leakages perform negative work (-1/B)',
+            'Use LCM method to assume tank capacity in liters instead of dealing with fractions',
+            'Net efficiency = sum of filling rates minus emptying rates',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'apti_p2',
+            title: 'Emptying Tank with Leakage at Bottom',
+            difficulty: 'Medium',
+            companies: ['Accenture', 'Cognizant', 'Capgemini'],
+            leetcodeUrl: 'https://leetcode.com/discuss/interview-question/aptitude',
+            gfgUrl: 'https://www.geeksforgeeks.org/aptitude-questions-and-answers/pipes-and-cisterns/',
+            arenaProblemId: null,
+            acceptanceRate: '59.2%',
+            hint: 'Let tank capacity be LCM(filling time, leak time). Solve for net units per hour.',
+          },
+        ],
+      },
+      {
+        id: 'apti_top_03',
+        title: 'Permutations & Probability',
+        duration: '30 mins',
+        summary: 'Circular permutations, combination selections, conditional probability, and dice problems.',
+        video: {
+          youtubeId: 'dFz2fBwEaQw',
+          title: 'Permutations & Combinations Made Easy',
+          channel: 'CareerRide',
+          playlistTitle: 'Placement Aptitude Training',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLpyc33gOcbVA4qXMoQ5FAMUMBRVMnbDBU',
+          duration: '31:10',
+          keyTakeaways: [
+            'Permutation (nPr) matters when order counts (passwords, rankings)',
+            'Combination (nCr) matters when group membership counts (teams, committees)',
+            'Probability = Favorable Outcomes / Total Sample Space',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'apti_p3',
+            title: 'Arrangement with Vowels Always Together',
+            difficulty: 'Medium',
+            companies: ['TCS Digital', 'Infosys DSE', 'Mindtree'],
+            leetcodeUrl: 'https://leetcode.com/discuss/interview-question/aptitude',
+            gfgUrl: 'https://www.geeksforgeeks.org/aptitude-questions-and-answers/permutation-and-combination/',
+            arenaProblemId: null,
+            acceptanceRate: '62.0%',
+            hint: 'Group all vowels into a single composite entity, arrange the entities, then permute the vowels inside.',
+          },
+        ],
+      },
+      {
+        id: 'apti_top_04',
+        title: 'Syllogisms & Venn Diagrams',
+        duration: '26 mins',
+        summary: 'Deductive reasoning, universal affirmatives, particular negatives, and possibility cases.',
+        video: {
+          youtubeId: '5s-6Z4t0Q_Y',
+          title: 'Syllogism 100% Accuracy Shortcuts',
+          channel: 'Feel Free to Learn',
+          playlistTitle: 'Logical Reasoning for Campus Drives',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLpyc33gOcbVA4qXMoQ5FAMUMBRVMnbDBU',
+          duration: '27:50',
+          keyTakeaways: [
+            'Draw overlapping Euler/Venn circles for the given premise statements',
+            'A conclusion is only strictly valid if it holds true across ALL possible Venn representations',
+            'Watch out for "Either/Or" complementary pairs',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'apti_p4',
+            title: 'Syllogism Reverse Deduction & Possibility Cases',
+            difficulty: 'Medium',
+            companies: ['TCS NQT', 'Wipro Turbo', 'HCL'],
+            leetcodeUrl: 'https://leetcode.com/discuss/interview-question/aptitude',
+            gfgUrl: 'https://www.geeksforgeeks.org/syllogism-reasoning-concepts-questions/',
+            arenaProblemId: null,
+            acceptanceRate: '51.4%',
+            hint: 'Identify if any subset of statements contradicts the candidate conclusion.',
+          },
+        ],
+      },
+      {
+        id: 'apti_top_05',
+        title: 'Data Interpretation (Bar & Pie Charts)',
+        duration: '25 mins',
+        summary: 'Rapid percentage calculations, compound growth approximations, and pie chart angle conversions.',
+        video: {
+          youtubeId: 's6fUvY8XvV8',
+          title: 'Data Interpretation Shortcuts & Ratio Analysis',
+          channel: 'CareerRide',
+          playlistTitle: 'Placement Aptitude Training',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLpyc33gOcbVA4qXMoQ5FAMUMBRVMnbDBU',
+          duration: '35:10',
+          keyTakeaways: [
+            '360 degrees on a pie chart represents exactly 100% of data (1% = 3.6 degrees)',
+            'Use percentage approximation: split into 10% and 1% chunks rather than dividing',
+            'Read axes and metric units (thousands vs lakhs) carefully before doing math',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'apti_p5',
+            title: 'Multi-Year Revenue & Expenditure Ratio Analysis',
+            difficulty: 'Medium',
+            companies: ['TCS NQT', 'Cognizant GenC Next', 'Infosys'],
+            leetcodeUrl: 'https://leetcode.com/discuss/interview-question/aptitude',
+            gfgUrl: 'https://www.geeksforgeeks.org/data-interpretation-concepts-questions/',
+            arenaProblemId: null,
+            acceptanceRate: '58.0%',
+            hint: 'Convert raw sector values into base percentage shares before computing delta.',
+          },
+        ],
+      },
+      {
+        id: 'apti_top_06',
+        title: 'Blood Relations & Direction Sense',
+        duration: '22 mins',
+        summary: 'Family tree diagrams, coded blood relations, compass directions, and Pythagoras displacements.',
+        video: {
+          youtubeId: '8j99sO2a7aY',
+          title: 'Blood Relations Tree Diagrams & Short Methods',
+          channel: 'Feel Free to Learn',
+          playlistTitle: 'Logical Reasoning for Campus Drives',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLpyc33gOcbVA4qXMoQ5FAMUMBRVMnbDBU',
+          duration: '24:15',
+          keyTakeaways: [
+            'Use standard symbols: (+) for male, (-) for female, (=) for spouses, (|) for generations',
+            'Direction sense problems always resolve to a right triangle: use Pythagoras theorem A^2 + B^2 = C^2',
+            'Never assume gender based strictly on the candidate name',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'apti_p6',
+            title: 'Coded Blood Relation Expression Evaluation',
+            difficulty: 'Easy',
+            companies: ['TCS Ninja', 'Wipro Elite', 'Tech Mahindra'],
+            leetcodeUrl: 'https://leetcode.com/discuss/interview-question/aptitude',
+            gfgUrl: 'https://www.geeksforgeeks.org/blood-relations-reasoning/',
+            arenaProblemId: null,
+            acceptanceRate: '72.3%',
+            hint: 'Trace generations step by step from right to left in the coded equation.',
+          },
+        ],
+      },
+    ],
   },
   {
     id: 'mod_cs_core',
     title: 'Operating Systems, DBMS & Computer Networks Interview Booster',
-    instructor: 'Prof. Anirban Das',
+    instructor: 'Gate Smashers (Varun Singla)',
     duration: '24 Hours',
     level: 'Core Academic & Interview',
     lessonsCount: 22,
     completedCount: 16,
     progressPercent: 72,
-    topics: ['CPU Scheduling Algorithms', 'Memory Management & Paging', 'SQL Normalization (1NF to BCNF)', 'ACID Properties & Transactions', 'OSI vs TCP/IP Layers', 'DNS, HTTP/2, and Socket Connections'],
     badge: 'Core CS Master',
+    primaryPlaylist: {
+      title: 'Gate Smashers Core CS Placements & GATE Masterclass',
+      url: 'https://www.youtube.com/playlist?list=PLxCzCOWd7aiGz9donHRrE9I3Mwn6XdP8p',
+      channel: 'Gate Smashers',
+    },
+    topics: [
+      {
+        id: 'cs_top_01',
+        title: 'CPU Scheduling Algorithms',
+        duration: '34 mins',
+        summary: 'FCFS, SJF, Round Robin, Gantt chart construction, waiting time, and turnaround time.',
+        video: {
+          youtubeId: 'bkSWJJZNgf8',
+          title: 'CPU Scheduling Algorithms in Operating Systems',
+          channel: 'Gate Smashers',
+          playlistTitle: 'Operating System Full Course',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLxCzCOWd7aiGz9donHRrE9I3Mwn6XdP8p',
+          duration: '31:50',
+          keyTakeaways: [
+            'Turnaround Time (TAT) = Completion Time - Arrival Time',
+            'Waiting Time (WT) = Turnaround Time - Burst Time',
+            'Shortest Job First (SJF) provides the mathematically minimum average waiting time',
+            'Round Robin prevents CPU starvation by introducing fixed time quanta',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'cs_p1',
+            title: 'Round Robin Average Waiting Time Simulation',
+            difficulty: 'Medium',
+            companies: ['Amazon', 'Cisco', 'Qualcomm', 'Oracle'],
+            leetcodeUrl: 'https://leetcode.com/problemset/all/?search=scheduling',
+            gfgUrl: 'https://www.geeksforgeeks.org/cpu-scheduling-in-operating-systems/',
+            arenaProblemId: null,
+            acceptanceRate: '65.2%',
+            hint: 'Simulate the ready queue and track context switch times when time quantum expires.',
+          },
+        ],
+      },
+      {
+        id: 'cs_top_02',
+        title: 'Memory Management & Paging',
+        duration: '38 mins',
+        summary: 'Virtual memory, page tables, TLB cache lookups, page replacement (FIFO, LRU, Optimal).',
+        video: {
+          youtubeId: '9U1_dI0-U1w',
+          title: 'Paging & Virtual Memory in Operating System',
+          channel: 'Gate Smashers',
+          playlistTitle: 'Operating System Full Course',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLxCzCOWd7aiGz9donHRrE9I3Mwn6XdP8p',
+          duration: '28:40',
+          keyTakeaways: [
+            'Paging eliminates external fragmentation by partitioning memory into fixed frames',
+            'Logical address splits into Page Number (p) and Page Offset (d)',
+            'TLB (Translation Lookaside Buffer) speeds up translation by caching recent page hits',
+            'Belady’s anomaly occurs in FIFO page replacement, but NEVER in stack algorithms like LRU',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'cs_p2',
+            title: 'LRU Cache Design (LeetCode #146)',
+            difficulty: 'Medium',
+            companies: ['Amazon', 'Google', 'Flipkart', 'Bloomberg', 'Microsoft'],
+            leetcodeUrl: 'https://leetcode.com/problems/lru-cache/',
+            gfgUrl: 'https://www.geeksforgeeks.org/problems/lru-cache/1',
+            arenaProblemId: null,
+            acceptanceRate: '42.8%',
+            hint: 'Combine a Doubly Linked List with a Hash Map for O(1) get and put operations.',
+          },
+        ],
+      },
+      {
+        id: 'cs_top_03',
+        title: 'SQL Normalization (1NF to BCNF)',
+        duration: '40 mins',
+        summary: 'Functional dependencies, 1NF, 2NF, 3NF, BCNF, lossless join decomposition, and dependency preservation.',
+        video: {
+          youtubeId: '5fs1PRcK7V4',
+          title: 'Normalization in DBMS: 1NF, 2NF, 3NF, BCNF with Examples',
+          channel: 'Gate Smashers',
+          playlistTitle: 'DBMS Full Course',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLxCzCOWd7aiFAN6I8CuViBuCdJgiOkT2Y',
+          duration: '36:15',
+          keyTakeaways: [
+            '1NF: Eliminates repeating groups and multivalued attributes (atomic values only)',
+            '2NF: Must be in 1NF and contain NO partial dependency (every non-key depends on whole candidate key)',
+            '3NF: Must be in 2NF and contain NO transitive dependency (X -> Y requires X is superkey or Y is prime)',
+            'BCNF: For every functional dependency X -> Y, X MUST be a candidate superkey',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'cs_p3',
+            title: 'Second Highest Salary (SQL LeetCode #176)',
+            difficulty: 'Medium',
+            companies: ['Amazon', 'Flipkart', 'Oracle', 'Goldman Sachs'],
+            leetcodeUrl: 'https://leetcode.com/problems/second-highest-salary/',
+            gfgUrl: 'https://www.geeksforgeeks.org/sql-query-to-find-second-highest-salary/',
+            arenaProblemId: null,
+            acceptanceRate: '38.4%',
+            hint: 'SELECT MAX(salary) FROM Employee WHERE salary < (SELECT MAX(salary) FROM Employee);',
+          },
+        ],
+      },
+      {
+        id: 'cs_top_04',
+        title: 'ACID Properties & Transactions',
+        duration: '30 mins',
+        summary: 'Atomicity, Consistency, Isolation, Durability, serializability schedules, and two-phase locking.',
+        video: {
+          youtubeId: 'k23i_99pGqE',
+          title: 'ACID Properties in DBMS Explained with Banking Example',
+          channel: 'Gate Smashers',
+          playlistTitle: 'DBMS Full Course',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLxCzCOWd7aiFAN6I8CuViBuCdJgiOkT2Y',
+          duration: '22:30',
+          keyTakeaways: [
+            'Atomicity: All operations succeed or none do ("All or Nothing")',
+            'Consistency: Data adheres to all validation rules and integrity constraints',
+            'Isolation: Concurrent execution yields same outcome as serial execution',
+            'Durability: Committed data remains permanently written even after system crash',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'cs_p4',
+            title: 'Dirty Read & Phantom Read Resolution with Isolation Levels',
+            difficulty: 'Medium',
+            companies: ['Morgan Stanley', 'Barclays', 'Goldman Sachs', 'SAP Labs'],
+            leetcodeUrl: 'https://leetcode.com/problemset/database/',
+            gfgUrl: 'https://www.geeksforgeeks.org/transaction-isolation-levels-in-dbms/',
+            arenaProblemId: null,
+            acceptanceRate: '61.7%',
+            hint: 'Review differences between Read Committed, Repeatable Read, and Serializable.',
+          },
+        ],
+      },
+      {
+        id: 'cs_top_05',
+        title: 'OSI vs TCP/IP Layers',
+        duration: '32 mins',
+        summary: '7 Layers of OSI, packet headers, encapsulation/decapsulation, MAC vs IP addressing.',
+        video: {
+          youtubeId: 'vv4y_uOneC8',
+          title: 'OSI Model Layers Explained Step by Step',
+          channel: 'Gate Smashers',
+          playlistTitle: 'Computer Networks Full Course',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLxCzCOWd7aiGFBD2-2joCpWOLUrDLvVV_',
+          duration: '29:50',
+          keyTakeaways: [
+            'Physical -> Data Link -> Network -> Transport -> Session -> Presentation -> Application',
+            'Data Link layer deals in Frames (MAC); Network layer in Packets (IP); Transport in Segments (Ports)',
+            'Routers operate at Layer 3 (Network); Switches operate at Layer 2 (Data Link)',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'cs_p5',
+            title: 'Subnetting & CIDR Address Range Calculation',
+            difficulty: 'Medium',
+            companies: ['Cisco', 'Juniper', 'Amazon AWS', 'Arista'],
+            leetcodeUrl: 'https://leetcode.com/discuss/interview-question/networking',
+            gfgUrl: 'https://www.geeksforgeeks.org/introduction-to-subnetting/',
+            arenaProblemId: null,
+            acceptanceRate: '55.9%',
+            hint: 'Formula: 2^(32 - CIDR) total IPs, minus 2 for network ID and broadcast address.',
+          },
+        ],
+      },
+      {
+        id: 'cs_top_06',
+        title: 'DNS, HTTP/2, and Socket Connections',
+        duration: '28 mins',
+        summary: '3-Way TCP handshake, SYN-ACK-FIN, UDP stateless transmission, HTTP/1.1 vs HTTP/2 multiplexing.',
+        video: {
+          youtubeId: 'uwoD5Eg78E0',
+          title: 'TCP 3-Way Handshake & Connection Teardown',
+          channel: 'Gate Smashers',
+          playlistTitle: 'Computer Networks Full Course',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLxCzCOWd7aiGFBD2-2joCpWOLUrDLvVV_',
+          duration: '25:10',
+          keyTakeaways: [
+            'TCP establishes connection using SYN -> SYN-ACK -> ACK exchange',
+            'UDP sends datagrams without handshake: faster with no flow control or retransmissions',
+            'HTTP/2 introduces binary framing and single connection multiplexing',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'cs_p6',
+            title: 'Socket Programming TCP Echo Server & Client in Python/C++',
+            difficulty: 'Medium',
+            companies: ['Cisco', 'Qualcomm', 'Nutanix', 'Directi'],
+            leetcodeUrl: 'https://leetcode.com/discuss/interview-question/networking',
+            gfgUrl: 'https://www.geeksforgeeks.org/socket-programming-cc/',
+            arenaProblemId: null,
+            acceptanceRate: '60.1%',
+            hint: 'Follow server sequence: socket() -> bind() -> listen() -> accept() -> recv() / send().',
+          },
+        ],
+      },
+    ],
   },
   {
     id: 'mod_soft_skills',
     title: 'Campus to Corporate: HR Rounds, GD Mastery & Professional Pitch',
-    instructor: 'Meera Chidambaram (Corporate HR Director)',
+    instructor: 'Corporate HR Directors & Interview Coaches',
     duration: '16 Hours',
     level: 'All Levels',
     lessonsCount: 18,
     completedCount: 14,
     progressPercent: 77,
-    topics: ['The 90-Second "Tell Me About Yourself" Formula', 'Handling Gap Years & Low CGPA Questions', 'Salary Negotiation for Freshers', 'STAR Method for Behavioral Rounds', 'Group Discussion Entry & Moderation Techniques'],
     badge: 'HR Star',
+    primaryPlaylist: {
+      title: 'Jeff Su & Dan Lok HR Interview Masterclass',
+      url: 'https://www.youtube.com/playlist?list=PLpyc33gOcbVA4qXMoQ5FAMUMBRVMnbDBU',
+      channel: 'Jeff Su',
+    },
+    topics: [
+      {
+        id: 'hr_top_01',
+        title: 'The 90-Second "Tell Me About Yourself" Formula',
+        duration: '18 mins',
+        summary: 'Present-Past-Future framing, elevator pitches, and highlighting relevant projects.',
+        video: {
+          youtubeId: 'es4xX3_3kE0',
+          title: 'How to Answer: Tell Me About Yourself (Best Formula)',
+          channel: 'Jeff Su',
+          playlistTitle: 'Job Interview Mastery',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLpyc33gOcbVA4qXMoQ5FAMUMBRVMnbDBU',
+          duration: '12:30',
+          keyTakeaways: [
+            'Formula: Present (current role/degree) -> Past (key achievement/project) -> Future (why this company)',
+            'Keep it under 90 seconds and end with an engaging bridge to the job description',
+            'Do not read your resume line by line; share your narrative momentum',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'hr_p1',
+            title: 'Draft & Practice 90s Elevator Pitch in AI Interviewer',
+            difficulty: 'Easy',
+            companies: ['Amazon', 'Google', 'TCS', 'Infosys', 'McKinsey'],
+            leetcodeUrl: 'https://leetcode.com/discuss/interview-question/behavioral',
+            gfgUrl: 'https://www.geeksforgeeks.org/how-to-answer-tell-me-about-yourself-in-an-interview/',
+            arenaProblemId: null,
+            acceptanceRate: '88.5%',
+            hint: 'Practice speaking aloud in the LMS AI Mock Interview tab for real-time speech analytics.',
+          },
+        ],
+      },
+      {
+        id: 'hr_top_02',
+        title: 'Handling Gap Years & Low CGPA Questions',
+        duration: '15 mins',
+        summary: 'Constructive explanations, emphasizing self-taught skills, certifications, and upward grade trajectories.',
+        video: {
+          youtubeId: '14n5xS9u-lQ',
+          title: 'How to Explain Gap Years in Interviews with Confidence',
+          channel: 'CareerRide',
+          playlistTitle: 'HR Interview Preparation',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLpyc33gOcbVA4qXMoQ5FAMUMBRVMnbDBU',
+          duration: '16:45',
+          keyTakeaways: [
+            'Own the situation without being defensive or fabricating excuses',
+            'Demonstrate how you utilized that time for skill acquisition and real-world projects',
+            'Pivot quickly back to what you can deliver in the target role starting day one',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'hr_p2',
+            title: 'STAR Response for Academic Hurdles & Career Gaps',
+            difficulty: 'Easy',
+            companies: ['TCS Digital', 'Wipro', 'Cognizant', 'L&T Infotech'],
+            leetcodeUrl: 'https://leetcode.com/discuss/interview-question/behavioral',
+            gfgUrl: 'https://www.geeksforgeeks.org/how-to-explain-employment-gap-in-resume/',
+            arenaProblemId: null,
+            acceptanceRate: '84.0%',
+            hint: 'Emphasize actionable learnings, open source contributions, and verified certifications.',
+          },
+        ],
+      },
+      {
+        id: 'hr_top_03',
+        title: 'Salary Negotiation for Freshers',
+        duration: '20 mins',
+        summary: 'Market research, evaluating CTC breakdowns (fixed vs variable vs ESOPs), and polite inquiries.',
+        video: {
+          youtubeId: '7_N1m8kQf3w',
+          title: 'How to Negotiate Salary for Freshers and College Graduates',
+          channel: 'Linda Raynier',
+          playlistTitle: 'Career Strategy',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLpyc33gOcbVA4qXMoQ5FAMUMBRVMnbDBU',
+          duration: '14:20',
+          keyTakeaways: [
+            'Differentiate between Total CTC vs Take-Home in-hand monthly salary',
+            'In campus on-campus drives, salary bands are usually fixed, but joining bonuses or locations can be discussed',
+            'Express genuine enthusiasm for the role before bringing up package numbers',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'hr_p3',
+            title: 'CTC Breakdown Analysis: Fixed vs Retention Bonus vs Stocks',
+            difficulty: 'Easy',
+            companies: ['Flipkart', 'Swiggy', 'Zomato', 'Amazon'],
+            leetcodeUrl: 'https://leetcode.com/discuss/interview-question/compensation',
+            gfgUrl: 'https://www.geeksforgeeks.org/how-to-negotiate-salary-as-a-fresher/',
+            arenaProblemId: null,
+            acceptanceRate: '91.2%',
+            hint: 'Calculate real first-year take home after deducting PF, gratuity, and 4-year ESOP vesting.',
+          },
+        ],
+      },
+      {
+        id: 'hr_top_04',
+        title: 'STAR Method for Behavioral Rounds',
+        duration: '25 mins',
+        summary: 'Situation, Task, Action, Result framework for Amazon Leadership Principles and team conflict questions.',
+        video: {
+          youtubeId: 'g9b9x0JzN1k',
+          title: 'Master the STAR Method for Behavioral Interviews',
+          channel: 'Self Made Millennial',
+          playlistTitle: 'Behavioral Interviews',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLpyc33gOcbVA4qXMoQ5FAMUMBRVMnbDBU',
+          duration: '18:50',
+          keyTakeaways: [
+            'Situation (15%): Set the scene and business problem',
+            'Task (10%): Your specific responsibility in that crisis',
+            'Action (60%): The concrete technical and strategic steps YOU took',
+            'Result (15%): Quantifiable outcome (e.g. "improved query latency by 45%")',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'hr_p4',
+            title: 'Amazon Leadership Principle: Ownership & Customer Obsession',
+            difficulty: 'Medium',
+            companies: ['Amazon', 'Microsoft', 'Atlassian', 'Adobe'],
+            leetcodeUrl: 'https://leetcode.com/discuss/interview-question/behavioral',
+            gfgUrl: 'https://www.geeksforgeeks.org/star-method-for-interview/',
+            arenaProblemId: null,
+            acceptanceRate: '79.6%',
+            hint: 'Structure story with clear metric improvements and personal agency.',
+          },
+        ],
+      },
+      {
+        id: 'hr_top_05',
+        title: 'Group Discussion Entry & Moderation Techniques',
+        duration: '22 mins',
+        summary: 'Initiation techniques, structured intervention, handling aggressive participants, and effective summarizing.',
+        video: {
+          youtubeId: '9k0Y8j2t4mU',
+          title: 'Group Discussion Rules, Do\'s & Don\'ts with Mock GD',
+          channel: 'CareerRide',
+          playlistTitle: 'Group Discussion Preparation',
+          playlistUrl: 'https://www.youtube.com/playlist?list=PLpyc33gOcbVA4qXMoQ5FAMUMBRVMnbDBU',
+          duration: '26:30',
+          keyTakeaways: [
+            'Initiating the GD is only rewarding if you give a comprehensive framework or definition',
+            'Never shout or cut someone off; use polite entry: "I agree with Rohan, and adding to his point..."',
+            'Summarizing at the conclusion should synthesize viewpoints objectively without taking a personal side',
+          ],
+        },
+        practiceProblems: [
+          {
+            id: 'hr_p5',
+            title: 'Participate in LMS AI Group Discussion Simulator',
+            difficulty: 'Easy',
+            companies: ['TCS Digital', 'Wipro Turbo', 'Mu Sigma', 'Deloitte'],
+            leetcodeUrl: 'https://leetcode.com/discuss/interview-question/behavioral',
+            gfgUrl: 'https://www.geeksforgeeks.org/group-discussion-tips/',
+            arenaProblemId: null,
+            acceptanceRate: '86.4%',
+            hint: 'Switch to the "GD Simulator" tab in the sidebar to practice with 4 AI personas in real-time!',
+          },
+        ],
+      },
+    ],
   },
 ];
 

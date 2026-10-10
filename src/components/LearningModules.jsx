@@ -918,12 +918,12 @@ export const LearningModules = ({
           }}
         >
           <div
-            className="card modal-content-card"
+            className="card"
             style={{
               maxWidth: '480px',
               width: '100%',
               padding: '1.75rem',
-              background: 'var(--bg-surface)',
+              background: '#0d1322',
               border: '1px solid rgba(251, 146, 60, 0.4)',
             }}
           >
@@ -1052,11 +1052,11 @@ export const LearningModules = ({
           }}
         >
           <div
-            className="card modal-content-card"
+            className="card"
             style={{
               maxWidth: '680px',
               width: '100%',
-              background: 'var(--bg-surface)',
+              background: '#0d1322',
               border: '2px solid rgba(99, 102, 241, 0.5)',
               padding: '2.5rem',
               textAlign: 'center',
