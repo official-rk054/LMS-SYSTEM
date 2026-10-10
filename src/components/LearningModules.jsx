@@ -1066,7 +1066,7 @@ export const LearningModules = ({
               <h3 style={{ textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.85rem', color: '#818cf8', marginBottom: '0.5rem' }}>
                 Certificate of Academic Excellence
               </h3>
-              <h2 style={{ fontSize: '1.8rem', color: '#ffffff', marginBottom: '0.5rem' }}>
+              <h2 style={{ fontSize: '1.8rem', color: 'var(--text-bright)', marginBottom: '0.5rem' }}>
                 PlaceIQ Placement Readiness Certification
               </h2>
               <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>

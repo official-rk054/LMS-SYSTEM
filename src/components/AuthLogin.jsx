@@ -168,7 +168,7 @@ export const AuthLogin = ({ onLogin }) => {
                 <GraduationCap size={24} color="#09090b" />
               </div>
               <div>
-                <h1 style={{ fontSize: '1.45rem', fontWeight: 800, margin: 0, color: '#ffffff', letterSpacing: '-0.02em' }}>
+                <h1 style={{ fontSize: '1.45rem', fontWeight: 800, margin: 0, color: 'var(--text-bright)', letterSpacing: '-0.02em' }}>
                   Place<span style={{ color: 'var(--text-muted)' }}>IQ</span>
                 </h1>
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
@@ -193,7 +193,7 @@ export const AuthLogin = ({ onLogin }) => {
                   Unified Security Portal
                 </span>
               </div>
-              <h3 style={{ fontSize: '1.15rem', color: '#ffffff', marginBottom: '0.3rem' }}>
+              <h3 style={{ fontSize: '1.15rem', color: 'var(--text-bright)', marginBottom: '0.3rem' }}>
                 One Login for All Roles
               </h3>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: '1.45', margin: 0 }}>
@@ -306,7 +306,7 @@ export const AuthLogin = ({ onLogin }) => {
         <div style={{ padding: '2.75rem 2.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           {/* Header */}
           <div style={{ marginBottom: '1.5rem' }}>
-            <h2 style={{ fontSize: '1.55rem', color: '#ffffff', fontWeight: 800, marginBottom: '0.3rem', letterSpacing: '-0.02em' }}>
+            <h2 style={{ fontSize: '1.55rem', color: 'var(--text-bright)', fontWeight: 800, marginBottom: '0.3rem', letterSpacing: '-0.02em' }}>
               Sign in to PlaceIQ
             </h2>
             <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', margin: 0 }}>

@@ -1065,7 +1065,7 @@ export const MockInterviewer = ({ userProfile }) => {
                 <span className="badge badge-success" style={{ marginBottom: '0.5rem' }}>
                   Assessment Complete
                 </span>
-                <h2 style={{ fontSize: '1.8rem', color: '#ffffff', marginBottom: '0.35rem' }}>
+                <h2 style={{ fontSize: '1.8rem', color: 'var(--text-bright)', marginBottom: '0.35rem' }}>
                   AI Interview Performance Evaluation
                 </h2>
                 <p style={{ fontSize: '0.9rem' }}>

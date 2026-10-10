@@ -29,8 +29,14 @@ import confetti from 'canvas-confetti';
 import { GROUP_DISCUSSION_TOPICS, APTITUDE_FLASHCARDS, ALUMNI_MENTORS } from '../data/mockData';
 import { useMediaConnectivity } from '../hooks/useMediaConnectivity';
 
-export const ExtraFeaturesSuite = ({ userProfile }) => {
-  const [activeTool, setActiveTool] = useState('gd'); // 'gd', 'fluency', 'plan', 'flashcards', 'mock_drive', 'alumni'
+export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
+  const [activeTool, setActiveTool] = useState(initialTool);
+
+  useEffect(() => {
+    if (initialTool) {
+      setActiveTool(initialTool);
+    }
+  }, [initialTool]);
 
   // GD state
   const [selectedGdTopic, setSelectedGdTopic] = useState(GROUP_DISCUSSION_TOPICS[0]);

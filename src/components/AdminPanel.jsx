@@ -108,10 +108,10 @@ export const AdminPanel = ({ userRole }) => {
                 {userRole === 'admin' ? 'TPO Office Command Portal' : 'Faculty Trainer Suite'}
               </span>
             </div>
-            <h2 style={{ fontSize: '1.7rem', color: '#ffffff', marginBottom: '0.2rem' }}>
+            <h2 style={{ fontSize: '1.7rem', color: 'var(--text-bright)', marginBottom: '0.2rem' }}>
               Campus Placement Operations & Cohort Analytics
             </h2>
-            <p style={{ fontSize: '0.85rem' }}>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
               Vellore Institute of Technology • Batch 2026 Engineering Recruitment Cycle
             </p>
           </div>
@@ -252,7 +252,7 @@ export const AdminPanel = ({ userRole }) => {
                     <td style={{ padding: '0.85rem 1rem', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                       {std.regNo}
                     </td>
-                    <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                    <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: 'var(--text-bright)' }}>
                       {std.name}
                     </td>
                     <td style={{ padding: '0.85rem 1rem', color: 'var(--text-dim)' }}>

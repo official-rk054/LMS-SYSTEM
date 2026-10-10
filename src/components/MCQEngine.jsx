@@ -32,18 +32,79 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
   const [showCalculator, setShowCalculator] = useState(false);
   const [calcInput, setCalcInput] = useState('');
 
+  // Pre-test warning signal modal state
+  const [showPreTestWarningModal, setShowPreTestWarningModal] = useState(false);
+  const [agreedToRules, setAgreedToRules] = useState(false);
+
+  // Strict Disqualification & Anti-Cheating State
+  const [isDisqualified, setIsDisqualified] = useState(false);
+  const [disqualificationReason, setDisqualificationReason] = useState('');
+  const [proctorLogs, setProctorLogs] = useState([]);
+
   // Active category filter
   const [selectedCategory, setSelectedCategory] = useState('All');
 
   const questions = MCQ_QUESTION_BANK;
   const currentQ = questions[currentQIndex];
 
-  // Anti-cheating tab-switch detection
+  // Disqualify and immediately exit exam directly
+  const triggerDisqualification = (reason) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setProctorLogs(prev => [...prev, { reason, timestamp }]);
+    setDisqualificationReason(reason);
+    setIsDisqualified(true);
+    setTestActive(false);
+    setTestSubmitted(true);
+    if (onTestCompleted) {
+      onTestCompleted();
+    }
+  };
+
+  // Anti-cheating listeners: Copy/Paste, Right Click, Shortcuts, Tab Switch
   useEffect(() => {
+    if (!testActive || testSubmitted) return;
+
+    // Prevent Copy, Cut, Paste
+    const handleCopyCutPaste = (e) => {
+      e.preventDefault();
+      triggerDisqualification('Unauthorized Text Copy / Cut / Paste Attempt Detected');
+    };
+
+    // Prevent Right Click
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+      triggerDisqualification('Right-Click Context Menu Access Attempt Detected');
+    };
+
+    // Prevent Unauthorized Keyboard Shortcuts (Ctrl+C, Ctrl+V, Ctrl+U, F12, PrintScreen)
+    const handleKeyDown = (e) => {
+      const key = e.key.toLowerCase();
+      const isCmdOrCtrl = e.ctrlKey || e.metaKey;
+
+      const isForbiddenShortcut = isCmdOrCtrl && ['c', 'v', 'x', 'u', 'a'].includes(key);
+      const isDevTools = e.key === 'F12' || (isCmdOrCtrl && e.shiftKey && (key === 'i' || key === 'j' || key === 'c'));
+      const isPrintScreen = e.key === 'PrintScreen' || e.code === 'PrintScreen';
+
+      if (isForbiddenShortcut || isDevTools || isPrintScreen) {
+        e.preventDefault();
+        const actionLabel = isForbiddenShortcut
+          ? `Ctrl+${key.toUpperCase()} Shortcut`
+          : isDevTools
+          ? 'Developer Tools Inspection'
+          : 'Screen Capture';
+        triggerDisqualification(`Suspicious Keyboard Shortcut (${actionLabel}) Attempted`);
+      }
+    };
+
+    // Window Visibility / Tab Switch Listener
     const handleVisibilityChange = () => {
-      if (testActive && !testSubmitted && document.hidden) {
+      if (document.hidden) {
         setTabSwitchCount(prev => {
           const next = prev + 1;
+          if (next >= 2) {
+            triggerDisqualification('Exceeded Maximum Allowed Window / Tab Switches (2/2)');
+            return next;
+          }
           setShowCheatingAlert(true);
           setTimeout(() => setShowCheatingAlert(false), 5000);
           return next;
@@ -51,8 +112,21 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
       }
     };
 
+    window.addEventListener('copy', handleCopyCutPaste);
+    window.addEventListener('cut', handleCopyCutPaste);
+    window.addEventListener('paste', handleCopyCutPaste);
+    window.addEventListener('contextmenu', handleContextMenu);
+    window.addEventListener('keydown', handleKeyDown);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('copy', handleCopyCutPaste);
+      window.removeEventListener('cut', handleCopyCutPaste);
+      window.removeEventListener('paste', handleCopyCutPaste);
+      window.removeEventListener('contextmenu', handleContextMenu);
+      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [testActive, testSubmitted]);
 
   // Countdown timer
@@ -72,7 +146,15 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
     return () => clearInterval(timer);
   }, [testActive, testSubmitted, remainingSeconds]);
 
+  const handleOpenPreTestModal = () => {
+    setAgreedToRules(false);
+    setShowPreTestWarningModal(true);
+  };
+
   const handleStartTest = () => {
+    setShowPreTestWarningModal(false);
+    setIsDisqualified(false);
+    setDisqualificationReason('');
     setTestActive(true);
     setTestSubmitted(false);
     setCurrentQIndex(0);
@@ -80,6 +162,7 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
     setFlaggedForReview({});
     setRemainingSeconds(900);
     setTabSwitchCount(0);
+    setProctorLogs([]);
   };
 
   const handleSelectOption = (idx) => {
@@ -238,15 +321,134 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
             </ul>
           </div>
 
-          <button onClick={handleStartTest} className="btn btn-primary btn-lg">
+          <button onClick={handleOpenPreTestModal} className="btn btn-primary btn-lg">
             Start Timed Assessment Now →
           </button>
         </div>
       )}
 
+      {/* Pre-Test Security Warning Signal Modal */}
+      {showPreTestWarningModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(10px)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.5rem',
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              maxWidth: '640px',
+              width: '100%',
+              background: '#0d1117',
+              border: '2px solid #f59e0b',
+              padding: '2rem',
+              boxShadow: '0 25px 50px -12px rgba(245, 158, 11, 0.3)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+              <div style={{ padding: '0.6rem', borderRadius: '50%', background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' }}>
+                <ShieldAlert size={32} />
+              </div>
+              <div>
+                <span className="badge badge-warning" style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem', fontWeight: 800 }}>
+                  ⚠️ OFFICIAL PROCTORING WARNING SIGNAL
+                </span>
+                <h3 style={{ fontSize: '1.4rem', color: '#ffffff', margin: '0.2rem 0 0 0', fontWeight: 800 }}>
+                  Strict Anti-Cheating Protocol Enforcement
+                </h3>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: '1.55', marginBottom: '1.25rem' }}>
+              Before launching this official assessment, please review the strict anti-cheating regulations enforced by your college Placement Cell (TPO):
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255, 255, 255, 0.03)', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255, 255, 255, 0.08)', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', fontSize: '0.84rem' }}>
+                <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>🚫</span>
+                <div>
+                  <strong style={{ color: '#f87171' }}>No Copying / Text Selection:</strong> Text selection, highlighting, and copying questions (Ctrl+C / Cmd+C / Right-Click) are strictly disabled. Any copy attempt will <strong>IMMEDIATELY TERMINATE</strong> your test with a zero score.
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', fontSize: '0.84rem' }}>
+                <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>🚫</span>
+                <div>
+                  <strong style={{ color: '#f87171' }}>No DevTools / Right-Clicking:</strong> Opening inspect element, context menu, or keyboard shortcuts (`F12`, `Ctrl+Shift+I`, `Ctrl+U`) will trigger instant disqualification.
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', fontSize: '0.84rem' }}>
+                <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>🚫</span>
+                <div>
+                  <strong style={{ color: '#f87171' }}>Tab Switch Monitoring:</strong> Leaving the active exam window is tracked. Reaching the tab-switch limit automatically disqualifies your submission.
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', fontSize: '0.84rem' }}>
+                <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>⚡</span>
+                <div>
+                  <strong style={{ color: '#fbbf24' }}>Direct Exit & TPO Audit Log:</strong> Any suspicious activity forces an <strong>IMMEDIATE DIRECT EXIT</strong> from the exam and flags your student profile in the TPO disciplinary log.
+                </div>
+              </div>
+            </div>
+
+            {/* Checkbox agreement */}
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.85rem 1rem', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: 'var(--radius-md)', cursor: 'pointer', marginBottom: '1.5rem' }}>
+              <input
+                type="checkbox"
+                checked={agreedToRules}
+                onChange={(e) => setAgreedToRules(e.target.checked)}
+                style={{ accentColor: '#f59e0b', marginTop: '0.2rem', width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '0.82rem', color: '#ffffff', fontWeight: 600, lineHeight: 1.4 }}>
+                I acknowledge the rules. I understand that copying text, right-clicking, or switching tabs will RESULT IN IMMEDIATE EXAM TERMINATION and a score of 0.
+              </span>
+            </label>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.85rem' }}>
+              <button onClick={() => setShowPreTestWarningModal(false)} className="btn btn-ghost">
+                Cancel
+              </button>
+              <button
+                onClick={handleStartTest}
+                disabled={!agreedToRules}
+                className="btn btn-primary"
+                style={{
+                  background: agreedToRules ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'rgba(255, 255, 255, 0.1)',
+                  color: agreedToRules ? '#000000' : 'var(--text-dim)',
+                  fontWeight: 800,
+                  borderColor: agreedToRules ? '#f59e0b' : 'transparent',
+                }}
+              >
+                Proceed & Launch Exam 🚀
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Active Test Screen */}
       {testActive && !testSubmitted && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '1.5rem' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 320px',
+            gap: '1.5rem',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            MozUserSelect: 'none',
+            msUserSelect: 'none',
+          }}
+        >
           {/* Main Question Panel */}
           <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '560px' }}>
             <div>
@@ -513,8 +715,66 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
         </div>
       )}
 
-      {/* Post-Test MCQ Diagnostic Analyzer (Checkpoint 8) */}
-      {testSubmitted && (
+      {/* Post-Test MCQ Diagnostic Analyzer */}
+      {testSubmitted && isDisqualified && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div
+            className="card"
+            style={{
+              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(153, 27, 27, 0.35) 100%)',
+              borderColor: 'rgba(239, 68, 68, 0.5)',
+              padding: '2rem',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <span className="badge badge-danger" style={{ marginBottom: '0.5rem', fontWeight: 800 }}>
+                  🚫 EXAM FORCIBLY TERMINATED - DISQUALIFIED BY PROCTOR
+                </span>
+                <h2 style={{ fontSize: '1.8rem', color: '#f87171', marginBottom: '0.35rem', fontWeight: 800 }}>
+                  Instant Disqualification & Proctor Audit Log
+                </h2>
+                <p style={{ fontSize: '0.9rem', color: '#fca5a5' }}>
+                  Student: <strong>{userProfile.name}</strong> • College: <strong>{userProfile.college}</strong>
+                </p>
+              </div>
+
+              <button onClick={handleOpenPreTestModal} className="btn btn-outline" style={{ borderColor: '#f87171', color: '#f87171' }}>
+                <RotateCcw size={15} /> Request Retake Clearance
+              </button>
+            </div>
+          </div>
+
+          <div className="card" style={{ border: '1px solid rgba(239, 68, 68, 0.3)', padding: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+              <XCircle size={32} color="#ef4444" />
+              <div>
+                <h3 style={{ fontSize: '1.15rem', color: '#f87171', margin: 0, fontWeight: 700 }}>
+                  Violation Reason: {disqualificationReason}
+                </h3>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '0.2rem 0 0 0' }}>
+                  Your exam session was automatically aborted due to suspicious activity. A score of 0% has been assigned and recorded in the Institutional TPO Disciplinary Audit Log.
+                </p>
+              </div>
+            </div>
+
+            {proctorLogs.length > 0 && (
+              <div style={{ background: 'rgba(9, 9, 11, 0.8)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                <h4 style={{ fontSize: '0.82rem', color: '#ffffff', marginBottom: '0.5rem', fontWeight: 700 }}>
+                  Recorded Proctor Incident Timestamps:
+                </h4>
+                {proctorLogs.map((log, i) => (
+                  <div key={i} style={{ fontSize: '0.78rem', color: '#f87171', fontFamily: 'var(--font-mono)' }}>
+                    [{log.timestamp}] VIOLATION DETECTED: {log.reason}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {testSubmitted && !isDisqualified && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div
             className="card"
@@ -529,7 +789,7 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
                 <span className="badge badge-success" style={{ marginBottom: '0.5rem' }}>
                   Exam Submitted & Evaluated
                 </span>
-                <h2 style={{ fontSize: '1.8rem', color: '#ffffff', marginBottom: '0.35rem' }}>
+                <h2 style={{ fontSize: '1.8rem', color: 'var(--text-bright)', marginBottom: '0.35rem' }}>
                   MCQ Diagnostic Performance Report
                 </h2>
                 <p style={{ fontSize: '0.9rem' }}>
@@ -538,7 +798,7 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
               </div>
 
               <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button onClick={handleStartTest} className="btn btn-outline">
+                <button onClick={handleOpenPreTestModal} className="btn btn-outline">
                   <RotateCcw size={15} /> Retake Test
                 </button>
                 <button onClick={() => window.print()} className="btn btn-primary">

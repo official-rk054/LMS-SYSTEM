@@ -134,7 +134,7 @@ export const MentorDashboard = ({ userProfile, setActiveTab }) => {
               <School size={20} color="var(--secondary)" />
               <span className="badge badge-info">Faculty Mentor & Trainer Portal</span>
             </div>
-            <h2 style={{ fontSize: '1.7rem', color: '#ffffff', marginBottom: '0.2rem' }}>
+            <h2 style={{ fontSize: '1.7rem', color: 'var(--text-bright)', marginBottom: '0.2rem' }}>
               Welcome back, {userProfile.name}! 👋
             </h2>
             <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)' }}>
@@ -230,7 +230,7 @@ export const MentorDashboard = ({ userProfile, setActiveTab }) => {
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <div style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff' }}>{batch.name}</div>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-bright)' }}>{batch.name}</div>
                   <span className="badge badge-success">{batch.studentsCount} Students</span>
                 </div>
 
@@ -291,7 +291,7 @@ export const MentorDashboard = ({ userProfile, setActiveTab }) => {
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
                     <div>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ffffff' }}>{doubt.studentName}</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-bright)' }}>{doubt.studentName}</span>
                       <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)', marginLeft: '0.5rem' }}>({doubt.regNo}) • {doubt.batch}</span>
                     </div>
                     <span className={`badge ${doubt.status === 'pending' ? 'badge-warning' : 'badge-success'}`}>
@@ -392,7 +392,7 @@ export const MentorDashboard = ({ userProfile, setActiveTab }) => {
                     <td style={{ padding: '0.85rem 1rem', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                       {std.regNo}
                     </td>
-                    <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#ffffff' }}>
+                    <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: 'var(--text-bright)' }}>
                       {std.name}
                     </td>
                     <td style={{ padding: '0.85rem 1rem' }}>

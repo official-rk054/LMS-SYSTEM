@@ -225,9 +225,10 @@ export function App() {
                 />
               )}
 
-              {activeTab === 'gd_simulator' && (
+              {(activeTab === 'gd_simulator' || activeTab === 'extra_suite') && (
                 <ExtraFeaturesSuite
                   userProfile={currentUser}
+                  initialTool={activeTab === 'extra_suite' ? 'plan' : 'gd'}
                 />
               )}
 
@@ -250,7 +251,7 @@ export function App() {
                 />
               )}
 
-              {activeTab === 'trainer_tests' && (
+              {(activeTab === 'trainer_tests' || activeTab === 'admin_panel') && (
                 <AdminPanel
                   userRole="trainer"
                 />

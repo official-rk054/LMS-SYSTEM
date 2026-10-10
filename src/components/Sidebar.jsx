@@ -81,9 +81,9 @@ export const Sidebar = ({
   };
 
   const roleColors = {
-    student: '#e4e4e7',
-    trainer: '#34d399',
-    admin: '#fbbf24',
+    student: 'var(--primary)',
+    trainer: 'var(--success)',
+    admin: 'var(--warning)',
   };
 
   return (
@@ -114,27 +114,19 @@ export const Sidebar = ({
           style={{
             padding: '0.45rem 0.75rem',
             borderRadius: 'var(--radius-md)',
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: `1px solid ${roleColors[userProfile.role] || '#38bdf8'}44`,
+            background: 'var(--bg-glass-strong)',
+            border: '1px solid var(--border-glass)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             fontSize: '0.75rem',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: roleColors[userProfile.role] || '#38bdf8', fontWeight: 700 }}>
-            <Layers size={14} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-bright)', fontWeight: 700 }}>
+            <Layers size={14} color="var(--primary)" />
             <span>{roleLabels[userProfile.role] || 'User Portal'}</span>
           </div>
-          <span
-            className="badge"
-            style={{
-              background: `${roleColors[userProfile.role] || '#38bdf8'}22`,
-              color: roleColors[userProfile.role] || '#38bdf8',
-              fontSize: '0.65rem',
-              padding: '0.1rem 0.4rem',
-            }}
-          >
+          <span className="badge badge-primary" style={{ fontSize: '0.65rem', padding: '0.15rem 0.45rem', fontWeight: 800 }}>
             ACTIVE
           </span>
         </div>
@@ -168,14 +160,16 @@ export const Sidebar = ({
 
       {/* Sidebar Footer with User Details & Logout */}
       <div className="sidebar-footer">
-        <div className="user-profile-widget" style={{ justifyContent: 'space-between', width: '100%' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <div className="user-avatar">
+        <div className="user-profile-widget" style={{ justifyContent: 'space-between', width: '100%', minWidth: 0, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: 1, minWidth: 0, overflow: 'hidden' }}>
+            <div className="user-avatar" style={{ flexShrink: 0 }}>
               {userProfile.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </div>
-            <div className="user-details">
-              <div className="user-name">{userProfile.name}</div>
-              <div className="user-college">{userProfile.role.toUpperCase()} • {userProfile.college}</div>
+            <div className="user-details" style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+              <div className="user-name" title={userProfile.name}>{userProfile.name}</div>
+              <div className="user-college" title={`${userProfile.role.toUpperCase()} • ${userProfile.college}`}>
+                {userProfile.role.toUpperCase()} • {userProfile.college}
+              </div>
             </div>
           </div>
 

@@ -186,7 +186,7 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
             >
               <TrendingUp size={16} color="#d4d4d8" />
               <div>
-                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#fafafa', lineHeight: 1 }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-bright)', lineHeight: 1 }}>
                   #{userProfile.batchRank} <span style={{ fontSize: '0.68rem', fontWeight: 500, color: 'var(--text-dim)' }}>/{userProfile.totalBatchStudents}</span>
                 </div>
                 <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 600 }}>
@@ -210,7 +210,7 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
             >
               <Zap size={16} color="#d4d4d8" fill="#d4d4d8" />
               <div>
-                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#fafafa', lineHeight: 1 }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-bright)', lineHeight: 1 }}>
                   {userProfile.xpPoints}
                 </div>
                 <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 600 }}>

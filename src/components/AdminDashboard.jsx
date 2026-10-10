@@ -119,7 +119,7 @@ export const AdminDashboard = ({ userProfile, setActiveTab }) => {
               <ShieldCheck size={20} color="var(--accent-purple)" />
               <span className="badge badge-warning">TPO Office Command & Placement Operations</span>
             </div>
-            <h2 style={{ fontSize: '1.7rem', color: '#ffffff', marginBottom: '0.2rem' }}>
+            <h2 style={{ fontSize: '1.7rem', color: 'var(--text-bright)', marginBottom: '0.2rem' }}>
               Vellore Institute of Technology • TPO Command Center
             </h2>
             <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)' }}>
@@ -274,7 +274,7 @@ export const AdminDashboard = ({ userProfile, setActiveTab }) => {
                     <td style={{ padding: '0.85rem 1rem', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                       {std.regNo}
                     </td>
-                    <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#ffffff' }}>
+                    <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: 'var(--text-bright)' }}>
                       {std.name}
                     </td>
                     <td style={{ padding: '0.85rem 1rem', color: 'var(--text-dim)' }}>
@@ -393,7 +393,7 @@ export const AdminDashboard = ({ userProfile, setActiveTab }) => {
               {drivesList.map((drive) => (
                 <div key={drive.id} style={{ padding: '0.9rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#ffffff' }}>{drive.company}</div>
+                    <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-bright)' }}>{drive.company}</div>
                     <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{drive.role} • {drive.packageCTC}</div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '0.2rem' }}>Date: {drive.date} • Cutoff: {drive.minCGPA} CGPA</div>
                   </div>
