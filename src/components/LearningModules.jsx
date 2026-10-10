@@ -22,7 +22,6 @@ import {
   UserCheck,
   TrendingUp,
   MessageSquare,
-  Youtube,
   Video
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -339,7 +338,7 @@ export const LearningModules = ({
               style={{ fontSize: '0.68rem', padding: '0.2rem 0.5rem', textDecoration: 'none', gap: '0.3rem' }}
               title="Open full YouTube playlist"
             >
-              <Youtube size={13} color="#f43f5e" /> Playlist ↗
+              <Video size={13} color="#f43f5e" /> Playlist ↗
             </a>
           </div>
 
@@ -469,7 +468,7 @@ export const LearningModules = ({
               className={`btn btn-sm ${activeLessonTab === 'video' ? 'btn-primary' : 'btn-outline'}`}
               style={{ fontSize: '0.78rem', gap: '0.4rem' }}
             >
-              <Youtube size={14} /> 🎥 Video Lecture
+              <Video size={14} /> 🎥 Video Lecture
             </button>
 
             <button
@@ -571,7 +570,7 @@ export const LearningModules = ({
                       className="btn btn-outline btn-sm"
                       style={{ fontSize: '0.72rem', textDecoration: 'none', gap: '0.35rem' }}
                     >
-                      <Youtube size={13} color="#f43f5e" /> Full Playlist
+                      <Video size={13} color="#f43f5e" /> Full Playlist
                     </a>
                   </div>
                 </div>
