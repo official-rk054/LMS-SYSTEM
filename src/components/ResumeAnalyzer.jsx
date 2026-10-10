@@ -764,8 +764,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
           4. WORKSPACE TAB CONTENTS (COMPACT & PRECISE)
           ═════════════════════════════════════════════════════════════ */}
 
-
-      {/* TAB 2: KEYWORDS */}
+      {/* TAB 1: KEYWORDS */}
       {activeWorkspaceTab === 'keywords' && (
         <div className="card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
           {/* Target Header with Collapsible JD Input */}
