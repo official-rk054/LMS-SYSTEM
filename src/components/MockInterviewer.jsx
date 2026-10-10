@@ -41,6 +41,11 @@ import { MOCK_INTERVIEW_SESSIONS } from '../data/mockData';
 import { useMediaConnectivity } from '../hooks/useMediaConnectivity';
 import { recordInterviewEvaluation } from '../services/authDatabase';
 import {
+  generateInterviewQuestion,
+  generateInterviewScorecard,
+  orchestrator,
+} from '../services/gemini';
+import {
   analyzeSpeechInRealTime,
   LiveSpeechRecognizer,
   playNaturalTTS
@@ -80,6 +85,14 @@ export const MockInterviewer = ({ userProfile = {} }) => {
   const [turnIndex, setTurnIndex] = useState(0);
   const [currentAiQuestion, setCurrentAiQuestion] = useState('');
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
+  const [isAiThinking, setIsAiThinking] = useState(false);
+  const [hasGeminiKey, setHasGeminiKey] = useState(() => orchestrator.getStatus().hasKey);
+
+  useEffect(() => {
+    return orchestrator.subscribe(status => {
+      setHasGeminiKey(status.hasKey);
+    });
+  }, []);
 
   // 4. Live Audio Input & Real-Time Interpretation
   const [isMicListening, setIsMicListening] = useState(false);
@@ -461,7 +474,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
   // ─────────────────────────────────────────────────────────────
   // SUBMIT CANDIDATE SPOKEN RESPONSE & GENERATE AI FOLLOW-UP
   // ─────────────────────────────────────────────────────────────
-  const handleSubmitCandidateResponse = () => {
+  const handleSubmitCandidateResponse = async () => {
     const responseText = liveSpokenTranscript.trim();
     if (!responseText) return;
 
@@ -490,44 +503,91 @@ export const MockInterviewer = ({ userProfile = {} }) => {
     setLiveInterimSnippet('');
     setLiveSpeechMetrics(null);
     speechSecondsRef.current = 0;
+    setIsAiThinking(true);
 
-    // Dynamic AI follow-up generator
-    setTimeout(() => {
+    // Dynamic AI follow-up generator: First try Gemini InterviewAgent, else fallback
+    let aiFollowUp = '';
+    try {
+      const geminiRes = await generateInterviewQuestion({
+        roundTitle: selectedRound.title,
+        company: selectedRound.company,
+        roundType: selectedRound.type,
+        turnIndex: nextTurn,
+        candidateName: candidateFirstName,
+        conversationHistory: updatedMessages,
+        candidateAnswer: responseText,
+      });
+
+      if (geminiRes.success && geminiRes.question) {
+        aiFollowUp = geminiRes.question;
+      }
+    } catch (_) {}
+
+    if (!aiFollowUp) {
       const analysis = analyzeCandidateText(
         responseText,
         nextTurn,
         selectedRound,
         candidateFirstName
       );
-      const aiFollowUp = analysis.followUp;
-      setCurrentAiQuestion(aiFollowUp);
+      aiFollowUp = analysis.followUp;
+    }
 
-      const aiMsg = {
-        sender: 'interviewer',
-        text: aiFollowUp,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
+    setIsAiThinking(false);
+    setCurrentAiQuestion(aiFollowUp);
 
-      const finalMessages = [...updatedMessages, aiMsg];
-      setMessages(finalMessages);
+    const aiMsg = {
+      sender: 'interviewer',
+      text: aiFollowUp,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
 
-      if (nextTurn >= 3) {
-        // Conclude after 3 full turns: AI speaks closing reflection, then conclude without restarting mic
-        speakText(aiFollowUp, () => {
-          stopMedia();
-          if (proctorRef.current) proctorRef.current.stop();
-          const telemetry = proctorRef.current
-            ? proctorRef.current.getTelemetry()
-            : { totalStrikes: 0, attentionPercentage: 100, infractionsLog: [] };
-          const report = compileRealScorecard(finalMessages, telemetry);
-          setEvaluationReport(report);
-          setIsFinished(true);
-        });
-      } else {
-        // Turn 1 and 2: speak follow-up question, automatically starting mic once sentence finishes!
-        speakText(aiFollowUp);
-      }
-    }, 900);
+    const finalMessages = [...updatedMessages, aiMsg];
+    setMessages(finalMessages);
+
+    if (nextTurn >= 3) {
+      // Conclude after 3 full turns: AI speaks closing reflection, then compile scorecard with Gemini
+      speakText(aiFollowUp, async () => {
+        stopMedia();
+        if (proctorRef.current) proctorRef.current.stop();
+        const telemetry = proctorRef.current
+          ? proctorRef.current.getTelemetry()
+          : { totalStrikes: 0, attentionPercentage: 100, infractionsLog: [] };
+
+        const baseReport = compileRealScorecard(finalMessages, telemetry);
+
+        try {
+          const scorecardRes = await generateInterviewScorecard({
+            roundTitle: selectedRound.title,
+            company: selectedRound.company,
+            roundType: selectedRound.type,
+            candidateName,
+            messages: finalMessages,
+            telemetry,
+          });
+
+          if (scorecardRes.success && scorecardRes.report) {
+            const gr = scorecardRes.report;
+            if (gr.overallScore) baseReport.overallReadiness = Math.round((baseReport.overallReadiness + gr.overallScore) / 2);
+            if (gr.technicalScore) baseReport.technicalDepth = gr.technicalScore;
+            if (gr.summary) baseReport.aiSummary = gr.summary;
+            if (gr.verdict) baseReport.aiVerdict = gr.verdict;
+            if (Array.isArray(gr.strengths) && gr.strengths.length > 0) {
+              baseReport.strengths = [...gr.strengths, ...baseReport.strengths.slice(0, 1)];
+            }
+            if (Array.isArray(gr.improvements) && gr.improvements.length > 0) {
+              baseReport.improvements = [...gr.improvements, ...baseReport.improvements.slice(0, 1)];
+            }
+          }
+        } catch (_) {}
+
+        setEvaluationReport(baseReport);
+        setIsFinished(true);
+      });
+    } else {
+      // Turn 1 and 2: speak follow-up question, automatically starting mic once sentence finishes!
+      speakText(aiFollowUp);
+    }
   };
 
   // Adaptive Question Generator based on Candidate's Actual Spoken Words
@@ -1301,14 +1361,42 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span className="badge badge-primary">
-                    Live Audio Interpretation
-                  </span>
+                  {hasGeminiKey ? (
+                    <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.35)', fontSize: '0.7rem', fontWeight: 700 }}>
+                      ✨ Gemini 2.5 Active
+                    </span>
+                  ) : (
+                    <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.35)', fontSize: '0.7rem', fontWeight: 700 }}>
+                      ⚡ Heuristic Fallback
+                    </span>
+                  )}
                   <span className={`badge ${proctorInfractions.length >= 2 ? 'badge-danger' : 'badge-success'}`}>
                     Proctor: {3 - proctorInfractions.length} Strikes Left
                   </span>
                 </div>
               </div>
+
+              {/* AI Thinking Indicator Banner */}
+              {isAiThinking && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.55rem',
+                    color: '#c084fc',
+                    background: 'rgba(168, 85, 247, 0.12)',
+                    border: '1px solid rgba(168, 85, 247, 0.3)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '0.6rem 0.9rem',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    marginBottom: '0.75rem',
+                  }}
+                >
+                  <Sparkles size={16} className="pulse-dot" />
+                  <span>Gemini AI is analyzing your response and formulating dynamic technical probe...</span>
+                </div>
+              )}
 
               {/* Current Question Box */}
               <div

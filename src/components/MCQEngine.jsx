@@ -14,11 +14,13 @@ import {
   Calculator,
   HelpCircle,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Sparkles
 } from 'lucide-react';
 import { MCQ_QUESTION_BANK } from '../data/mockData';
 import confetti from 'canvas-confetti';
 import { recordAssessmentSubmission } from '../services/authDatabase';
+import { explainMCQWithGemini } from '../services/gemini';
 
 export const MCQEngine = ({ userProfile, onTestCompleted }) => {
   const [testActive, setTestActive] = useState(false);
@@ -43,6 +45,36 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
 
   // Active category filter
   const [selectedCategory, setSelectedCategory] = useState('All');
+
+  // Gemini AI Tutor Explanations state
+  const [aiExplanations, setAiExplanations] = useState({});
+  const [loadingExplanationId, setLoadingExplanationId] = useState(null);
+
+  const handleAskGeminiMCQ = async (q) => {
+    setLoadingExplanationId(q.id);
+    try {
+      const res = await explainMCQWithGemini({
+        questionText: q.question,
+        options: q.options,
+        correctOptionIndex: q.correctIndex,
+        selectedOptionIndex: selectedAnswers[q.id],
+        topic: `${q.category} - ${q.subtopic}`,
+      });
+
+      if (res.success && res.explanation) {
+        setAiExplanations(prev => ({ ...prev, [q.id]: res.explanation }));
+      } else {
+        setAiExplanations(prev => ({
+          ...prev,
+          [q.id]: `💡 Conceptual Breakdown:\n• Underlying Rule: ${q.explanation}\n• High-Frequency Exam Trap: Common mistake is failing to isolate edge constraints.`
+        }));
+      }
+    } catch (_) {
+      setAiExplanations(prev => ({ ...prev, [q.id]: q.explanation }));
+    } finally {
+      setLoadingExplanationId(null);
+    }
+  };
 
   const questions = MCQ_QUESTION_BANK;
   const currentQ = questions[currentQIndex];
@@ -976,6 +1008,39 @@ export const MCQEngine = ({ userProfile, onTestCompleted }) => {
                     <div style={{ fontSize: '0.8rem', background: 'rgba(99, 102, 241, 0.06)', padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-sm)', color: 'var(--text-muted)' }}>
                       <strong>Solution Explanation:</strong> {q.explanation}
                     </div>
+
+                    <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+                      <button
+                        onClick={() => handleAskGeminiMCQ(q)}
+                        disabled={loadingExplanationId === q.id}
+                        className="btn btn-outline btn-sm"
+                        style={{ fontSize: '0.74rem', padding: '0.25rem 0.65rem', color: '#c084fc', borderColor: 'rgba(168, 85, 247, 0.35)', gap: '0.35rem' }}
+                      >
+                        <Sparkles size={13} />
+                        {loadingExplanationId === q.id ? 'Gemini Thinking...' : 'Deep Gemini Explanation'}
+                      </button>
+                    </div>
+
+                    {aiExplanations[q.id] && (
+                      <div
+                        style={{
+                          marginTop: '0.65rem',
+                          padding: '0.75rem 1rem',
+                          background: 'rgba(168, 85, 247, 0.08)',
+                          borderRadius: 'var(--radius-sm)',
+                          border: '1px solid rgba(168, 85, 247, 0.25)',
+                          fontSize: '0.8rem',
+                          color: 'var(--text-main)',
+                          whiteSpace: 'pre-line',
+                          lineHeight: '1.55',
+                        }}
+                      >
+                        <strong style={{ color: '#c084fc', display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.35rem' }}>
+                          <Sparkles size={14} /> Gemini 2.5 Tutor Insight:
+                        </strong>
+                        {aiExplanations[q.id]}
+                      </div>
+                    )}
                   </div>
                 );
               })}

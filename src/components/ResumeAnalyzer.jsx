@@ -31,13 +31,18 @@ import {
   SlidersHorizontal,
   Info,
   Wand2,
-  Pencil
+  Pencil,
+  Sparkles
 } from 'lucide-react';
 import {
   runResumeAuditAgent,
   ROLE_PROFILES,
   extractCandidateMetadata
 } from '../services/resumeAuditAgent';
+import {
+  rewriteResumeBullet,
+  orchestrator,
+} from '../services/gemini';
 
 const PRESET_JDS = {
   sde_amazon: {
@@ -235,6 +240,48 @@ export const ResumeAnalyzer = ({ userProfile, resumeFromBuilder }) => {
   // Current JD metadata
   const currentJD = PRESET_JDS[targetRole] || PRESET_JDS.sde_amazon;
   const activeJDText = isCustomJdActive ? customJDText : currentJD.text;
+
+  const [rewritingId, setRewritingId] = useState(null);
+  const [hasGeminiKey, setHasGeminiKey] = useState(() => orchestrator.getStatus().hasKey);
+
+  useEffect(() => {
+    return orchestrator.subscribe(status => {
+      setHasGeminiKey(status.hasKey);
+    });
+  }, []);
+
+  const handleGeminiRewrite = async (item) => {
+    setRewritingId(item.id);
+    try {
+      const res = await rewriteResumeBullet({
+        originalBullet: item.beforeText,
+        targetRole: currentJD.role,
+        company: currentJD.company,
+        missingKeywords: analysisResult.missingKeywords || [],
+      });
+
+      if (res.success && res.rewrite) {
+        setAnalysisResult(prev => ({
+          ...prev,
+          feedbackLoop: prev.feedbackLoop.map(fb =>
+            fb.id === item.id
+              ? {
+                  ...fb,
+                  afterText: res.rewrite.afterText,
+                  critique: res.rewrite.critique || fb.critique,
+                  rationale: `✨ Gemini 2.5: ${res.rewrite.rationale || 'Aligned with hiring criteria'}`,
+                  isGemini: true,
+                }
+              : fb
+          ),
+        }));
+      }
+    } catch (err) {
+      console.warn('Gemini rewrite error:', err);
+    } finally {
+      setRewritingId(null);
+    }
+  };
 
   // Run audit agent whenever resume text or target role changes
   const executeAgentAudit = (rawText, roleKey, jdText = isCustomJdActive ? customJDText : PRESET_JDS[roleKey]?.text || '') => {
@@ -1026,11 +1073,31 @@ export const ResumeAnalyzer = ({ userProfile, resumeFromBuilder }) => {
               <div>
                 <h4 style={{ margin: '0 0 0.5rem', color: '#86efac', fontSize: '0.78rem' }}>Rewrite template</h4>
                 <p style={{ margin: 0, fontSize: '0.84rem', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{item.afterText}</p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginTop: '0.65rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginTop: '0.65rem', flexWrap: 'wrap' }}>
                   <span style={{ color: 'var(--text-dim)', fontSize: '0.73rem' }}>{item.rationale}</span>
-                  <button type="button" className="btn btn-outline btn-sm" onClick={() => handleCopyRewrite(item.afterText, item.id)}>
-                    <Copy size={13} /> {copiedRewrite === item.id ? 'Copied' : 'Copy'}
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      style={{
+                        fontSize: '0.72rem',
+                        padding: '0.25rem 0.6rem',
+                        gap: '0.3rem',
+                        background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                        border: 'none',
+                        fontWeight: 600,
+                      }}
+                      disabled={rewritingId === item.id}
+                      onClick={() => handleGeminiRewrite(item)}
+                      title="Synthesize Google XYZ rewrite specifically for this bullet using Gemini AI"
+                    >
+                      <Sparkles size={12} />
+                      {rewritingId === item.id ? 'Synthesizing...' : 'Gemini XYZ Rewrite'}
+                    </button>
+                    <button type="button" className="btn btn-outline btn-sm" onClick={() => handleCopyRewrite(item.afterText, item.id)}>
+                      <Copy size={13} /> {copiedRewrite === item.id ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
                 </div>
               </div>
             </article>

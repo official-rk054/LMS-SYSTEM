@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Menu,
   Flame,
@@ -15,6 +15,7 @@ import {
   Building
 } from 'lucide-react';
 import { TRANSLATIONS } from '../data/translations';
+import { orchestrator } from '../services/gemini';
 
 export const Topbar = ({
   userProfile,
@@ -22,8 +23,17 @@ export const Topbar = ({
   theme,
   setTheme,
   lang,
-  onToggleMobile
+  onToggleMobile,
+  onOpenGeminiSettings,
 }) => {
+  const [hasGeminiKey, setHasGeminiKey] = useState(() => orchestrator.getStatus().hasKey);
+
+  useEffect(() => {
+    return orchestrator.subscribe(status => {
+      setHasGeminiKey(status.hasKey);
+    });
+  }, []);
+
   const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
   const isLight = theme === 'light';
 
@@ -143,6 +153,42 @@ export const Topbar = ({
             <span>Placement Rate: 71.4% (1,320 Placed)</span>
           </div>
         )}
+
+        {/* Gemini AI Status & Settings Button */}
+        <button
+          onClick={onOpenGeminiSettings}
+          className="btn btn-sm"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            fontSize: '0.74rem',
+            fontWeight: 700,
+            padding: '0.3rem 0.75rem',
+            borderRadius: 'var(--radius-full)',
+            background: hasGeminiKey
+              ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.18) 0%, rgba(168, 85, 247, 0.18) 100%)'
+              : (isLight ? '#f1f5f9' : 'rgba(255, 255, 255, 0.06)'),
+            border: hasGeminiKey
+              ? '1px solid rgba(168, 85, 247, 0.45)'
+              : (isLight ? '1px solid #cbd5e1' : '1px solid var(--border-subtle)'),
+            color: hasGeminiKey ? '#c084fc' : (isLight ? '#475569' : 'var(--text-muted)'),
+            cursor: 'pointer',
+          }}
+          title="Google Gemini AI Engine: Configure API key and test connection"
+        >
+          <Sparkles size={13} color={hasGeminiKey ? '#c084fc' : (isLight ? '#64748b' : '#a1a1aa')} />
+          <span>{hasGeminiKey ? 'Gemini 2.5 Active' : 'Gemini AI'}</span>
+          <span
+            style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              backgroundColor: hasGeminiKey ? '#34d399' : '#f59e0b',
+              display: 'inline-block',
+            }}
+          />
+        </button>
 
         {/* Anti-Cheating / Proctoring Status */}
         <div

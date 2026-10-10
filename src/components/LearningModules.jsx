@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { LEARNING_MODULES } from '../data/mockData';
+import { answerDoubtWithGemini } from '../services/gemini';
 
 export const LearningModules = ({
   userProfile,
@@ -156,15 +157,32 @@ export const LearningModules = ({
     }, 800);
   };
 
-  const handleSendDoubt = (e) => {
+  const handleSendDoubt = async (e) => {
     e.preventDefault();
     if (!doubtQuestion.trim()) return;
 
     const userQ = doubtQuestion.trim();
-    setDoubtChat((prev) => [...prev, { sender: 'user', text: userQ }]);
+    const updatedChat = [...doubtChat, { sender: 'user', text: userQ }];
+    setDoubtChat(updatedChat);
     setDoubtQuestion('');
     setIsThinkingDoubt(true);
 
+    try {
+      const res = await answerDoubtWithGemini({
+        moduleTitle: selectedModule.title,
+        topicTitle: activeTopic.title,
+        userQuestion: userQ,
+        chatHistory: updatedChat,
+      });
+
+      if (res.success && res.answer) {
+        setDoubtChat((prev) => [...prev, { sender: 'ai', text: res.answer, isGemini: true }]);
+        setIsThinkingDoubt(false);
+        return;
+      }
+    } catch (_) {}
+
+    // Fallback heuristic response
     setTimeout(() => {
       let aiReply = `For "${activeTopic.title}", a standard high-frequency pattern in tech interviews is to first identify constraints.`;
       if (userQ.toLowerCase().includes('time') || userQ.toLowerCase().includes('complexity')) {
@@ -177,7 +195,7 @@ export const LearningModules = ({
 
       setDoubtChat((prev) => [...prev, { sender: 'ai', text: aiReply }]);
       setIsThinkingDoubt(false);
-    }, 700);
+    }, 500);
   };
 
   // Filter problems for the active topic
