@@ -181,6 +181,7 @@ export function App() {
 
               {activeTab === 'resume_analyzer' && (
                 <ResumeAnalyzer
+                  userProfile={currentUser}
                   resumeFromBuilder={resumeDataForAudit}
                 />
               )}

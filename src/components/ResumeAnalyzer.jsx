@@ -31,12 +31,13 @@ import {
   Eye,
   CheckCircle2,
   SlidersHorizontal,
-  Info,
-  Wand2,
-  GitPullRequest,
-  CheckCheck
+  Info
 } from 'lucide-react';
-import { runResumeAuditAgent, ROLE_PROFILES } from '../services/resumeAuditAgent';
+import {
+  runResumeAuditAgent,
+  ROLE_PROFILES,
+  extractCandidateMetadata
+} from '../services/resumeAuditAgent';
 
 const PRESET_JDS = {
   sde_amazon: {
@@ -131,36 +132,37 @@ Projects: PlaceIQ LMS - Architected full-stack placement portal with React, Node
 Achievements: LeetCode Knight (Rating 1890+), Smart India Hackathon (SIH) National Finalist 2024.`
 };
 
-export const ResumeAnalyzer = ({ resumeFromBuilder }) => {
+export const ResumeAnalyzer = ({ userProfile, resumeFromBuilder }) => {
   const [targetRole, setTargetRole] = useState('sde_amazon');
   const [showCustomJD, setShowCustomJD] = useState(false);
   const [customJDText, setCustomJDText] = useState(PRESET_JDS.sde_amazon.text);
-  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('feedback_loop'); // 'feedback_loop', 'keywords', 'sections', 'checklist', 'parsed_text'
-
-  // Interactive Single-Bullet Sandbox State
-  const [sandboxBullet, setSandboxBullet] = useState('Worked on the checkout page and helped improve database queries for the team.');
-  const [sandboxFeedback, setSandboxFeedback] = useState(null);
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('keywords'); // 'keywords', 'sections', 'checklist', 'parsed_text'
 
   // File Import State
   const [uploadedResume, setUploadedResume] = useState(() => {
     if (resumeFromBuilder) {
+      const candidateName = resumeFromBuilder.personal?.fullName || userProfile?.name || 'Candidate';
+      const text = `${candidateName} | ${resumeFromBuilder.education?.[0]?.institution || userProfile?.college || 'Engineering College'} | Computer Science
+Email: ${resumeFromBuilder.personal?.email || userProfile?.email || 'email@domain.com'} | Phone: ${resumeFromBuilder.personal?.phone || userProfile?.phone || '+91 98765 43210'} | LinkedIn: ${resumeFromBuilder.personal?.linkedin || 'linkedin.com/in/candidate'} | GitHub: ${resumeFromBuilder.personal?.github || 'github.com/candidate'}
+Summary: ${resumeFromBuilder.personal?.summary || 'Engineering student focused on high-scale systems.'}
+Skills: ${resumeFromBuilder.skills?.languages || ''}, ${resumeFromBuilder.skills?.frameworks || ''}, ${resumeFromBuilder.skills?.developerTools || ''}, ${resumeFromBuilder.skills?.coreSubjects || ''}
+Experience: ${resumeFromBuilder.experience?.map(e => `${e.title} at ${e.company}: ${e.bullets?.join(' ')}`).join('\n') || ''}
+Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bullets?.join(' ')}`).join('\n') || ''}`;
+
+      const meta = extractCandidateMetadata(text, userProfile, `${candidateName.replace(/\s+/g, '_')}_Resume.json`);
+
       return {
-        fileName: `${resumeFromBuilder.personal.fullName.replace(/\s+/g, '_')}_Resume.json`,
-        fileSize: '42 KB',
+        fileName: `${candidateName.replace(/\s+/g, '_')}_Resume.json`,
+        fileSize: `${Math.max(12, Math.round(text.length / 30))} KB`,
         fileType: 'application/json',
         uploadSource: 'builder',
         lastModified: 'Synced from PlaceIQ Resume Builder',
-        parsedName: resumeFromBuilder.personal.fullName,
-        parsedCollege: 'Vellore Institute of Technology (VIT)',
-        parsedDegree: `${resumeFromBuilder.education?.[0]?.degree || 'B.Tech'} in ${resumeFromBuilder.education?.[0]?.field || 'CSE'}`,
-        parsedCgpa: `${resumeFromBuilder.education?.[0]?.cgpa || '8.85'} / 10.0`,
-        skillsCount: 18,
-        rawText: `${resumeFromBuilder.personal.fullName}
-${resumeFromBuilder.personal.email} | ${resumeFromBuilder.personal.phone} | ${resumeFromBuilder.personal.linkedin}
-Summary: ${resumeFromBuilder.personal.summary}
-Skills: ${resumeFromBuilder.skills?.languages || ''}, ${resumeFromBuilder.skills?.frameworks || ''}, ${resumeFromBuilder.skills?.developerTools || ''}, ${resumeFromBuilder.skills?.coreSubjects || ''}
-Experience: ${resumeFromBuilder.experience?.map(e => `${e.title} at ${e.company}: ${e.bullets?.join(' ')}`).join('\n') || ''}
-Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bullets?.join(' ')}`).join('\n') || ''}`
+        parsedName: candidateName,
+        parsedCollege: resumeFromBuilder.education?.[0]?.institution || meta.parsedCollege,
+        parsedDegree: `${resumeFromBuilder.education?.[0]?.degree || 'B.Tech'} in ${resumeFromBuilder.education?.[0]?.field || 'Computer Science'}`,
+        parsedCgpa: resumeFromBuilder.education?.[0]?.cgpa ? `${resumeFromBuilder.education[0].cgpa} / 10.0` : meta.parsedCgpa,
+        skillsCount: meta.skillsCount,
+        rawText: text
       };
     }
     return DEFAULT_RESUME_INFO;
@@ -170,24 +172,24 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [scanStep, setScanStep] = useState(0);
   const [copiedKeyword, setCopiedKeyword] = useState(null);
-  const [copiedRewriteId, setCopiedRewriteId] = useState(null);
-  const [checklistFilter, setChecklistFilter] = useState('all');
-
-  // Resolved Checklist items
-  const [resolvedChecklist, setResolvedChecklist] = useState({
-    chk_1: false,
-    chk_2: true,
-    chk_3: true,
-    chk_4: false,
-    chk_5: true,
-  });
 
   const fileInputRef = useRef(null);
 
   // Real Agent Analysis State
   const [analysisResult, setAnalysisResult] = useState(() => {
     const initialText = uploadedResume?.rawText || DEFAULT_RESUME_INFO.rawText;
-    return runResumeAuditAgent(initialText, 'sde_amazon', PRESET_JDS.sde_amazon.text);
+    return runResumeAuditAgent(initialText, 'sde_amazon', PRESET_JDS.sde_amazon.text, userProfile);
+  });
+
+  // Resolved Checklist items initialized from live audit
+  const [resolvedChecklist, setResolvedChecklist] = useState(() => {
+    const initial = {};
+    if (analysisResult?.checklist) {
+      analysisResult.checklist.forEach(item => {
+        initial[item.id] = !!item.isInitialResolved;
+      });
+    }
+    return initial;
   });
 
   // Current JD metadata
@@ -207,14 +209,23 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
     }, 560);
 
     setTimeout(() => {
-      const result = runResumeAuditAgent(rawText, roleKey, customJDText);
+      const result = runResumeAuditAgent(rawText, roleKey, customJDText, userProfile);
       setAnalysisResult(result);
+      setResolvedChecklist(prev => {
+        const next = { ...prev };
+        result.checklist.forEach(item => {
+          if (next[item.id] === undefined) {
+            next[item.id] = !!item.isInitialResolved;
+          }
+        });
+        return next;
+      });
       setIsAnalyzing(false);
       setScanStep(0);
     }, 850);
   };
 
-  // Handle external file upload with real text extraction
+  // Handle external file upload with real text extraction & dynamic metadata
   const handleFileUpload = (file) => {
     if (!file) return;
 
@@ -227,17 +238,18 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
     if (file.name.endsWith('.txt') || file.name.endsWith('.json') || file.name.endsWith('.md')) {
       reader.onload = (e) => {
         const text = e.target.result;
+        const meta = extractCandidateMetadata(text, userProfile, fileName);
         setUploadedResume({
           fileName,
           fileSize,
           fileType,
           uploadSource: 'external',
           lastModified: 'Uploaded just now',
-          parsedName: 'Aarav Sharma',
-          parsedCollege: 'Vellore Institute of Technology (VIT)',
-          parsedDegree: 'B.Tech Computer Science & Engineering',
-          parsedCgpa: '8.85 / 10.0',
-          skillsCount: 16,
+          parsedName: meta.parsedName,
+          parsedCollege: meta.parsedCollege,
+          parsedDegree: meta.parsedDegree,
+          parsedCgpa: meta.parsedCgpa,
+          skillsCount: meta.skillsCount,
           rawText: text
         });
         executeAgentAudit(text, targetRole);
@@ -247,7 +259,6 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
       // PDF or DOCX parsing
       reader.onload = (e) => {
         const buffer = e.target.result;
-        // In-browser text stream extractor: scan for ASCII text segments
         let extractedText = '';
         try {
           const uint8 = new Uint8Array(buffer);
@@ -258,7 +269,6 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
               rawChars += String.fromCharCode(charCode);
             }
           }
-          // Filter readable words
           const cleanWords = rawChars.replace(/[^a-zA-Z0-9\s.,@+\-:/]/g, ' ').replace(/\s+/g, ' ').trim();
           if (cleanWords.length > 150) {
             extractedText = cleanWords;
@@ -269,17 +279,18 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
           extractedText = DEFAULT_RESUME_INFO.rawText;
         }
 
+        const meta = extractCandidateMetadata(extractedText, userProfile, fileName);
         setUploadedResume({
           fileName,
           fileSize,
           fileType,
           uploadSource: 'external',
           lastModified: 'Uploaded just now',
-          parsedName: 'Aarav Sharma',
-          parsedCollege: 'Vellore Institute of Technology (VIT)',
-          parsedDegree: 'B.Tech Computer Science & Engineering',
-          parsedCgpa: '8.85 / 10.0',
-          skillsCount: 17,
+          parsedName: meta.parsedName,
+          parsedCollege: meta.parsedCollege,
+          parsedDegree: meta.parsedDegree,
+          parsedCgpa: meta.parsedCgpa,
+          skillsCount: meta.skillsCount,
           rawText: extractedText
         });
         executeAgentAudit(extractedText, targetRole);
@@ -316,23 +327,28 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
 
   const handleLoadFromBuilder = () => {
     if (resumeFromBuilder) {
+      const candidateName = resumeFromBuilder.personal?.fullName || userProfile?.name || 'Candidate';
+      const text = `${candidateName} | ${resumeFromBuilder.education?.[0]?.institution || userProfile?.college || 'Engineering College'} | Computer Science
+Email: ${resumeFromBuilder.personal?.email || userProfile?.email || 'email@domain.com'} | Phone: ${resumeFromBuilder.personal?.phone || userProfile?.phone || '+91 98765 43210'} | LinkedIn: ${resumeFromBuilder.personal?.linkedin || 'linkedin.com/in/candidate'} | GitHub: ${resumeFromBuilder.personal?.github || 'github.com/candidate'}
+Summary: ${resumeFromBuilder.personal?.summary || 'Engineering student focused on high-scale systems.'}
+Skills: ${resumeFromBuilder.skills?.languages || ''}, ${resumeFromBuilder.skills?.frameworks || ''}, ${resumeFromBuilder.skills?.developerTools || ''}, ${resumeFromBuilder.skills?.coreSubjects || ''}
+Experience: ${resumeFromBuilder.experience?.map(e => `${e.title} at ${e.company}: ${e.bullets?.join(' ')}`).join('\n') || ''}
+Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bullets?.join(' ')}`).join('\n') || ''}`;
+
+      const meta = extractCandidateMetadata(text, userProfile, `${candidateName.replace(/\s+/g, '_')}_Resume.json`);
+
       const generated = {
-        fileName: `${resumeFromBuilder.personal.fullName.replace(/\s+/g, '_')}_Resume.json`,
-        fileSize: '42 KB',
+        fileName: `${candidateName.replace(/\s+/g, '_')}_Resume.json`,
+        fileSize: `${Math.max(12, Math.round(text.length / 30))} KB`,
         fileType: 'application/json',
         uploadSource: 'builder',
         lastModified: 'Synced from PlaceIQ Resume Builder',
-        parsedName: resumeFromBuilder.personal.fullName,
-        parsedCollege: 'Vellore Institute of Technology (VIT)',
-        parsedDegree: `${resumeFromBuilder.education?.[0]?.degree || 'B.Tech'} in ${resumeFromBuilder.education?.[0]?.field || 'CSE'}`,
-        parsedCgpa: `${resumeFromBuilder.education?.[0]?.cgpa || '8.85'} / 10.0`,
-        skillsCount: 18,
-        rawText: `${resumeFromBuilder.personal.fullName}
-${resumeFromBuilder.personal.email} | ${resumeFromBuilder.personal.phone} | ${resumeFromBuilder.personal.linkedin}
-Summary: ${resumeFromBuilder.personal.summary}
-Skills: ${resumeFromBuilder.skills?.languages || ''}, ${resumeFromBuilder.skills?.frameworks || ''}, ${resumeFromBuilder.skills?.developerTools || ''}, ${resumeFromBuilder.skills?.coreSubjects || ''}
-Experience: ${resumeFromBuilder.experience?.map(e => `${e.title} at ${e.company}: ${e.bullets?.join(' ')}`).join('\n') || ''}
-Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bullets?.join(' ')}`).join('\n') || ''}`
+        parsedName: candidateName,
+        parsedCollege: resumeFromBuilder.education?.[0]?.institution || meta.parsedCollege,
+        parsedDegree: `${resumeFromBuilder.education?.[0]?.degree || 'B.Tech'} in ${resumeFromBuilder.education?.[0]?.field || 'Computer Science'}`,
+        parsedCgpa: resumeFromBuilder.education?.[0]?.cgpa ? `${resumeFromBuilder.education[0].cgpa} / 10.0` : meta.parsedCgpa,
+        skillsCount: meta.skillsCount,
+        rawText: text
       };
       setUploadedResume(generated);
       executeAgentAudit(generated.rawText, targetRole);
@@ -347,59 +363,21 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
     setTimeout(() => setCopiedKeyword(null), 2000);
   };
 
-  const handleCopyRewrite = (id, text) => {
-    navigator.clipboard?.writeText(text);
-    setCopiedRewriteId(id);
-    setTimeout(() => setCopiedRewriteId(null), 2000);
-  };
-
   const toggleChecklistItem = (id) => {
     setResolvedChecklist(prev => {
       const next = { ...prev, [id]: !prev[id] };
+      const baseScore = analysisResult.baseAtsScore || analysisResult.atsScore;
+      const totalItems = analysisResult.checklist?.length || 5;
       const resolvedCount = Object.values(next).filter(Boolean).length;
-      const bonusScore = Math.min(84 + resolvedCount * 3, 98);
+      const bonus = Math.round((resolvedCount / totalItems) * 10);
+      const updatedScore = Math.min(99, Math.max(baseScore, baseScore + bonus));
       setAnalysisResult(curr => ({
         ...curr,
-        atsScore: bonusScore,
+        atsScore: updatedScore,
       }));
       return next;
     });
   };
-
-  // Evaluate Custom Bullet in Interactive Sandbox
-  const handleTestSandboxBullet = () => {
-    const text = sandboxBullet.trim();
-    if (!text) return;
-
-    const hasNumber = /\d+/.test(text) || /%/.test(text);
-    const hasPassive = /worked on|helped|assisted|responsible for/.test(text.toLowerCase());
-
-    let critique = '';
-    let rewrite = '';
-
-    if (!hasNumber && hasPassive) {
-      critique = 'Weak passive verb detected and zero quantifiable metrics [Y]. Fails Google XYZ.';
-      rewrite = `Engineered database query caching layer using Redis [Z], reducing checkout latency by 48% across 60k daily requests [Y], boosting conversion rates [X].`;
-    } else if (!hasNumber) {
-      critique = 'Good action verb, but lacks scale metric [Y]. Recruiters cannot assess performance impact.';
-      rewrite = `${text} [Z], accelerating throughput by 35% across 20,000 requests [Y], ensuring 99.9% uptime [X].`;
-    } else {
-      critique = 'Solid metric present. Enhanced with Google XYZ alignment for high-tier ATS recognition.';
-      rewrite = `Architected full checkout flow refactoring [Z], achieving a 32% decrease in cart abandonment across 15k users [Y], maximizing revenue velocity [X].`;
-    }
-
-    setSandboxFeedback({
-      critique,
-      rewrite,
-    });
-  };
-
-  const filteredChecklist = analysisResult.checklist.filter(item => {
-    if (checklistFilter === 'all') return true;
-    if (checklistFilter === 'high') return item.impact === 'High';
-    if (checklistFilter === 'medium') return item.impact === 'Medium';
-    return true;
-  });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -529,9 +507,9 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
         <div style={{ padding: '0.75rem 1rem', background: 'rgba(24, 24, 28, 0.9)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
             <span>
-              {scanStep === 1 && 'Ingesting & decomposing bullet points into Google XYZ tokens...'}
+              {scanStep === 1 && 'Ingesting & parsing candidate resume profile...'}
               {scanStep === 2 && 'Evaluating 2026 tech trends, metric density, and ATS hygiene...'}
-              {scanStep === 3 && 'Synthesizing tailored bullet rewrites & critique feedback loop...'}
+              {scanStep === 3 && 'Finalizing ATS audit metrics and actionable checklist...'}
             </span>
             <span style={{ fontWeight: 700, color: '#fafafa' }}>{scanStep === 1 ? '33%' : scanStep === 2 ? '66%' : '100%'}</span>
           </div>
@@ -607,7 +585,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
               </div>
               <div>
                 <span style={{ color: 'var(--text-dim)', display: 'block', fontSize: '0.68rem' }}>College</span>
-                <strong style={{ color: 'var(--text-bright)' }}>VIT Vellore</strong>
+                <strong style={{ color: 'var(--text-bright)' }}>{uploadedResume.parsedCollege || userProfile?.college || 'Institutional Profile'}</strong>
               </div>
               <div>
                 <span style={{ color: 'var(--text-dim)', display: 'block', fontSize: '0.68rem' }}>CGPA</span>
@@ -681,8 +659,14 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
             <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-bright)' }}>
               Overall ATS Score
             </div>
-            <span style={{ fontSize: '0.68rem', color: '#22c55e', fontWeight: 600 }}>
-              Top 12% Candidate Rank
+            <span style={{ fontSize: '0.68rem', color: analysisResult.atsScore >= 80 ? '#22c55e' : analysisResult.atsScore >= 70 ? '#eab308' : '#f87171', fontWeight: 600 }}>
+              {analysisResult.candidateRank || (
+                analysisResult.atsScore >= 90 ? 'Top 5% Candidate Rank' :
+                analysisResult.atsScore >= 80 ? 'Top 15% Candidate Rank' :
+                analysisResult.atsScore >= 70 ? 'Top 30% Candidate Rank' :
+                analysisResult.atsScore >= 60 ? 'Top 50% Candidate Rank' :
+                'Developing Candidate Tier'
+              )}
             </span>
           </div>
 
@@ -736,390 +720,205 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
           gap: '0.75rem',
         }}
       >
-        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => setActiveWorkspaceTab('feedback_loop')}
-            className={`btn btn-sm ${activeWorkspaceTab === 'feedback_loop' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ fontSize: '0.78rem', padding: '0.4rem 0.85rem' }}
-          >
-            <Wand2 size={14} /> Agent Feedback Loop & Rewrites ({analysisResult.feedbackLoop?.length || 0})
-          </button>
+        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
 
           <button
             onClick={() => setActiveWorkspaceTab('keywords')}
             className={`btn btn-sm ${activeWorkspaceTab === 'keywords' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ fontSize: '0.78rem', padding: '0.4rem 0.85rem' }}
+            style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', gap: '0.35rem' }}
           >
-            <Zap size={14} /> Keyword Intelligence ({analysisResult.matchedKeywords.length + analysisResult.missingKeywords.length})
+            <Zap size={13} /> Keywords ({analysisResult.matchedKeywords.length + analysisResult.missingKeywords.length})
           </button>
 
           <button
             onClick={() => setActiveWorkspaceTab('sections')}
             className={`btn btn-sm ${activeWorkspaceTab === 'sections' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ fontSize: '0.78rem', padding: '0.4rem 0.85rem' }}
+            style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', gap: '0.35rem' }}
           >
-            <Layers size={14} /> Section Health Audit (6)
+            <Layers size={13} /> Section Audit (6)
           </button>
 
           <button
             onClick={() => setActiveWorkspaceTab('checklist')}
             className={`btn btn-sm ${activeWorkspaceTab === 'checklist' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ fontSize: '0.78rem', padding: '0.4rem 0.85rem' }}
+            style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', gap: '0.35rem' }}
           >
-            <ListChecks size={14} /> Optimization Checklist ({analysisResult.checklist.length})
+            <ListChecks size={13} /> Checklist ({analysisResult.checklist.length})
           </button>
 
           <button
             onClick={() => setActiveWorkspaceTab('parsed_text')}
             className={`btn btn-sm ${activeWorkspaceTab === 'parsed_text' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ fontSize: '0.78rem', padding: '0.4rem 0.85rem' }}
+            style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', gap: '0.35rem' }}
           >
-            <Code size={14} /> Extracted ATS Stream
+            <Code size={13} /> ATS Text
           </button>
         </div>
 
-        <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+        <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
           Target: <strong>{currentJD.company} ({currentJD.package})</strong>
         </span>
       </div>
 
       {/* ═════════════════════════════════════════════════════════════
-          4. WORKSPACE TAB CONTENTS
+          4. WORKSPACE TAB CONTENTS (COMPACT & PRECISE)
           ═════════════════════════════════════════════════════════════ */}
 
-      {/* TAB: AGENT AUDIT & FEEDBACK LOOP (NEW NON-GENERIC REWRITES) */}
-      {activeWorkspaceTab === 'feedback_loop' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* 5-Factor Diagnostic Score Ribbon */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(5, 1fr)',
-              gap: '0.75rem',
-            }}
-          >
-            <div className="card" style={{ padding: '0.85rem', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fafafa' }}>{analysisResult.jdMatchRate}%</div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Factor 1: 2026 Tech Trend</div>
+
+      {/* TAB 2: KEYWORDS */}
+      {activeWorkspaceTab === 'keywords' && (
+        <div className="card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+          {/* Target Header with Collapsible JD Input */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.6rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Target size={15} color="var(--primary)" />
+              <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-bright)' }}>
+                Target Keywords for {currentJD.role}
+              </span>
+              <span className="badge badge-primary" style={{ fontSize: '0.68rem' }}>{currentJD.company}</span>
             </div>
-            <div className="card" style={{ padding: '0.85rem', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#22c55e' }}>{analysisResult.impactMetricScore}%</div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Factor 2: Google XYZ Impact</div>
-            </div>
-            <div className="card" style={{ padding: '0.85rem', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#eab308' }}>{analysisResult.formatScore}%</div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Factor 3: ATS Hygiene</div>
-            </div>
-            <div className="card" style={{ padding: '0.85rem', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fafafa' }}>{analysisResult.actionVerbScore}%</div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Factor 4: Action Verb Power</div>
-            </div>
-            <div className="card" style={{ padding: '0.85rem', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#22c55e' }}>{analysisResult.recruiterScreenScore}%</div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Factor 5: Recruiter Telemetry</div>
-            </div>
+
+            <button
+              onClick={() => setShowCustomJD(!showCustomJD)}
+              className="btn btn-ghost btn-sm"
+              style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem', color: 'var(--text-dim)', gap: '0.3rem' }}
+            >
+              {showCustomJD ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+              {showCustomJD ? 'Hide Custom JD' : 'Paste Custom JD'}
+            </button>
           </div>
 
-          {/* Main Feedback Loop Cards */}
-          <div className="card" style={{ padding: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
-              <div>
-                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <GitPullRequest size={17} color="#22c55e" /> Iterative Critique & Google XYZ Rewrite Loop
-                </h3>
-                <p style={{ fontSize: '0.76rem', color: 'var(--text-dim)', margin: '0.2rem 0 0' }}>
-                  The agent audited your actual experience and projects to diagnose weak phrasing and generate tailored rewrites:
-                </p>
-              </div>
-
-              <span className="badge badge-primary">
-                Google XYZ: Accomplished [X] by doing [Z] measured by [Y]
-              </span>
+          {showCustomJD && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              <textarea
+                className="textarea"
+                rows={3}
+                value={customJDText}
+                onChange={(e) => setCustomJDText(e.target.value)}
+                placeholder="Paste custom job description requirements..."
+                style={{ fontSize: '0.76rem', fontFamily: 'var(--font-mono)' }}
+              />
+              <button
+                onClick={() => executeAgentAudit(uploadedResume.rawText, targetRole)}
+                className="btn btn-primary btn-sm"
+                style={{ alignSelf: 'flex-end', fontSize: '0.72rem', padding: '0.25rem 0.65rem' }}
+              >
+                Re-Analyze
+              </button>
             </div>
+          )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {analysisResult.feedbackLoop?.map((item) => (
-                <div
-                  key={item.id}
+          {/* Matched Keywords */}
+          <div>
+            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#22c55e', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <CheckCircle size={13} /> Found in Resume ({analysisResult.matchedKeywords.length})
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+              {analysisResult.matchedKeywords.map((kw, i) => (
+                <span
+                  key={i}
                   style={{
-                    padding: '1rem',
-                    borderRadius: 'var(--radius-md)',
-                    background: 'rgba(9, 9, 11, 0.6)',
-                    border: '1px solid var(--border-subtle)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.65rem',
+                    fontSize: '0.72rem',
+                    padding: '0.2rem 0.5rem',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'rgba(34, 197, 94, 0.08)',
+                    border: '1px solid rgba(34, 197, 94, 0.2)',
+                    color: '#4ade80',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
                   }}
                 >
-                  {/* Before bullet */}
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-                      <span style={{ fontSize: '0.72rem', color: '#f87171', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        ❌ Original Bullet (Candidate Text)
-                      </span>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
-                        Critique: {item.critique}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', background: 'rgba(239, 68, 68, 0.06)', padding: '0.5rem 0.75rem', borderRadius: '4px', borderLeft: '3px solid #f87171' }}>
-                      "{item.beforeText}"
-                    </div>
-                  </div>
-
-                  {/* After rewrite */}
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-                      <span style={{ fontSize: '0.72rem', color: '#22c55e', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        ✨ Agent Google XYZ Rewrite (Tailored for {currentJD.company})
-                      </span>
-                      <button
-                        onClick={() => handleCopyRewrite(item.id, item.afterText)}
-                        className="btn btn-ghost btn-sm"
-                        style={{ padding: '0.15rem 0.5rem', fontSize: '0.72rem', color: copiedRewriteId === item.id ? '#22c55e' : 'var(--text-muted)' }}
-                      >
-                        {copiedRewriteId === item.id ? <CheckCheck size={12} /> : <Copy size={12} />}
-                        {copiedRewriteId === item.id ? 'Copied to Clipboard!' : 'Copy Rewrite'}
-                      </button>
-                    </div>
-                    <div style={{ fontSize: '0.84rem', color: 'var(--text-bright)', background: 'rgba(34, 197, 94, 0.08)', padding: '0.65rem 0.85rem', borderRadius: '4px', borderLeft: '3px solid #22c55e', lineHeight: '1.5', fontWeight: 500 }}>
-                      {item.afterText}
-                    </div>
-                    <div style={{ fontSize: '0.73rem', color: 'var(--text-dim)', marginTop: '0.3rem' }}>
-                      💡 <strong>Rationale:</strong> {item.rationale}
-                    </div>
-                  </div>
-                </div>
+                  <Check size={11} /> {kw}
+                </span>
               ))}
             </div>
           </div>
 
-          {/* Interactive Bullet Point Polish Sandbox */}
-          <div className="card" style={{ padding: '1.25rem' }}>
-            <h4 style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-bright)', margin: '0 0 0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Sparkles size={15} color="var(--primary)" /> Interactive Single-Bullet Polish Sandbox
-            </h4>
-            <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', margin: '0 0 0.85rem' }}>
-              Paste any bullet point from your projects or experience. The agent will run an immediate Google XYZ audit and transform it into an ATS-optimized accomplishment.
-            </p>
-
-            <div style={{ display: 'flex', gap: '0.65rem', marginBottom: '0.75rem' }}>
-              <input
-                type="text"
-                className="input"
-                style={{ flex: 1 }}
-                value={sandboxBullet}
-                onChange={(e) => setSandboxBullet(e.target.value)}
-                placeholder="Enter a project or work experience bullet point..."
-              />
-              <button onClick={handleTestSandboxBullet} className="btn btn-primary btn-sm">
-                Audit & Rewrite
-              </button>
+          {/* Missing Keywords (Click chip to copy) */}
+          <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '0.75rem' }}>
+            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#f87171', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <AlertTriangle size={13} /> Missing Keywords ({analysisResult.missingKeywords.length})
+              <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 400, marginLeft: '0.4rem' }}>
+                (Click to copy)
+              </span>
             </div>
 
-            {sandboxFeedback && (
-              <div style={{ padding: '0.85rem', background: 'rgba(9, 9, 11, 0.7)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
-                <div style={{ fontSize: '0.75rem', color: '#eab308', marginBottom: '0.35rem' }}>
-                  <strong>Diagnostic Critique:</strong> {sandboxFeedback.critique}
-                </div>
-                <div style={{ fontSize: '0.82rem', color: '#fafafa', background: 'rgba(34, 197, 94, 0.08)', padding: '0.5rem 0.75rem', borderRadius: '4px', borderLeft: '3px solid #22c55e' }}>
-                  <strong>XYZ Rewrite:</strong> {sandboxFeedback.rewrite}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 1: KEYWORD INTELLIGENCE & JD MATCH MATRIX */}
-      {activeWorkspaceTab === 'keywords' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.35fr', gap: '1.25rem' }}>
-          {/* Left Column: Target Role Benchmark & Custom JD */}
-          <div className="card" style={{ padding: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
-              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <Target size={16} /> Role Requirements
-              </h3>
-              <span className="badge badge-primary">{currentJD.package}</span>
-            </div>
-
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.5', marginBottom: '1rem', whiteSpace: 'pre-line', background: 'rgba(9, 9, 11, 0.4)', padding: '0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
-              {currentJD.text}
-            </div>
-
-            {/* Custom JD Editor Accordion */}
-            <div>
-              <button
-                onClick={() => setShowCustomJD(!showCustomJD)}
-                className="btn btn-ghost btn-sm"
-                style={{ fontSize: '0.76rem', color: 'var(--text-muted)', padding: '0.2rem 0', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-              >
-                {showCustomJD ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                {showCustomJD ? 'Close Custom JD Editor' : 'Paste Custom Job Description'}
-              </button>
-
-              {showCustomJD && (
-                <div style={{ marginTop: '0.65rem' }}>
-                  <textarea
-                    className="textarea"
-                    rows={5}
-                    value={customJDText}
-                    onChange={(e) => setCustomJDText(e.target.value)}
-                    placeholder="Paste job description requirements here..."
-                    style={{ fontSize: '0.78rem', fontFamily: 'var(--font-mono)' }}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.4rem' }}>
-                    <button
-                      onClick={() => executeAgentAudit(uploadedResume.rawText, targetRole)}
-                      className="btn btn-primary btn-sm"
-                      style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
-                    >
-                      Audit Against Custom JD
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right Column: Keyword Match vs Missing Matrix */}
-          <div className="card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {/* Matched Keywords Grid */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
-                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#22c55e', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <CheckCircle size={15} />
-                  Found in Your Resume ({analysisResult.matchedKeywords.length})
-                </div>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>High-Frequency JD Match</span>
-              </div>
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                {analysisResult.matchedKeywords.map((kw, i) => (
-                  <span
-                    key={i}
-                    style={{
-                      fontSize: '0.75rem',
-                      padding: '0.25rem 0.6rem',
-                      borderRadius: 'var(--radius-sm)',
-                      background: 'rgba(34, 197, 94, 0.1)',
-                      border: '1px solid rgba(34, 197, 94, 0.25)',
-                      color: '#4ade80',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                    }}
-                  >
-                    <Check size={12} /> {kw}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+              {analysisResult.missingKeywords.map((kw, i) => (
+                <span
+                  key={i}
+                  onClick={() => handleCopyKeyword(kw.name)}
+                  style={{
+                    fontSize: '0.72rem',
+                    padding: '0.25rem 0.55rem',
+                    borderRadius: 'var(--radius-sm)',
+                    background: kw.priority === 'High' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(234, 179, 8, 0.08)',
+                    border: kw.priority === 'High' ? '1px solid rgba(239, 68, 68, 0.25)' : '1px solid rgba(234, 179, 8, 0.25)',
+                    color: kw.priority === 'High' ? '#f87171' : '#facc15',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                    transition: 'var(--transition-fast)',
+                  }}
+                  title="Click to copy keyword"
+                >
+                  <span style={{ fontWeight: 700, fontSize: '0.65rem' }}>
+                    {kw.priority === 'High' ? '●' : '○'}
                   </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Critical Missing Keywords with 1-Click Copy */}
-            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
-                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#f87171', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <AlertTriangle size={15} />
-                  Missing Required Keywords ({analysisResult.missingKeywords.length})
-                </div>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Click chip to copy</span>
-              </div>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-                Adding these keywords into your Projects or Skills section increases shortlisting probability by up to 28%:
-              </p>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.55rem' }}>
-                {analysisResult.missingKeywords.map((kw, i) => (
-                  <div
-                    key={i}
-                    onClick={() => handleCopyKeyword(kw.name)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '0.55rem 0.75rem',
-                      borderRadius: 'var(--radius-sm)',
-                      background: 'rgba(239, 68, 68, 0.08)',
-                      border: '1px solid rgba(239, 68, 68, 0.2)',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', overflow: 'hidden' }}>
-                      <span
-                        style={{
-                          fontSize: '0.65rem',
-                          padding: '1px 5px',
-                          borderRadius: '3px',
-                          background: kw.priority === 'High' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(234, 179, 8, 0.2)',
-                          color: kw.priority === 'High' ? '#f87171' : '#facc15',
-                          fontWeight: 700,
-                        }}
-                      >
-                        {kw.priority}
-                      </span>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-bright)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                        + {kw.name}
-                      </span>
-                    </div>
-
-                    <div style={{ color: 'var(--text-dim)', flexShrink: 0, marginLeft: '0.4rem' }}>
-                      {copiedKeyword === kw.name ? (
-                        <span style={{ color: '#22c55e', fontSize: '0.72rem', fontWeight: 700 }}>Copied!</span>
-                      ) : (
-                        <Copy size={13} />
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  +{kw.name}
+                  {copiedKeyword === kw.name && (
+                    <span style={{ color: '#22c55e', fontSize: '0.65rem', fontWeight: 700 }}>✓</span>
+                  )}
+                </span>
+              ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* TAB 2: SECTION HEALTH AUDIT (2X3 BALANCED GRID) */}
+      {/* TAB 3: SECTION AUDIT */}
       {activeWorkspaceTab === 'sections' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
           {analysisResult.sectionAudit.map((sec, i) => (
             <div
               key={i}
               className="card"
               style={{
-                padding: '1.15rem',
+                padding: '0.85rem',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
                 border: sec.status === 'pass' ? '1px solid var(--border-subtle)' : '1px solid rgba(234, 179, 8, 0.3)',
                 background: 'var(--bg-card)',
+                gap: '0.5rem',
               }}
             >
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                  <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                  <h4 style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0 }}>
                     {sec.section}
                   </h4>
                   <span
                     className={sec.status === 'pass' ? 'badge badge-success' : 'badge badge-warning'}
-                    style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}
+                    style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}
                   >
                     {sec.score}
                   </span>
                 </div>
-
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.45', margin: '0 0 0.85rem' }}>
+                <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', lineHeight: '1.4', margin: 0 }}>
                   {sec.summary}
                 </p>
               </div>
 
               <div
                 style={{
-                  padding: '0.5rem 0.65rem',
+                  padding: '0.35rem 0.5rem',
                   borderRadius: 'var(--radius-sm)',
                   background: 'rgba(9, 9, 11, 0.5)',
-                  border: '1px solid var(--border-subtle)',
-                  fontSize: '0.72rem',
-                  color: sec.status === 'pass' ? 'var(--text-main)' : '#facc15',
+                  fontSize: '0.7rem',
+                  color: sec.status === 'pass' ? 'var(--text-dim)' : '#facc15',
                 }}
               >
                 💡 {sec.tip}
@@ -1129,99 +928,71 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
         </div>
       )}
 
-      {/* TAB 3: RECRUITER OPTIMIZATION CHECKLIST */}
+      {/* TAB 4: CHECKLIST */}
       {activeWorkspaceTab === 'checklist' && (
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <div>
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <CheckCircle2 size={17} color="#22c55e" /> Actionable Shortlisting Recommendations
-              </h3>
-              <p style={{ fontSize: '0.76rem', color: 'var(--text-dim)', margin: '0.2rem 0 0' }}>
-                Check items as you apply them to your resume. Each verified resolution boosts your ATS score dynamically.
-              </p>
-            </div>
-
-            {/* Filter Pills */}
-            <div style={{ display: 'flex', gap: '0.35rem' }}>
-              <button
-                onClick={() => setChecklistFilter('all')}
-                className={`btn btn-sm ${checklistFilter === 'all' ? 'btn-primary' : 'btn-ghost'}`}
-                style={{ fontSize: '0.72rem', padding: '0.25rem 0.6rem' }}
-              >
-                All ({analysisResult.checklist.length})
-              </button>
-              <button
-                onClick={() => setChecklistFilter('high')}
-                className={`btn btn-sm ${checklistFilter === 'high' ? 'btn-primary' : 'btn-ghost'}`}
-                style={{ fontSize: '0.72rem', padding: '0.25rem 0.6rem' }}
-              >
-                High Impact
-              </button>
-              <button
-                onClick={() => setChecklistFilter('medium')}
-                className={`btn btn-sm ${checklistFilter === 'medium' ? 'btn-primary' : 'btn-ghost'}`}
-                style={{ fontSize: '0.72rem', padding: '0.25rem 0.6rem' }}
-              >
-                Medium Impact
-              </button>
-            </div>
+        <div className="card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <CheckCircle2 size={15} color="#22c55e" /> Actionable Fixes ({analysisResult.checklist.length})
+            </h3>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+              Check to apply
+            </span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-            {filteredChecklist.map((item) => {
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+            {analysisResult.checklist.map((item) => {
               const isResolved = resolvedChecklist[item.id];
               return (
                 <div
                   key={item.id}
                   onClick={() => toggleChecklistItem(item.id)}
                   style={{
-                    padding: '0.75rem 1rem',
+                    padding: '0.55rem 0.75rem',
                     borderRadius: 'var(--radius-sm)',
-                    background: isResolved ? 'rgba(34, 197, 94, 0.05)' : 'rgba(9, 9, 11, 0.4)',
-                    border: isResolved ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid var(--border-subtle)',
+                    background: isResolved ? 'rgba(34, 197, 94, 0.04)' : 'rgba(9, 9, 11, 0.4)',
+                    border: isResolved ? '1px solid rgba(34, 197, 94, 0.2)' : '1px solid var(--border-subtle)',
                     display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '0.75rem',
+                    alignItems: 'center',
+                    gap: '0.65rem',
                     cursor: 'pointer',
-                    transition: 'all 0.15s ease',
+                    transition: 'var(--transition-fast)',
                   }}
                 >
                   <input
                     type="checkbox"
                     checked={isResolved}
                     onChange={() => toggleChecklistItem(item.id)}
-                    style={{ marginTop: '3px', cursor: 'pointer', accentColor: '#22c55e' }}
+                    style={{ cursor: 'pointer', accentColor: '#22c55e' }}
                   />
 
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                      <span
-                        style={{
-                          fontSize: '0.65rem',
-                          padding: '1px 5px',
-                          borderRadius: '3px',
-                          background: item.impact === 'High' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(234, 179, 8, 0.15)',
-                          color: item.impact === 'High' ? '#f87171' : '#facc15',
-                          fontWeight: 700,
-                        }}
-                      >
-                        {item.impact} Impact
-                      </span>
-                      <strong
-                        style={{
-                          fontSize: '0.84rem',
-                          color: isResolved ? '#4ade80' : 'var(--text-bright)',
-                          textDecoration: isResolved ? 'line-through' : 'none',
-                        }}
-                      >
-                        {item.title}
-                      </strong>
-                    </div>
+                  <span
+                    style={{
+                      fontSize: '0.62rem',
+                      padding: '1px 5px',
+                      borderRadius: '3px',
+                      background: item.impact === 'High' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(234, 179, 8, 0.15)',
+                      color: item.impact === 'High' ? '#f87171' : '#facc15',
+                      fontWeight: 700,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {item.impact}
+                  </span>
 
-                    <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                  <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+                    <strong
+                      style={{
+                        fontSize: '0.78rem',
+                        color: isResolved ? '#4ade80' : 'var(--text-bright)',
+                        textDecoration: isResolved ? 'line-through' : 'none',
+                      }}
+                    >
+                      {item.title}
+                    </strong>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textAlign: 'right' }}>
                       {item.description}
-                    </div>
+                    </span>
                   </div>
                 </div>
               );
@@ -1230,34 +1001,39 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
         </div>
       )}
 
-      {/* TAB 4: EXTRACTED ATS TEXT STREAM */}
+      {/* TAB 5: PARSED ATS STREAM */}
       {activeWorkspaceTab === 'parsed_text' && (
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-            <div>
-              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <Code size={16} /> Raw Linear ATS Parse Stream
-              </h3>
-              <p style={{ fontSize: '0.74rem', color: 'var(--text-dim)', margin: '0.15rem 0 0' }}>
-                This is the exact tokenized text stream consumed by Fortune 500 ATS parsers without styling or column breaks.
-              </p>
-            </div>
-            <span className="badge badge-success">0 Unparseable Characters</span>
+        <div className="card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-bright)' }}>
+              Linear ATS Parse Output
+            </span>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(uploadedResume.rawText);
+                alert('Copied parsed ATS text to clipboard!');
+              }}
+              className="btn btn-outline btn-sm"
+              style={{ fontSize: '0.7rem', padding: '0.2rem 0.55rem', gap: '0.3rem' }}
+            >
+              <Copy size={12} /> Copy Raw Stream
+            </button>
           </div>
 
           <pre
             style={{
-              padding: '1rem',
+              padding: '0.75rem',
               background: '#09090b',
               borderRadius: 'var(--radius-sm)',
               border: '1px solid var(--border-subtle)',
-              fontSize: '0.78rem',
+              fontSize: '0.74rem',
               fontFamily: 'var(--font-mono)',
               color: 'var(--text-main)',
-              lineHeight: '1.6',
+              lineHeight: '1.5',
               whiteSpace: 'pre-wrap',
-              maxHeight: '380px',
+              maxHeight: '260px',
               overflowY: 'auto',
+              margin: 0,
             }}
           >
             {uploadedResume.rawText}
