@@ -92,9 +92,23 @@ export const MockInterviewer = ({ userProfile = {} }) => {
   const [hasGeminiKey, setHasGeminiKey] = useState(() => orchestrator.getStatus().hasKey);
 
   useEffect(() => {
-    return orchestrator.subscribe(status => {
+    let isMounted = true;
+    // The app can use a server-side key, which is intentionally not exposed to
+    // the browser and therefore is not reflected by orchestrator.getStatus().
+    fetch('/api/gemini/status')
+      .then(response => response.ok ? response.json() : null)
+      .then(status => {
+        if (isMounted && status?.available) setHasGeminiKey(true);
+      })
+      .catch(() => {});
+
+    const unsubscribe = orchestrator.subscribe(status => {
       setHasGeminiKey(status.hasKey);
     });
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   // 4. Live Audio Input & Real-Time Interpretation
