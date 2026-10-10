@@ -31,7 +31,10 @@ import {
   Eye,
   CheckCircle2,
   SlidersHorizontal,
-  Info
+  Info,
+  Wand2,
+  GitPullRequest,
+  CheckCheck
 } from 'lucide-react';
 import {
   runResumeAuditAgent,
@@ -764,19 +767,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
           4. WORKSPACE TAB CONTENTS (COMPACT & PRECISE)
           ═════════════════════════════════════════════════════════════ */}
 
-      {/* TAB 1: KEYWORDS */}
-      {activeWorkspaceTab === 'keywords' && (
-        <div className="card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-          {/* Target Header with Collapsible JD Input */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.6rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Target size={15} color="var(--primary)" />
-              <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-bright)' }}>
-                Target Keywords for {currentJD.role}
-              </span>
-              <span className="badge badge-primary" style={{ fontSize: '0.68rem' }}>{currentJD.company}</span>
-=======
-      {/* TAB: AGENT AUDIT & FEEDBACK LOOP (NEW NON-GENERIC REWRITES) */}
+      {/* TAB: AGENT AUDIT & FEEDBACK LOOP */}
       {activeWorkspaceTab === 'feedback_loop' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           {/* 5-Factor Diagnostic Score Ribbon */}
@@ -807,58 +798,30 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
               <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#10b981' }}>{analysisResult.recruiterScreenScore}%</div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Factor 5: Recruiter Telemetry</div>
             </div>
-
-            <button
-              onClick={() => setShowCustomJD(!showCustomJD)}
-              className="btn btn-ghost btn-sm"
-              style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem', color: 'var(--text-dim)', gap: '0.3rem' }}
-            >
-              {showCustomJD ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-              {showCustomJD ? 'Hide Custom JD' : 'Paste Custom JD'}
-            </button>
           </div>
 
-          {showCustomJD && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              <textarea
-                className="textarea"
-                rows={3}
-                value={customJDText}
-                onChange={(e) => setCustomJDText(e.target.value)}
-                placeholder="Paste custom job description requirements..."
-                style={{ fontSize: '0.76rem', fontFamily: 'var(--font-mono)' }}
-              />
-              <button
-                onClick={() => executeAgentAudit(uploadedResume.rawText, targetRole)}
-                className="btn btn-primary btn-sm"
-                style={{ alignSelf: 'flex-end', fontSize: '0.72rem', padding: '0.25rem 0.65rem' }}
-              >
-                Re-Analyze
-              </button>
-            </div>
-          )}
+          {/* Main Feedback Loop Cards */}
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <GitPullRequest size={17} color="#10b981" /> Iterative Critique & Google XYZ Rewrite Loop
+                </h3>
+                <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', margin: '0.2rem 0 0' }}>
+                  The agent audited your actual experience and projects to diagnose weak phrasing and generate tailored rewrites:
+                </p>
+              </div>
 
-          {/* Matched Keywords */}
-          <div>
-            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#22c55e', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <CheckCircle size={13} /> Found in Resume ({analysisResult.matchedKeywords.length})
+              <span className="badge badge-primary">
+                Google XYZ: Accomplished [X] by doing [Z] measured by [Y]
+              </span>
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-              {analysisResult.matchedKeywords.map((kw, i) => (
-                <span
-                  key={i}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {analysisResult.feedbackLoop?.map((item) => (
+                <div
+                  key={item.id}
                   style={{
-<<<<<<< HEAD
-                    fontSize: '0.72rem',
-                    padding: '0.2rem 0.5rem',
-                    borderRadius: 'var(--radius-sm)',
-                    background: 'rgba(34, 197, 94, 0.08)',
-                    border: '1px solid rgba(34, 197, 94, 0.2)',
-                    color: '#4ade80',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-=======
                     padding: '1rem',
                     borderRadius: 'var(--radius-md)',
                     background: 'var(--bg-glass-strong)',
@@ -866,48 +829,73 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '0.65rem',
->>>>>>> 51241a4 (style(resume-analyzer): replace dark background containers with light glassmorphism variables for clean contrast)
                   }}
                 >
-                  <Check size={11} /> {kw}
-                </span>
+                  {/* Before bullet */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                      <span style={{ fontSize: '0.72rem', color: '#f87171', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        ❌ Original Bullet (Candidate Text)
+                      </span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        Critique: {item.critique}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', background: 'rgba(239, 68, 68, 0.06)', padding: '0.5rem 0.75rem', borderRadius: '4px', borderLeft: '3px solid #f87171' }}>
+                      "{item.beforeText}"
+                    </div>
+                  </div>
+
+                  {/* After rewrite */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                      <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        ✨ Agent Google XYZ Rewrite (Tailored for {currentJD.company})
+                      </span>
+                      <button
+                        onClick={() => handleCopyRewrite(item.id, item.afterText)}
+                        className="btn btn-ghost btn-sm"
+                        style={{ padding: '0.15rem 0.5rem', fontSize: '0.72rem', color: copiedRewriteId === item.id ? '#10b981' : 'var(--text-muted)' }}
+                      >
+                        {copiedRewriteId === item.id ? <CheckCheck size={12} /> : <Copy size={12} />}
+                        {copiedRewriteId === item.id ? 'Copied to Clipboard!' : 'Copy Rewrite'}
+                      </button>
+                    </div>
+                    <div style={{ fontSize: '0.84rem', color: 'var(--text-bright)', background: 'rgba(16, 185, 129, 0.08)', padding: '0.65rem 0.85rem', borderRadius: '4px', borderLeft: '3px solid #10b981', lineHeight: '1.5', fontWeight: 500 }}>
+                      {item.afterText}
+                    </div>
+                    <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
+                      💡 <strong>Rationale:</strong> {item.rationale}
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
 
-          {/* Missing Keywords (Click chip to copy) */}
-          <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '0.75rem' }}>
-            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#f87171', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <AlertTriangle size={13} /> Missing Keywords ({analysisResult.missingKeywords.length})
-              <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 400, marginLeft: '0.4rem' }}>
-                (Click to copy)
-              </span>
+          {/* Interactive Bullet Point Polish Sandbox */}
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <h4 style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-bright)', margin: '0 0 0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Sparkles size={15} color="var(--primary)" /> Interactive Single-Bullet Polish Sandbox
+            </h4>
+            <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', margin: '0 0 0.85rem' }}>
+              Paste any bullet point from your projects or experience. The agent will run an immediate Google XYZ audit and transform it into an ATS-optimized accomplishment.
+            </p>
+
+            <div style={{ display: 'flex', gap: '0.65rem', marginBottom: '0.75rem' }}>
+              <input
+                type="text"
+                className="input"
+                style={{ flex: 1 }}
+                value={sandboxBullet}
+                onChange={(e) => setSandboxBullet(e.target.value)}
+                placeholder="Enter a project or work experience bullet point..."
+              />
+              <button onClick={handleTestSandboxBullet} className="btn btn-primary btn-sm">
+                Audit & Rewrite
+              </button>
             </div>
 
-<<<<<<< HEAD
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-              {analysisResult.missingKeywords.map((kw, i) => (
-                <span
-                  key={i}
-                  onClick={() => handleCopyKeyword(kw.name)}
-                  style={{
-                    fontSize: '0.72rem',
-                    padding: '0.25rem 0.55rem',
-                    borderRadius: 'var(--radius-sm)',
-                    background: kw.priority === 'High' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(234, 179, 8, 0.08)',
-                    border: kw.priority === 'High' ? '1px solid rgba(239, 68, 68, 0.25)' : '1px solid rgba(234, 179, 8, 0.25)',
-                    color: kw.priority === 'High' ? '#f87171' : '#facc15',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.3rem',
-                    transition: 'var(--transition-fast)',
-                  }}
-                  title="Click to copy keyword"
-                >
-                  <span style={{ fontWeight: 700, fontSize: '0.65rem' }}>
-                    {kw.priority === 'High' ? '●' : '○'}
-=======
             {sandboxFeedback && (
               <div style={{ padding: '0.85rem', background: 'var(--bg-glass-strong)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-glass)' }}>
                 <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginBottom: '0.35rem' }}>
@@ -922,7 +910,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
         </div>
       )}
 
-      {/* TAB 1: KEYWORD INTELLIGENCE & JD MATCH MATRIX */}
+      {/* TAB: KEYWORD INTELLIGENCE & JD MATCH MATRIX */}
       {activeWorkspaceTab === 'keywords' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.35fr', gap: '1.25rem' }}>
           {/* Left Column: Target Role Benchmark & Custom JD */}
@@ -978,11 +966,11 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
             {/* Matched Keywords Grid */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
-                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#22c55e', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <CheckCircle size={15} />
                   Found in Your Resume ({analysisResult.matchedKeywords.length})
                 </div>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>High-Frequency JD Match</span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>High-Frequency JD Match</span>
               </div>
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
@@ -993,23 +981,78 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                       fontSize: '0.75rem',
                       padding: '0.25rem 0.6rem',
                       borderRadius: 'var(--radius-sm)',
-                      background: 'rgba(34, 197, 94, 0.1)',
-                      border: '1px solid rgba(34, 197, 94, 0.25)',
-                      color: '#4ade80',
+                      background: 'rgba(16, 185, 129, 0.1)',
+                      border: '1px solid rgba(16, 185, 129, 0.25)',
+                      color: '#10b981',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '0.35rem',
                     }}
                   >
                     <Check size={12} /> {kw}
->>>>>>> 51241a4 (style(resume-analyzer): replace dark background containers with light glassmorphism variables for clean contrast)
                   </span>
-                  +{kw.name}
-                  {copiedKeyword === kw.name && (
-                    <span style={{ color: '#22c55e', fontSize: '0.65rem', fontWeight: 700 }}>✓</span>
-                  )}
-                </span>
-              ))}
+                ))}
+              </div>
+            </div>
+
+            {/* Critical Missing Keywords */}
+            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#f87171', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <AlertTriangle size={15} />
+                  Missing Required Keywords ({analysisResult.missingKeywords.length})
+                </div>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Click chip to copy</span>
+              </div>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                Adding these keywords into your Projects or Skills section increases shortlisting probability:
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.55rem' }}>
+                {analysisResult.missingKeywords.map((kw, i) => (
+                  <div
+                    key={i}
+                    onClick={() => handleCopyKeyword(kw.name)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.55rem 0.75rem',
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'rgba(239, 68, 68, 0.08)',
+                      border: '1px solid rgba(239, 68, 68, 0.2)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', overflow: 'hidden' }}>
+                      <span
+                        style={{
+                          fontSize: '0.65rem',
+                          padding: '1px 5px',
+                          borderRadius: '3px',
+                          background: kw.priority === 'High' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(234, 179, 8, 0.2)',
+                          color: kw.priority === 'High' ? '#f87171' : '#f59e0b',
+                          fontWeight: 700,
+                        }}
+                      >
+                        {kw.priority}
+                      </span>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-main)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                        + {kw.name}
+                      </span>
+                    </div>
+
+                    <div style={{ color: 'var(--text-muted)', flexShrink: 0, marginLeft: '0.4rem' }}>
+                      {copiedKeyword === kw.name ? (
+                        <span style={{ color: '#10b981', fontSize: '0.72rem', fontWeight: 700 }}>Copied!</span>
+                      ) : (
+                        <Copy size={13} />
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -1053,16 +1096,10 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                 style={{
                   padding: '0.35rem 0.5rem',
                   borderRadius: 'var(--radius-sm)',
-<<<<<<< HEAD
-                  background: 'rgba(9, 9, 11, 0.5)',
-                  fontSize: '0.7rem',
-                  color: sec.status === 'pass' ? 'var(--text-dim)' : '#facc15',
-=======
                   background: 'var(--bg-glass-strong)',
                   border: '1px solid var(--border-glass)',
                   fontSize: '0.72rem',
                   color: sec.status === 'pass' ? 'var(--text-main)' : '#f59e0b',
->>>>>>> 51241a4 (style(resume-analyzer): replace dark background containers with light glassmorphism variables for clean contrast)
                 }}
               >
                 💡 {sec.tip}
@@ -1094,13 +1131,8 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                   style={{
                     padding: '0.55rem 0.75rem',
                     borderRadius: 'var(--radius-sm)',
-<<<<<<< HEAD
-                    background: isResolved ? 'rgba(34, 197, 94, 0.04)' : 'rgba(9, 9, 11, 0.4)',
-                    border: isResolved ? '1px solid rgba(34, 197, 94, 0.2)' : '1px solid var(--border-subtle)',
-=======
                     background: isResolved ? 'rgba(16, 185, 129, 0.08)' : 'var(--bg-glass-strong)',
                     border: isResolved ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-glass)',
->>>>>>> 51241a4 (style(resume-analyzer): replace dark background containers with light glassmorphism variables for clean contrast)
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.65rem',
@@ -1171,19 +1203,11 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
 
           <pre
             style={{
-<<<<<<< HEAD
-              padding: '0.75rem',
-              background: '#09090b',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-subtle)',
-              fontSize: '0.74rem',
-=======
               padding: '1rem',
               background: 'var(--bg-glass-strong)',
               borderRadius: 'var(--radius-sm)',
               border: '1px solid var(--border-glass)',
               fontSize: '0.78rem',
->>>>>>> 51241a4 (style(resume-analyzer): replace dark background containers with light glassmorphism variables for clean contrast)
               fontFamily: 'var(--font-mono)',
               color: 'var(--text-main)',
               lineHeight: '1.5',
