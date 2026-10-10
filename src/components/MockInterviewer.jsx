@@ -35,7 +35,10 @@ import {
   Trash2,
   HelpCircle,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Keyboard,
+  FastForward,
+  Check
 } from 'lucide-react';
 import { MOCK_INTERVIEW_SESSIONS } from '../data/mockData';
 import { useMediaConnectivity } from '../hooks/useMediaConnectivity';
@@ -99,9 +102,13 @@ export const MockInterviewer = ({ userProfile = {} }) => {
   const [liveSpokenTranscript, setLiveSpokenTranscript] = useState('');
   const [liveInterimSnippet, setLiveInterimSnippet] = useState('');
   const [liveSpeechMetrics, setLiveSpeechMetrics] = useState(null);
+  const [candidateAnswerText, setCandidateAnswerText] = useState('');
+  const [inputMode, setInputMode] = useState('voice'); // 'voice' | 'type'
+  const [speechErrorNotice, setSpeechErrorNotice] = useState(null);
   const liveRecognizerRef = useRef(null);
   const speechSecondsRef = useRef(0);
   const speechTimerIntervalRef = useRef(null);
+  const ttsTimeoutRef = useRef(null);
 
   // Accumulated speech telemetry across the entire interview
   const sessionTranscriptsRef = useRef([]);
@@ -208,6 +215,22 @@ export const MockInterviewer = ({ userProfile = {} }) => {
   }, [messages]);
 
   // ─────────────────────────────────────────────────────────────
+  // ANSWER INPUT & REAL-TIME SPEECH/TYPING METRICS
+  // ─────────────────────────────────────────────────────────────
+  const handleUpdateAnswerText = (text) => {
+    setCandidateAnswerText(text);
+    if (!text.trim()) {
+      setLiveSpeechMetrics(null);
+      return;
+    }
+    const words = text.trim().split(/\s+/).filter(Boolean).length;
+    const roundKeywords = selectedRound?.keywordsExpected || [];
+    const simulatedElapsed = Math.max(1, speechSecondsRef.current || Math.round(words / 2.2));
+    const metrics = analyzeSpeechInRealTime(text, simulatedElapsed, { keywords: roundKeywords });
+    setLiveSpeechMetrics(metrics);
+  };
+
+  // ─────────────────────────────────────────────────────────────
   // SPEECH RECOGNITION & AUTOMATIC MIC ACTIVATION
   // ─────────────────────────────────────────────────────────────
   const startSpeechRecognition = async () => {
@@ -232,6 +255,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
         onTranscript: ({ transcript, interim }) => {
           setLiveSpokenTranscript(transcript);
           setLiveInterimSnippet(interim);
+          setCandidateAnswerText(transcript);
 
           const metrics = analyzeSpeechInRealTime(
             transcript,
@@ -263,6 +287,13 @@ export const MockInterviewer = ({ userProfile = {} }) => {
         onError: (err) => {
           console.warn('Speech recognition error:', err);
           setIsMicListening(false);
+          const errCode = err?.error || err?.message || 'network';
+          if (errCode === 'network' || errCode === 'not-allowed' || errCode === 'service-not-allowed') {
+            setSpeechErrorNotice(
+              '⚠️ Live speech recognition cloud service is unreachable or blocked on this connection. Keyboard Input mode has been enabled so you can type your answers directly without interruption!'
+            );
+            setInputMode('type');
+          }
         },
       });
     }
@@ -270,6 +301,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
     const started = liveRecognizerRef.current.start({ lang: 'en-IN', continuous: true });
     if (started) {
       setIsMicListening(true);
+      setSpeechErrorNotice(null);
     }
   };
 
@@ -287,10 +319,26 @@ export const MockInterviewer = ({ userProfile = {} }) => {
   // Automatically start candidate mic once interviewer ends sentence
   const autoStartMic = () => {
     if (isFinished || isTerminatedByProctor) return;
+    if (inputMode === 'type') return; // Do not auto-open mic if user chose typing mode
     // 400ms pause for natural conversational cadence before activating microphone
     setTimeout(() => {
       startSpeechRecognition();
     }, 450);
+  };
+
+  // Skip AI voice speaking to answer immediately
+  const handleSkipAiSpeaking = () => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    if (ttsTimeoutRef.current) {
+      clearTimeout(ttsTimeoutRef.current);
+      ttsTimeoutRef.current = null;
+    }
+    setIsAiSpeaking(false);
+    if (turnIndex < 3 && inputMode === 'voice') {
+      autoStartMic();
+    }
   };
 
   // Text-to-speech helper: speaks interviewer question and automatically triggers mic on conclusion
@@ -298,6 +346,11 @@ export const MockInterviewer = ({ userProfile = {} }) => {
     // If mic is currently open, pause it immediately so it doesn't transcribe the AI's question
     stopSpeechRecognition();
     setIsAiSpeaking(true);
+
+    if (ttsTimeoutRef.current) {
+      clearTimeout(ttsTimeoutRef.current);
+      ttsTimeoutRef.current = null;
+    }
 
     const onSentenceFinished = () => {
       setIsAiSpeaking(false);
@@ -312,8 +365,8 @@ export const MockInterviewer = ({ userProfile = {} }) => {
     if (!speechSynthesisEnabled) {
       // If AI voice output is toggled off, estimate conversational reading time, then auto-activate mic
       const words = (text || '').trim().split(/\s+/).filter(Boolean).length;
-      const readingDelay = Math.min(3600, Math.max(1600, Math.round((words / 3.0) * 1000)));
-      setTimeout(() => {
+      const readingDelay = Math.min(2500, Math.max(1200, Math.round((words / 3.5) * 1000)));
+      ttsTimeoutRef.current = setTimeout(() => {
         onSentenceFinished();
       }, readingDelay);
       return;
@@ -322,9 +375,9 @@ export const MockInterviewer = ({ userProfile = {} }) => {
     let isDone = false;
     const words = (text || '').trim().split(/\s+/).filter(Boolean).length;
     // Safety fallback timeout in case browser drops utterance.onend
-    const fallbackMs = Math.max(3500, Math.round((words / 2.0) * 1000) + 1500);
+    const fallbackMs = Math.max(3000, Math.round((words / 2.0) * 1000) + 1200);
 
-    const fallbackTimer = setTimeout(() => {
+    ttsTimeoutRef.current = setTimeout(() => {
       if (!isDone) {
         isDone = true;
         onSentenceFinished();
@@ -332,19 +385,19 @@ export const MockInterviewer = ({ userProfile = {} }) => {
     }, fallbackMs);
 
     playNaturalTTS(text, {
-      rate: 1.02,
+      rate: 1.05,
       pitch: 1.0,
       onEnd: () => {
         if (!isDone) {
           isDone = true;
-          clearTimeout(fallbackTimer);
+          if (ttsTimeoutRef.current) clearTimeout(ttsTimeoutRef.current);
           onSentenceFinished();
         }
       },
       onError: () => {
         if (!isDone) {
           isDone = true;
-          clearTimeout(fallbackTimer);
+          if (ttsTimeoutRef.current) clearTimeout(ttsTimeoutRef.current);
           onSentenceFinished();
         }
       },
@@ -365,13 +418,15 @@ export const MockInterviewer = ({ userProfile = {} }) => {
     setTerminationInfo(null);
     setProctorInfractions([]);
     setLiveSpokenTranscript('');
+    setCandidateAnswerText('');
     setLiveInterimSnippet('');
     setLiveSpeechMetrics(null);
+    setSpeechErrorNotice(null);
     sessionTranscriptsRef.current = [];
     sessionFillersRef.current = {};
     sessionPaceSamplesRef.current = [];
 
-    const starterText = round.starterPrompt;
+    const starterText = (round.starterPrompt || '').replace(/Aarav/g, candidateFirstName);
     setCurrentAiQuestion(starterText);
 
     const initialAiMessage = {
@@ -430,10 +485,8 @@ export const MockInterviewer = ({ userProfile = {} }) => {
         };
 
         setTimeout(() => {
-          const report = compileRealScorecard(messages, allTelemetry);
-          setEvaluationReport(report);
-          setIsFinished(true);
-        }, 1800);
+          concludeAndFinalizeReport(messages, allTelemetry);
+        }, 1200);
       },
     });
 
@@ -459,6 +512,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
     if (isMicListening) {
       stopSpeechRecognition();
     } else {
+      setInputMode('voice');
       startSpeechRecognition();
     }
   };
@@ -466,20 +520,145 @@ export const MockInterviewer = ({ userProfile = {} }) => {
   // Manual or clear reset of spoken response
   const handleClearSpeech = () => {
     setLiveSpokenTranscript('');
+    setCandidateAnswerText('');
     setLiveInterimSnippet('');
     setLiveSpeechMetrics(null);
     speechSecondsRef.current = 0;
   };
 
   // ─────────────────────────────────────────────────────────────
-  // SUBMIT CANDIDATE SPOKEN RESPONSE & GENERATE AI FOLLOW-UP
+  // QUICK SAMPLE ANSWERS (PER ROUND AND TURN)
   // ─────────────────────────────────────────────────────────────
-  const handleSubmitCandidateResponse = async () => {
-    const responseText = liveSpokenTranscript.trim();
+  const getSampleAnswersForRound = (round, turn) => {
+    if (!round) return [];
+    if (round.id === 'round_tech') {
+      if (turn === 0) {
+        return [
+          {
+            label: 'Process vs Thread (In-Depth)',
+            text: 'In Linux, a Process possesses its own independent virtual address space, memory pages (heap, stack, data), and a dedicated Process Control Block (PCB). A Thread is a lightweight execution unit inside a process that shares that address space, heap, and open file descriptors, while maintaining its own registers and stack. The Linux kernel CFS treats both as task_struct entities, but switching between threads minimizes cache and TLB flushing overhead.',
+          },
+          {
+            label: 'Concise Core Summary',
+            text: 'Processes are isolated execution environments requiring IPC like pipes or shared memory to communicate. Threads share process memory, allowing high-speed communication but requiring synchronization primitives like mutexes and semaphores to prevent race conditions.',
+          },
+        ];
+      } else if (turn === 1) {
+        return [
+          {
+            label: 'B+ Tree & Concurrency Scaling',
+            text: 'A B+ Tree index accelerates range queries by storing data pointers strictly in doubly linked leaf nodes, achieving O(log N) lookups. Under high write concurrency, however, frequent node splits and page rebalancing cause write amplification and lock contention on storage.',
+          },
+        ];
+      } else {
+        return [
+          {
+            label: 'Circuit Breaker & Partition Tolerance',
+            text: 'To prevent cascading outages during microservice network partitions, I implement the Circuit Breaker pattern with Closed, Open, and Half-Open states. If downstream errors exceed our error rate threshold, requests fail fast with cached fallbacks to protect system thread pools.',
+          },
+        ];
+      }
+    } else if (round.id === 'round_hr') {
+      if (turn === 0) {
+        return [
+          {
+            label: 'STAR Conflict Resolution',
+            text: 'During our college capstone project, our team disagreed on adopting React vs vanilla templates with only 3 weeks until submission. Using the STAR framework, I organized a comparative benchmark measuring build velocity and reusability, leading us to agree on a lightweight React component structure that shipped two days ahead of schedule.',
+          },
+        ];
+      } else {
+        return [
+          {
+            label: 'Code Quality vs Deadlines',
+            text: 'When mentoring developers under tight release schedules, I advocate for writing clean, modular code with unit tests for critical business logic while postponing premature optimizations. Technical debt accumulated today slows down tomorrow\'s velocity.',
+          },
+        ];
+      }
+    } else {
+      return [
+        {
+          label: 'Customer Obsession & Root Cause',
+          text: 'During our placement portal launch, unindexed queries caused database connection pool exhaustion under 2,000 concurrent students. I quickly initiated a temporary connection throttle, added Redis query caching, and ran a comprehensive 5-Why root cause audit to permanently prevent recurrence.',
+        },
+      ];
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // CONCLUDE AND FINALIZE REPORT (LOCAL + GEMINI)
+  // ─────────────────────────────────────────────────────────────
+  const concludeAndFinalizeReport = async (finalMessages = messages, customTelemetry = null) => {
+    stopMedia();
+    if (proctorRef.current) proctorRef.current.stop();
+    if (liveRecognizerRef.current) liveRecognizerRef.current.stop();
+    setIsMicListening(false);
+    setIsAiSpeaking(false);
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+
+    const telemetry = customTelemetry || (proctorRef.current
+      ? proctorRef.current.getTelemetry()
+      : {
+          totalStrikes: proctorInfractions.length,
+          maxStrikes: 3,
+          isTerminated: isTerminatedByProctor,
+          attentionPercentage: Math.max(30, 100 - proctorInfractions.length * 15),
+          infractionsLog: proctorInfractions,
+        });
+
+    const baseReport = compileRealScorecard(finalMessages, telemetry);
+    setEvaluationReport(baseReport);
+    setIsFinished(true);
+
+    try {
+      const scorecardRes = await generateInterviewScorecard({
+        roundTitle: selectedRound.title,
+        company: selectedRound.company,
+        roundType: selectedRound.type,
+        candidateName,
+        messages: finalMessages,
+        telemetry,
+      });
+
+      if (scorecardRes.success && scorecardRes.report) {
+        const gr = scorecardRes.report;
+        setEvaluationReport(prev => {
+          const updated = { ...(prev || baseReport) };
+          if (gr.overallScore) updated.overallScore = Math.round((updated.overallScore + gr.overallScore) / 2);
+          if (gr.technicalScore && updated.metrics) updated.metrics.technicalDepth = gr.technicalScore;
+          if (gr.summary) updated.aiSummary = gr.summary;
+          if (gr.verdict) updated.aiVerdict = gr.verdict;
+          if (Array.isArray(gr.strengths) && gr.strengths.length > 0) {
+            updated.strengths = [...gr.strengths, ...updated.strengths.slice(0, 1)];
+          }
+          if (Array.isArray(gr.improvements) && gr.improvements.length > 0) {
+            updated.improvements = [...gr.improvements, ...updated.improvements.slice(0, 1)];
+          }
+          recordInterviewEvaluation(updated);
+          return updated;
+        });
+      }
+    } catch (_) {}
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // SUBMIT CANDIDATE SPOKEN OR TYPED RESPONSE & GENERATE AI FOLLOW-UP
+  // ─────────────────────────────────────────────────────────────
+  const handleSubmitCandidateResponse = async (forcedText = null) => {
+    const responseText = (typeof forcedText === 'string' ? forcedText : (candidateAnswerText || liveSpokenTranscript)).trim();
     if (!responseText) return;
 
     // Immediately stop mic while AI evaluates and speaks the next sentence
     stopSpeechRecognition();
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    if (ttsTimeoutRef.current) {
+      clearTimeout(ttsTimeoutRef.current);
+      ttsTimeoutRef.current = null;
+    }
+    setIsAiSpeaking(false);
 
     const newUserMsg = {
       sender: 'candidate',
@@ -499,9 +678,11 @@ export const MockInterviewer = ({ userProfile = {} }) => {
     const updatedMessages = [...messages, newUserMsg];
     setTurnIndex(nextTurn);
     setMessages(updatedMessages);
+    setCandidateAnswerText('');
     setLiveSpokenTranscript('');
     setLiveInterimSnippet('');
     setLiveSpeechMetrics(null);
+    setSpeechErrorNotice(null);
     speechSecondsRef.current = 0;
     setIsAiThinking(true);
 
@@ -546,46 +727,12 @@ export const MockInterviewer = ({ userProfile = {} }) => {
     setMessages(finalMessages);
 
     if (nextTurn >= 3) {
-      // Conclude after 3 full turns: AI speaks closing reflection, then compile scorecard with Gemini
-      speakText(aiFollowUp, async () => {
-        stopMedia();
-        if (proctorRef.current) proctorRef.current.stop();
-        const telemetry = proctorRef.current
-          ? proctorRef.current.getTelemetry()
-          : { totalStrikes: 0, attentionPercentage: 100, infractionsLog: [] };
-
-        const baseReport = compileRealScorecard(finalMessages, telemetry);
-
-        try {
-          const scorecardRes = await generateInterviewScorecard({
-            roundTitle: selectedRound.title,
-            company: selectedRound.company,
-            roundType: selectedRound.type,
-            candidateName,
-            messages: finalMessages,
-            telemetry,
-          });
-
-          if (scorecardRes.success && scorecardRes.report) {
-            const gr = scorecardRes.report;
-            if (gr.overallScore) baseReport.overallReadiness = Math.round((baseReport.overallReadiness + gr.overallScore) / 2);
-            if (gr.technicalScore) baseReport.technicalDepth = gr.technicalScore;
-            if (gr.summary) baseReport.aiSummary = gr.summary;
-            if (gr.verdict) baseReport.aiVerdict = gr.verdict;
-            if (Array.isArray(gr.strengths) && gr.strengths.length > 0) {
-              baseReport.strengths = [...gr.strengths, ...baseReport.strengths.slice(0, 1)];
-            }
-            if (Array.isArray(gr.improvements) && gr.improvements.length > 0) {
-              baseReport.improvements = [...gr.improvements, ...baseReport.improvements.slice(0, 1)];
-            }
-          }
-        } catch (_) {}
-
-        setEvaluationReport(baseReport);
-        setIsFinished(true);
+      // Conclude after 3 full turns: AI speaks closing reflection, then compile scorecard
+      speakText(aiFollowUp, () => {
+        concludeAndFinalizeReport(finalMessages);
       });
     } else {
-      // Turn 1 and 2: speak follow-up question, automatically starting mic once sentence finishes!
+      // Turn 1 and 2: speak follow-up question
       speakText(aiFollowUp);
     }
   };
@@ -654,24 +801,7 @@ export const MockInterviewer = ({ userProfile = {} }) => {
   // CONCLUDE INTERVIEW MANUALLY
   // ─────────────────────────────────────────────────────────────
   const handleConcludeInterview = () => {
-    stopMedia();
-    if (proctorRef.current) proctorRef.current.stop();
-    if (liveRecognizerRef.current) liveRecognizerRef.current.stop();
-    setIsMicListening(false);
-
-    const telemetry = proctorRef.current
-      ? proctorRef.current.getTelemetry()
-      : {
-          totalStrikes: proctorInfractions.length,
-          maxStrikes: 3,
-          isTerminated: isTerminatedByProctor,
-          attentionPercentage: Math.max(30, 100 - proctorInfractions.length * 15),
-          infractionsLog: proctorInfractions,
-        };
-
-    const report = compileRealScorecard(messages, telemetry);
-    setEvaluationReport(report);
-    setIsFinished(true);
+    concludeAndFinalizeReport(messages);
   };
 
   // ─────────────────────────────────────────────────────────────
@@ -1408,19 +1538,31 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                   marginBottom: '0.85rem',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.4rem' }}>
                   <strong style={{ fontSize: '0.82rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                     <Sparkles size={14} />
                     {selectedRound.interviewerName} asks:
                   </strong>
-                  <button
-                    onClick={() => speakText(currentAiQuestion)}
-                    className="btn btn-ghost btn-sm"
-                    style={{ padding: '0.15rem 0.4rem', fontSize: '0.7rem' }}
-                    title="Replay Voice"
-                  >
-                    <Volume1 size={13} /> Replay
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    {isAiSpeaking && (
+                      <button
+                        onClick={handleSkipAiSpeaking}
+                        className="btn btn-sm btn-accent"
+                        style={{ padding: '0.2rem 0.55rem', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                        title="Skip voice and start answering immediately"
+                      >
+                        <FastForward size={13} /> Skip Voice & Answer Now
+                      </button>
+                    )}
+                    <button
+                      onClick={() => speakText(currentAiQuestion)}
+                      className="btn btn-ghost btn-sm"
+                      style={{ padding: '0.15rem 0.4rem', fontSize: '0.7rem' }}
+                      title="Replay Voice"
+                    >
+                      <Volume1 size={13} /> Replay
+                    </button>
+                  </div>
                 </div>
                 <div style={{ fontSize: '0.9rem', lineHeight: '1.5', color: '#fafafa', fontWeight: 500 }}>
                   {currentAiQuestion}
@@ -1438,10 +1580,10 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                 )}
               </div>
 
-              {/* LIVE CANDIDATE AUDIO INTERPRETATION CONSOLE */}
-              <div className="live-interpretation-console" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                {/* Status Bar */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {/* LIVE CANDIDATE AUDIO / TYPING INTERPRETATION CONSOLE */}
+              <div className="live-interpretation-console" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                {/* Status Bar & Input Mode Switcher */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                     <span
                       className="pulse-dot"
@@ -1450,52 +1592,213 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                         boxShadow: isAiSpeaking ? '0 0 8px var(--primary)' : isMicListening ? '0 0 8px #22c55e' : 'none',
                       }}
                     />
-                    <strong style={{ fontSize: '0.8rem', color: '#ffffff' }}>
+                    <strong style={{ fontSize: '0.78rem', color: '#ffffff' }}>
                       {isAiSpeaking
-                        ? '🤖 Interviewer Speaking... (Mic activates automatically when sentence ends)'
+                        ? '🤖 Interviewer Speaking... (Mic activates once done)'
                         : isMicListening
-                        ? '🎙️ Mic Active (Auto-Started) — Transcribing Your Response Live'
-                        : '🎙️ Microphone Paused — Click to Resume'}
+                        ? '🎙️ Mic Active — Transcribing Voice Live'
+                        : inputMode === 'type'
+                        ? '⌨️ Keyboard Input Mode Active'
+                        : '🎙️ Mic Paused — Speak or Type Answer'}
                     </strong>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <LiveAudioBarMeter level={audioLevel} active={isSpeaking || isMicListening} />
-                    <span style={{ fontSize: '0.7rem', color: isSpeaking ? 'var(--text-success)' : '#a1a1aa' }}>
-                      {audioLevel}% Vol
-                    </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {/* Mode Toggle Tabs */}
+                    <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.06)', borderRadius: '6px', padding: '2px' }}>
+                      <button
+                        onClick={() => {
+                          setInputMode('voice');
+                          if (!isMicListening && !isAiSpeaking) startSpeechRecognition();
+                        }}
+                        className={`btn btn-sm ${inputMode === 'voice' ? 'btn-accent' : 'btn-ghost'}`}
+                        style={{ padding: '0.18rem 0.55rem', fontSize: '0.7rem', height: 'auto', borderRadius: '4px' }}
+                      >
+                        <Mic size={12} style={{ marginRight: '3px' }} /> Voice
+                      </button>
+                      <button
+                        onClick={() => {
+                          setInputMode('type');
+                          stopSpeechRecognition();
+                        }}
+                        className={`btn btn-sm ${inputMode === 'type' ? 'btn-accent' : 'btn-ghost'}`}
+                        style={{ padding: '0.18rem 0.55rem', fontSize: '0.7rem', height: 'auto', borderRadius: '4px' }}
+                      >
+                        <Keyboard size={12} style={{ marginRight: '3px' }} /> Type
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <LiveAudioBarMeter level={audioLevel} active={isSpeaking || isMicListening} />
+                      <span style={{ fontSize: '0.68rem', color: isSpeaking ? 'var(--text-success)' : '#a1a1aa' }}>
+                        {audioLevel}% Vol
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Real-Time Live Interpretation Text Window */}
-                <div className={`live-interpretation-box ${isMicListening ? 'listening' : ''}`} style={{ flex: 1 }}>
-                  {liveSpokenTranscript || liveInterimSnippet ? (
-                    <div>
-                      <span>{liveSpokenTranscript}</span>
-                      {liveInterimSnippet && (
-                        <span className="live-interim-text"> {liveInterimSnippet}</span>
-                      )}
-                      {isMicListening && <span className="live-typing-cursor" />}
+                {/* Speech Error / Guidance Notice (if network/mic blocked) */}
+                {speechErrorNotice && (
+                  <div
+                    style={{
+                      background: 'rgba(245, 158, 11, 0.12)',
+                      border: '1px solid rgba(245, 158, 11, 0.35)',
+                      borderRadius: '6px',
+                      padding: '0.4rem 0.65rem',
+                      fontSize: '0.73rem',
+                      color: '#fbbf24',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+                      <span>{speechErrorNotice}</span>
                     </div>
-                  ) : isAiSpeaking ? (
-                    <div style={{ color: 'var(--text-dim)', fontSize: '0.84rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '0.45rem', textAlign: 'center' }}>
-                      <Volume2 className="pulse-dot" size={24} color="var(--primary)" />
-                      <span style={{ color: '#fafafa', fontWeight: 600 }}>{selectedRound.interviewerName} is asking a question...</span>
-                      <span style={{ fontSize: '0.76rem', color: '#a1a1aa' }}>Listen carefully! Your microphone will activate automatically the moment they finish their sentence.</span>
-                    </div>
-                  ) : isMicListening ? (
-                    <div style={{ color: 'var(--text-success)', fontSize: '0.84rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '0.45rem', textAlign: 'center' }}>
-                      <Mic className="pulse-dot" size={24} color="#22c55e" />
-                      <span style={{ fontWeight: 700 }}>🎙️ Sentence finished — Your turn to speak!</span>
-                      <span style={{ fontSize: '0.76rem', color: '#a1a1aa' }}>Speak out loud. Your voice is being interpreted and transcribed live in real time.</span>
+                    <button
+                      onClick={() => setSpeechErrorNotice(null)}
+                      className="btn btn-ghost btn-sm"
+                      style={{ padding: '0.1rem 0.35rem', fontSize: '0.68rem', color: '#ffffff' }}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
+
+                {/* Dual-Mode Response Workspace */}
+                <div
+                  className={`live-interpretation-box ${isMicListening ? 'listening' : ''}`}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minHeight: '130px',
+                    padding: '0.75rem',
+                  }}
+                >
+                  {inputMode === 'type' ? (
+                    /* 1. TYPE INPUT MODE */
+                    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.35rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+                        <span>⌨️ Type or edit your response below:</span>
+                        <span style={{ fontWeight: 600, color: candidateAnswerText.trim() ? '#38bdf8' : 'inherit' }}>
+                          {candidateAnswerText.trim().split(/\s+/).filter(Boolean).length} words
+                        </span>
+                      </div>
+                      <textarea
+                        value={candidateAnswerText}
+                        onChange={(e) => handleUpdateAnswerText(e.target.value)}
+                        placeholder="Type your structured interview response here... (e.g. explain architectural principles, memory management, concurrency, or use the STAR framework)"
+                        className="input"
+                        style={{
+                          flex: 1,
+                          minHeight: '95px',
+                          fontSize: '0.84rem',
+                          lineHeight: '1.5',
+                          resize: 'vertical',
+                          background: 'rgba(0, 0, 0, 0.45)',
+                          color: '#fafafa',
+                          border: '1px solid var(--border-subtle)',
+                          borderRadius: 'var(--radius-sm)',
+                          padding: '0.65rem',
+                        }}
+                      />
                     </div>
                   ) : (
-                    <div style={{ color: 'var(--text-dim)', fontSize: '0.85rem', fontStyle: 'italic', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '0.5rem' }}>
-                      <Mic size={24} color="#71717a" />
-                      <span>Microphone paused. Click <strong>"Resume Mic"</strong> below or speak once active.</span>
+                    /* 2. VOICE INPUT MODE WITH EDITABLE MIRROR */
+                    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.4rem' }}>
+                      {liveSpokenTranscript || liveInterimSnippet || candidateAnswerText ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.35rem' }}>
+                          <div style={{ fontSize: '0.84rem', color: '#ffffff', lineHeight: '1.4' }}>
+                            <span>{liveSpokenTranscript || candidateAnswerText}</span>
+                            {liveInterimSnippet && (
+                              <span className="live-interim-text"> {liveInterimSnippet}</span>
+                            )}
+                            {isMicListening && <span className="live-typing-cursor" />}
+                          </div>
+
+                          {/* Editable Text Area to fine-tune spoken words */}
+                          <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '0.35rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-dim)', marginBottom: '0.2rem' }}>
+                              <span>✏️ You can edit or add to your response before submitting:</span>
+                              <span>{candidateAnswerText.trim().split(/\s+/).filter(Boolean).length} words</span>
+                            </div>
+                            <textarea
+                              value={candidateAnswerText}
+                              onChange={(e) => handleUpdateAnswerText(e.target.value)}
+                              placeholder="Spoken words sync here. You can edit directly..."
+                              className="input"
+                              style={{
+                                width: '100%',
+                                minHeight: '55px',
+                                fontSize: '0.78rem',
+                                resize: 'vertical',
+                                background: 'rgba(0, 0, 0, 0.35)',
+                                color: '#ffffff',
+                                padding: '0.4rem 0.6rem',
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ) : isAiSpeaking ? (
+                        <div style={{ color: 'var(--text-dim)', fontSize: '0.84rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '0.45rem', textAlign: 'center' }}>
+                          <Volume2 className="pulse-dot" size={24} color="var(--primary)" />
+                          <span style={{ color: '#fafafa', fontWeight: 600 }}>{selectedRound.interviewerName} is asking a question...</span>
+                          <span style={{ fontSize: '0.74rem', color: '#a1a1aa' }}>Listen carefully, or click "Skip Voice & Answer Now" above to answer immediately.</span>
+                        </div>
+                      ) : isMicListening ? (
+                        <div style={{ color: 'var(--text-success)', fontSize: '0.84rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '0.45rem', textAlign: 'center' }}>
+                          <Mic className="pulse-dot" size={24} color="#22c55e" />
+                          <span style={{ fontWeight: 700 }}>🎙️ Microphone Listening — Your turn to speak!</span>
+                          <span style={{ fontSize: '0.74rem', color: '#a1a1aa' }}>Speak clearly into your microphone, or switch to Type mode above.</span>
+                        </div>
+                      ) : (
+                        <div style={{ color: 'var(--text-dim)', fontSize: '0.84rem', fontStyle: 'italic', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '0.45rem', textAlign: 'center' }}>
+                          <Mic size={24} color="#71717a" />
+                          <span>Microphone paused. Click <strong>"Start Mic"</strong> below or switch to <strong>"Type"</strong> mode to enter your answer.</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
+
+                {/* Quick Sample Answer Chips for Instant Practice & Testing */}
+                {getSampleAnswersForRound(selectedRound, turnIndex).length > 0 && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      flexWrap: 'wrap',
+                      padding: '0.35rem 0.55rem',
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      borderRadius: '6px',
+                      border: '1px dashed rgba(255, 255, 255, 0.1)',
+                    }}
+                  >
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>💡 Sample Answers:</span>
+                    {getSampleAnswersForRound(selectedRound, turnIndex).map((sample, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleUpdateAnswerText(sample.text)}
+                        className="btn btn-outline btn-sm"
+                        style={{
+                          fontSize: '0.68rem',
+                          padding: '0.15rem 0.5rem',
+                          height: 'auto',
+                          background: 'rgba(56, 189, 248, 0.08)',
+                          borderColor: 'rgba(56, 189, 248, 0.35)',
+                          color: '#38bdf8',
+                        }}
+                        title="Click to insert this high-scoring response"
+                      >
+                        + {sample.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {/* Real-time Telemetry Strip (Pace, Fillers, Keywords, Confidence) */}
                 {liveSpeechMetrics && (
@@ -1535,62 +1838,67 @@ export const MockInterviewer = ({ userProfile = {} }) => {
                 )}
 
                 {/* Candidate Action Buttons */}
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.25rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.2rem', flexWrap: 'wrap' }}>
+                  {inputMode === 'voice' && (
+                    <button
+                      onClick={toggleSpeechRecognition}
+                      disabled={isAiSpeaking}
+                      className={`btn ${isMicListening ? 'btn-accent audio-pulse-ring' : 'btn-outline'}`}
+                      style={{
+                        flex: 1,
+                        minWidth: '150px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.45rem',
+                        background: isMicListening ? '#22c55e' : 'transparent',
+                        color: isMicListening ? '#09090b' : 'inherit',
+                        fontWeight: 600,
+                        opacity: isAiSpeaking ? 0.75 : 1,
+                      }}
+                    >
+                      {isAiSpeaking ? (
+                        <>
+                          <Volume1 size={16} />
+                          <span>AI Speaking...</span>
+                        </>
+                      ) : isMicListening ? (
+                        <>
+                          <Mic className="pulse-dot" size={16} />
+                          <span>🎙️ Pause Mic</span>
+                        </>
+                      ) : (
+                        <>
+                          <Mic size={16} />
+                          <span>🎙️ Start Mic</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+
                   <button
-                    onClick={toggleSpeechRecognition}
-                    disabled={isAiSpeaking}
-                    className={`btn ${isMicListening ? 'btn-accent audio-pulse-ring' : 'btn-outline'}`}
+                    onClick={() => handleSubmitCandidateResponse()}
+                    className="btn btn-primary"
+                    disabled={!candidateAnswerText.trim() && !liveSpokenTranscript.trim()}
                     style={{
-                      flex: 1,
+                      flex: inputMode === 'type' ? 1 : undefined,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '0.45rem',
-                      background: isMicListening ? '#22c55e' : 'transparent',
-                      color: isMicListening ? '#09090b' : 'inherit',
-                      fontWeight: 600,
-                      opacity: isAiSpeaking ? 0.75 : 1,
-                    }}
-                  >
-                    {isAiSpeaking ? (
-                      <>
-                        <Volume1 size={16} />
-                        <span>AI Speaking (Auto-mic queued)</span>
-                      </>
-                    ) : isMicListening ? (
-                      <>
-                        <Mic className="pulse-dot" size={16} />
-                        <span>🎙️ Mic Active (Click to Pause)</span>
-                      </>
-                    ) : (
-                      <>
-                        <Mic size={16} />
-                        <span>🎙️ Resume Mic</span>
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={handleSubmitCandidateResponse}
-                    className="btn btn-primary"
-                    disabled={!liveSpokenTranscript.trim()}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
                       fontWeight: 600,
                     }}
                   >
                     <Send size={15} />
-                    Submit Answer
+                    Submit Answer (Turn {turnIndex + 1}/3)
                   </button>
 
-                  {liveSpokenTranscript && (
+                  {(candidateAnswerText || liveSpokenTranscript) && (
                     <button
                       onClick={handleClearSpeech}
                       className="btn btn-ghost btn-sm"
                       style={{ padding: '0.5rem', color: 'var(--text-dim)' }}
-                      title="Clear Transcript"
+                      title="Clear Response"
                     >
                       <Trash2 size={16} />
                     </button>

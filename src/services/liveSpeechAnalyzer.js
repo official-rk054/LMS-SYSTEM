@@ -225,8 +225,8 @@ export class LiveSpeechRecognizer {
       };
 
       this.recognition.onerror = (err) => {
-        console.warn('LiveSpeechRecognizer error:', err.error);
-        this.lastError = err.error || 'unknown';
+        console.warn('LiveSpeechRecognizer error:', err?.error || err);
+        this.lastError = err?.error || 'speech_recognition_error';
         this.onError(err);
       };
 
@@ -264,6 +264,7 @@ export class LiveSpeechRecognizer {
 
 /**
  * Natural Text-to-Speech Player with live word and sentence boundary tracking
+ * Includes safety mechanisms to avoid Chrome utterance GC drops and paused synthesizer states.
  */
 export function playNaturalTTS(text, {
   rate = 1.0,
@@ -280,9 +281,16 @@ export function playNaturalTTS(text, {
   }
 
   try {
+    // Resume in case browser speech engine was suspended
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
     window.speechSynthesis.cancel(); // Stop any pending speech
 
     const utterance = new SpeechSynthesisUtterance(text);
+    // Pin utterance to window to prevent Chrome V8 garbage collection dropping onend
+    window.__activeTTSUtterance = utterance;
+
     utterance.rate = rate;
     utterance.pitch = pitch;
     utterance.volume = volume;
@@ -297,9 +305,25 @@ export function playNaturalTTS(text, {
       utterance.voice = preferredVoice;
     }
 
-    utterance.onstart = () => onStart();
-    utterance.onend = () => onEnd();
-    utterance.onerror = (e) => onError(e);
+    utterance.onstart = () => {
+      onStart();
+    };
+
+    utterance.onend = () => {
+      window.__activeTTSUtterance = null;
+      onEnd();
+    };
+
+    utterance.onerror = (e) => {
+      window.__activeTTSUtterance = null;
+      // Do not treat deliberate cancel/interrupted as fatal error
+      if (e?.error === 'interrupted' || e?.error === 'canceled') {
+        onEnd();
+      } else {
+        onError(e);
+      }
+    };
+
     utterance.onboundary = (event) => {
       onBoundary({
         charIndex: event.charIndex,
@@ -311,6 +335,7 @@ export function playNaturalTTS(text, {
     window.speechSynthesis.speak(utterance);
     return utterance;
   } catch (err) {
+    window.__activeTTSUtterance = null;
     onError(err);
     return null;
   }
