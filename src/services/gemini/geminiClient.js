@@ -78,7 +78,9 @@ export async function testGeminiConnection(candidateKey = null) {
 }
 
 /**
- * Core caller for Gemini models with automatic backend proxy fallback
+ * Core caller for Gemini models. Prefer the server proxy so production can use
+ * a server-side GEMINI_API_KEY without exposing it in the browser. If the
+ * backend is unavailable or unconfigured, fall back to a user-provided key.
  */
 export async function callGeminiApi({
   prompt,
@@ -88,32 +90,8 @@ export async function callGeminiApi({
 }) {
   const clientKey = getGeminiApiKey();
 
-  // 1. Direct Client-side execution if client key is available
-  if (clientKey) {
-    try {
-      const ai = new GoogleGenAI({ apiKey: clientKey });
-      const config = {};
-      if (systemInstruction) {
-        config.systemInstruction = systemInstruction;
-      }
-      if (typeof temperature === 'number') {
-        config.temperature = temperature;
-      }
-
-      const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: Object.keys(config).length > 0 ? config : undefined,
-      });
-
-      return response?.text || '';
-    } catch (err) {
-      console.warn('Direct Gemini call failed:', err?.message);
-      // Fall through to backend proxy attempt before giving up
-    }
-  }
-
-  // 2. Try Backend Server Proxy if server has GEMINI_API_KEY
+  let backendError = '';
+  // 1. Try the backend first (required for server-side keys and Vercel).
   try {
     const backendRes = await fetch('/api/gemini/generate', {
       method: 'POST',
@@ -121,18 +99,39 @@ export async function callGeminiApi({
       body: JSON.stringify({ prompt, systemInstruction, temperature, model }),
     });
 
-    if (backendRes.ok) {
-      const data = await backendRes.json();
-      if (data?.text) {
-        return data.text;
-      }
+    const data = await backendRes.json().catch(() => ({}));
+    if (backendRes.ok && typeof data?.text === 'string' && data.text.trim()) {
+      return data.text;
     }
-  } catch (_) {
-    // Backend unreachable or offline
+    backendError = data?.error || `Gemini backend returned HTTP ${backendRes.status}`;
+  } catch (err) {
+    backendError = err?.message || 'Gemini backend is unreachable';
   }
 
-  // 3. Neither client nor backend key is available
-  const err = new Error('NO_GEMINI_API_KEY');
-  err.code = 'NO_GEMINI_API_KEY';
+  // 2. Support the existing user-provided browser key as a fallback.
+  if (clientKey) {
+    try {
+      const ai = new GoogleGenAI({ apiKey: clientKey });
+      const config = {};
+      if (systemInstruction) config.systemInstruction = systemInstruction;
+      if (typeof temperature === 'number') config.temperature = temperature;
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: Object.keys(config).length ? config : undefined,
+      });
+      const text = response?.text || '';
+      if (text.trim()) return text;
+      throw new Error('Gemini returned an empty response.');
+    } catch (err) {
+      console.warn('Direct Gemini call failed:', err?.message);
+      backendError = err?.message || backendError;
+    }
+  }
+
+  const err = new Error(clientKey
+    ? `Gemini request failed: ${backendError}`
+    : 'Gemini is not configured. Set GEMINI_API_KEY on the backend or add a Gemini API key in AI settings.');
+  err.code = clientKey ? 'GEMINI_REQUEST_FAILED' : 'NO_GEMINI_API_KEY';
   throw err;
 }

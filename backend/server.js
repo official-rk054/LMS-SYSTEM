@@ -1,10 +1,22 @@
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
 import authRoutes from './routes/authRoutes.js';
 import studentRoutes from './routes/studentRoutes.js';
 import mentorRoutes from './routes/mentorRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import geminiRoutes from './routes/geminiRoutes.js';
+
+// Automatically load environment variables if supported (Node 20.6+)
+if (typeof process.loadEnvFile === 'function') {
+  try {
+    if (fs.existsSync('.env')) {
+      process.loadEnvFile('.env');
+    } else if (fs.existsSync('backend/.env')) {
+      process.loadEnvFile('backend/.env');
+    }
+  } catch (_) {}
+}
 
 const app = express();
 const PORT = process.env.PORT || 5000;
