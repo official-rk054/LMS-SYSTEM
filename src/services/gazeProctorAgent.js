@@ -89,7 +89,8 @@ export class GazeAttentionProctor {
     this.intervalId = null;
 
     this.consecutiveLookawayFrames = 0;
-    this.framesRequiredForStrike = 6; // 6 frames * 500ms = 3.0 seconds continuous lookaway
+    this.framesRequiredForStrike = 8; // 8 frames * 500ms = 4.0 seconds continuous lookaway
+    this.lastStrikeTimestamp = 0;
     this.totalFramesChecked = 0;
     this.focusedFramesCount = 0;
     this.isTerminated = false;
@@ -103,10 +104,15 @@ export class GazeAttentionProctor {
 
     this.handleVisibilityChange = this.handleVisibilityChange.bind(this);
     this.handleWindowBlur = this.handleWindowBlur.bind(this);
+    this.handleWindowFocus = this.handleWindowFocus.bind(this);
+    this.blurTimeoutId = null;
+    this.startTime = 0;
   }
 
   handleVisibilityChange() {
     if (!this.isRunning || this.isTerminated) return;
+    // 10s grace period for camera/mic permission prompts and tab initialization
+    if (Date.now() - this.startTime < 10000) return;
     if (document.hidden) {
       this.registerInstantInfraction('Tab switch / Minimized browser window detected');
     }
@@ -114,14 +120,30 @@ export class GazeAttentionProctor {
 
   handleWindowBlur() {
     if (!this.isRunning || this.isTerminated) return;
-    // Window lost focus (candidate clicked on another monitor/window)
-    this.registerInstantInfraction('Window lost focus (multitasking detected off-screen)');
+    // 10s grace period for device permission popups
+    if (Date.now() - this.startTime < 10000) return;
+
+    if (this.blurTimeoutId) clearTimeout(this.blurTimeoutId);
+    // Debounce 4.5 seconds to prevent browser permission alerts or minor clicks from triggering false strikes
+    this.blurTimeoutId = setTimeout(() => {
+      if (this.isRunning && !this.isTerminated && typeof document !== 'undefined' && !document.hasFocus()) {
+        this.triggerStrike('Window lost focus (>4s multitasking detected off-screen)');
+      }
+    }, 4500);
+  }
+
+  handleWindowFocus() {
+    if (this.blurTimeoutId) {
+      clearTimeout(this.blurTimeoutId);
+      this.blurTimeoutId = null;
+    }
   }
 
   start() {
     if (this.isRunning) return;
     this.isRunning = true;
     this.isTerminated = false;
+    this.startTime = Date.now();
     this.consecutiveLookawayFrames = 0;
     this.totalFramesChecked = 0;
     this.focusedFramesCount = 0;
@@ -129,6 +151,7 @@ export class GazeAttentionProctor {
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', this.handleVisibilityChange);
       window.addEventListener('blur', this.handleWindowBlur);
+      window.addEventListener('focus', this.handleWindowFocus);
     }
 
     this.intervalId = setInterval(() => {
@@ -142,9 +165,14 @@ export class GazeAttentionProctor {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
+    if (this.blurTimeoutId) {
+      clearTimeout(this.blurTimeoutId);
+      this.blurTimeoutId = null;
+    }
     if (typeof document !== 'undefined') {
       document.removeEventListener('visibilitychange', this.handleVisibilityChange);
       window.removeEventListener('blur', this.handleWindowBlur);
+      window.removeEventListener('focus', this.handleWindowFocus);
     }
   }
 
@@ -219,10 +247,10 @@ export class GazeAttentionProctor {
         reason: deviationReason,
       });
 
-      // If user looks away for 3 consecutive seconds, register infraction!
+      // If user looks away for 4 continuous seconds (8 frames * 500ms), register infraction!
       if (this.consecutiveLookawayFrames >= this.framesRequiredForStrike) {
         this.consecutiveLookawayFrames = 0; // reset counter
-        this.triggerStrike(deviationReason || 'Diverted gaze off-screen for >3 seconds');
+        this.triggerStrike(deviationReason || 'Diverted gaze off-screen for >4 seconds');
       }
     }
   }
@@ -237,7 +265,7 @@ export class GazeAttentionProctor {
     const data = frame.data;
 
     // Sample central zone (x: 40..120, y: 20..90) where eyes & upper face reside
-    let centerSkinPixels = 0;
+    let centerFacePixels = 0;
     let totalSampled = 0;
 
     for (let y = 20; y < 90; y += 4) {
@@ -248,16 +276,18 @@ export class GazeAttentionProctor {
         const b = data[idx + 2];
         totalSampled++;
 
-        // Standard human skin tone color space heuristic (YCbCr / RGB bounds)
-        if (r > 60 && g > 40 && b > 20 && r > g && r > b && Math.abs(r - g) > 15) {
-          centerSkinPixels++;
+        // Permissive face/skin & light presence check to accommodate diverse lighting & webcams
+        const isSkin = (r > 45 && g > 30 && b > 20 && (r >= g || Math.abs(r - g) < 25));
+        const hasLuminance = (r + g + b > 80);
+        if (isSkin || hasLuminance) {
+          centerFacePixels++;
         }
       }
     }
 
-    const ratio = centerSkinPixels / Math.max(1, totalSampled);
-    // If center face skin ratio is too low (< 0.12), the user has turned away or left screen
-    return ratio >= 0.12;
+    const ratio = centerFacePixels / Math.max(1, totalSampled);
+    // If center face presence ratio is too low (< 0.06), face is likely absent/diverted
+    return ratio >= 0.06;
   }
 
   registerInstantInfraction(reason = 'Off-screen distraction detected') {
@@ -267,6 +297,11 @@ export class GazeAttentionProctor {
 
   triggerStrike(reason) {
     if (this.isTerminated) return;
+    // Enforce 6-second cooldown between strikes to avoid cascade terminations
+    const now = Date.now();
+    if (now - this.lastStrikeTimestamp < 6000) return;
+    this.lastStrikeTimestamp = now;
+
     this.strikeCount++;
 
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
