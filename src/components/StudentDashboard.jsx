@@ -563,11 +563,11 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
                   </span>
 
                   <button
-                    onClick={() => setActiveTab('company_prep')}
+                    onClick={() => setActiveTab('job_board')}
                     className="btn btn-outline btn-sm"
                     style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', fontWeight: 600 }}
                   >
-                    Rounds Prep →
+                    View Drive →
                   </button>
                 </div>
               </div>
