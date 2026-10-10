@@ -511,14 +511,11 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
               >
                 {/* Company Name & CTC Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                    <span style={{ fontSize: '1.25rem', lineHeight: 1 }}>{drive.logo}</span>
-                    <div>
-                      <h4 style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)', margin: 0, lineHeight: 1.1 }}>
-                        {drive.company}
-                      </h4>
-                      <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>{drive.tier}</span>
-                    </div>
+                  <div>
+                    <h4 style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)', margin: 0, lineHeight: 1.1 }}>
+                      {drive.company}
+                    </h4>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>{drive.tier}</span>
                   </div>
                   <span
                     className="badge"
@@ -540,11 +537,11 @@ export const StudentDashboard = ({ userProfile, setActiveTab, lang }) => {
                 </div>
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                  <span>📍 {drive.location}</span>
+                  <span>{drive.location}</span>
                   <span>•</span>
                   <span>CGPA: <strong>{drive.minCGPA}</strong></span>
                   <span>•</span>
-                  <span>📅 {drive.date}</span>
+                  <span>{drive.date}</span>
                 </div>
 
                 {/* Action & Status Row */}

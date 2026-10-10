@@ -82,26 +82,6 @@ export const Topbar = ({
               <span>{userProfile.streakDays || 14} {t.streak}</span>
             </div>
 
-            {/* XP Points */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                background: isLight ? '#faf5ff' : 'rgba(168, 85, 247, 0.12)',
-                border: isLight ? '1px solid #e9d5ff' : '1px solid rgba(168, 85, 247, 0.3)',
-                padding: '0.35rem 0.75rem',
-                borderRadius: 'var(--radius-full)',
-                color: isLight ? '#7e22ce' : '#c084fc',
-                fontSize: '0.82rem',
-                fontWeight: 700,
-              }}
-              title="Preparation Karma XP"
-            >
-              <Zap size={15} color={isLight ? '#9333ea' : '#c084fc'} fill={isLight ? '#a855f7' : '#c084fc'} />
-              <span>{userProfile.xpPoints || 3420} XP</span>
-            </div>
-
             {/* Placement Readiness Score Pill */}
             <div
               style={{

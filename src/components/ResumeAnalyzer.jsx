@@ -27,14 +27,11 @@ import {
   ChevronDown,
   ChevronUp,
   ListChecks,
-  Code,
   Eye,
   CheckCircle2,
   SlidersHorizontal,
   Info,
-  Wand2,
-  GitPullRequest,
-  CheckCheck
+  Wand2
 } from 'lucide-react';
 import {
   runResumeAuditAgent,
@@ -139,7 +136,7 @@ export const ResumeAnalyzer = ({ userProfile, resumeFromBuilder }) => {
   const [targetRole, setTargetRole] = useState('sde_amazon');
   const [showCustomJD, setShowCustomJD] = useState(false);
   const [customJDText, setCustomJDText] = useState(PRESET_JDS.sde_amazon.text);
-  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('keywords'); // 'keywords', 'sections', 'checklist', 'parsed_text'
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('keywords'); // 'keywords', 'sections', 'checklist'
 
   // File Import State
   const [uploadedResume, setUploadedResume] = useState(() => {
@@ -433,7 +430,7 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
               </span>
             </div>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0.15rem 0 0' }}>
-              Autonomous 2026 Tech Trend Analysis • Google XYZ Formula Evaluator • Tailored Non-Generic Rewrites
+              Autonomous 2026 Tech Trend Analysis • Target JD Keyword Benchmarking • Actionable Section Audit
             </p>
           </div>
         </div>
@@ -748,14 +745,6 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
           >
             <ListChecks size={13} /> Checklist ({analysisResult.checklist.length})
           </button>
-
-          <button
-            onClick={() => setActiveWorkspaceTab('parsed_text')}
-            className={`btn btn-sm ${activeWorkspaceTab === 'parsed_text' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', gap: '0.35rem' }}
-          >
-            <Code size={13} /> ATS Text
-          </button>
         </div>
 
         <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
@@ -766,149 +755,6 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
       {/* ═════════════════════════════════════════════════════════════
           4. WORKSPACE TAB CONTENTS (COMPACT & PRECISE)
           ═════════════════════════════════════════════════════════════ */}
-
-      {/* TAB: AGENT AUDIT & FEEDBACK LOOP */}
-      {activeWorkspaceTab === 'feedback_loop' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* 5-Factor Diagnostic Score Ribbon */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(5, 1fr)',
-              gap: '0.75rem',
-            }}
-          >
-            <div className="card" style={{ padding: '0.85rem', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>{analysisResult.jdMatchRate}%</div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Factor 1: 2026 Tech Trend</div>
-            </div>
-            <div className="card" style={{ padding: '0.85rem', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#10b981' }}>{analysisResult.impactMetricScore}%</div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Factor 2: Google XYZ Impact</div>
-            </div>
-            <div className="card" style={{ padding: '0.85rem', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f59e0b' }}>{analysisResult.formatScore}%</div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Factor 3: ATS Hygiene</div>
-            </div>
-            <div className="card" style={{ padding: '0.85rem', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>{analysisResult.actionVerbScore}%</div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Factor 4: Action Verb Power</div>
-            </div>
-            <div className="card" style={{ padding: '0.85rem', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#10b981' }}>{analysisResult.recruiterScreenScore}%</div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Factor 5: Recruiter Telemetry</div>
-            </div>
-          </div>
-
-          {/* Main Feedback Loop Cards */}
-          <div className="card" style={{ padding: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
-              <div>
-                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-bright)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <GitPullRequest size={17} color="#10b981" /> Iterative Critique & Google XYZ Rewrite Loop
-                </h3>
-                <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', margin: '0.2rem 0 0' }}>
-                  The agent audited your actual experience and projects to diagnose weak phrasing and generate tailored rewrites:
-                </p>
-              </div>
-
-              <span className="badge badge-primary">
-                Google XYZ: Accomplished [X] by doing [Z] measured by [Y]
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {analysisResult.feedbackLoop?.map((item) => (
-                <div
-                  key={item.id}
-                  style={{
-                    padding: '1rem',
-                    borderRadius: 'var(--radius-md)',
-                    background: 'var(--bg-glass-strong)',
-                    border: '1px solid var(--border-glass)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.65rem',
-                  }}
-                >
-                  {/* Before bullet */}
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-                      <span style={{ fontSize: '0.72rem', color: '#f87171', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        ❌ Original Bullet (Candidate Text)
-                      </span>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                        Critique: {item.critique}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', background: 'rgba(239, 68, 68, 0.06)', padding: '0.5rem 0.75rem', borderRadius: '4px', borderLeft: '3px solid #f87171' }}>
-                      "{item.beforeText}"
-                    </div>
-                  </div>
-
-                  {/* After rewrite */}
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-                      <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        ✨ Agent Google XYZ Rewrite (Tailored for {currentJD.company})
-                      </span>
-                      <button
-                        onClick={() => handleCopyRewrite(item.id, item.afterText)}
-                        className="btn btn-ghost btn-sm"
-                        style={{ padding: '0.15rem 0.5rem', fontSize: '0.72rem', color: copiedRewriteId === item.id ? '#10b981' : 'var(--text-muted)' }}
-                      >
-                        {copiedRewriteId === item.id ? <CheckCheck size={12} /> : <Copy size={12} />}
-                        {copiedRewriteId === item.id ? 'Copied to Clipboard!' : 'Copy Rewrite'}
-                      </button>
-                    </div>
-                    <div style={{ fontSize: '0.84rem', color: 'var(--text-bright)', background: 'rgba(16, 185, 129, 0.08)', padding: '0.65rem 0.85rem', borderRadius: '4px', borderLeft: '3px solid #10b981', lineHeight: '1.5', fontWeight: 500 }}>
-                      {item.afterText}
-                    </div>
-                    <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
-                      💡 <strong>Rationale:</strong> {item.rationale}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Interactive Bullet Point Polish Sandbox */}
-          <div className="card" style={{ padding: '1.25rem' }}>
-            <h4 style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-bright)', margin: '0 0 0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Sparkles size={15} color="var(--primary)" /> Interactive Single-Bullet Polish Sandbox
-            </h4>
-            <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', margin: '0 0 0.85rem' }}>
-              Paste any bullet point from your projects or experience. The agent will run an immediate Google XYZ audit and transform it into an ATS-optimized accomplishment.
-            </p>
-
-            <div style={{ display: 'flex', gap: '0.65rem', marginBottom: '0.75rem' }}>
-              <input
-                type="text"
-                className="input"
-                style={{ flex: 1 }}
-                value={sandboxBullet}
-                onChange={(e) => setSandboxBullet(e.target.value)}
-                placeholder="Enter a project or work experience bullet point..."
-              />
-              <button onClick={handleTestSandboxBullet} className="btn btn-primary btn-sm">
-                Audit & Rewrite
-              </button>
-            </div>
-
-            {sandboxFeedback && (
-              <div style={{ padding: '0.85rem', background: 'var(--bg-glass-strong)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-glass)' }}>
-                <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginBottom: '0.35rem' }}>
-                  <strong>Diagnostic Critique:</strong> {sandboxFeedback.critique}
-                </div>
-                <div style={{ fontSize: '0.82rem', color: 'var(--text-main)', background: 'rgba(16, 185, 129, 0.1)', padding: '0.5rem 0.75rem', borderRadius: '4px', borderLeft: '3px solid #10b981' }}>
-                  <strong>XYZ Rewrite:</strong> {sandboxFeedback.rewrite}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* TAB: KEYWORD INTELLIGENCE & JD MATCH MATRIX */}
       {activeWorkspaceTab === 'keywords' && (
@@ -1143,7 +989,11 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
                   <input
                     type="checkbox"
                     checked={isResolved}
-                    onChange={() => toggleChecklistItem(item.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      toggleChecklistItem(item.id);
+                    }}
                     style={{ cursor: 'pointer', accentColor: '#22c55e' }}
                   />
 
@@ -1179,51 +1029,6 @@ Projects: ${resumeFromBuilder.projects?.map(p => `${p.name} (${p.tech}): ${p.bul
               );
             })}
           </div>
-        </div>
-      )}
-
-      {/* TAB 5: PARSED ATS STREAM */}
-      {activeWorkspaceTab === 'parsed_text' && (
-        <div className="card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-bright)' }}>
-              Linear ATS Parse Output
-            </span>
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(uploadedResume.rawText);
-                alert('Copied parsed ATS text to clipboard!');
-              }}
-              className="btn btn-outline btn-sm"
-              style={{ fontSize: '0.7rem', padding: '0.2rem 0.55rem', gap: '0.3rem' }}
-            >
-              <Copy size={12} /> Copy Raw Stream
-            </button>
-          </div>
-
-          <pre
-            style={{
-<<<<<<< HEAD
-              padding: '0.75rem',
-              background: 'var(--bg-main)',
-=======
-              padding: '1rem',
-              background: 'var(--bg-glass-strong)',
->>>>>>> 80c556e3a29f4095220e285550ade5a9d1b51590
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-glass)',
-              fontSize: '0.78rem',
-              fontFamily: 'var(--font-mono)',
-              color: 'var(--text-main)',
-              lineHeight: '1.5',
-              whiteSpace: 'pre-wrap',
-              maxHeight: '260px',
-              overflowY: 'auto',
-              margin: 0,
-            }}
-          >
-            {uploadedResume.rawText}
-          </pre>
         </div>
       )}
     </div>

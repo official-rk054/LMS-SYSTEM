@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Mic,
   MicOff,
@@ -24,7 +24,18 @@ import {
   RefreshCw,
   Sliders,
   ShieldCheck,
-  Volume1
+  ShieldAlert,
+  Volume1,
+  AlertTriangle,
+  Eye,
+  EyeOff,
+  XCircle,
+  FileText,
+  CheckCircle,
+  Trash2,
+  HelpCircle,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { MOCK_INTERVIEW_SESSIONS } from '../data/mockData';
 import { useMediaConnectivity } from '../hooks/useMediaConnectivity';
@@ -34,7 +45,9 @@ import {
   LiveSpeechRecognizer,
   playNaturalTTS
 } from '../services/liveSpeechAnalyzer';
+import { GazeAttentionProctor, playProctorSound } from '../services/gazeProctorAgent';
 
+// Audio VU Bar Meter Component
 const LiveAudioBarMeter = ({ level = 0, active = false }) => {
   const bars = [0.35, 0.7, 1.0, 0.85, 0.5, 0.9, 0.4];
   return (
@@ -47,44 +60,69 @@ const LiveAudioBarMeter = ({ level = 0, active = false }) => {
   );
 };
 
-export const MockInterviewer = ({ userProfile }) => {
+export const MockInterviewer = ({ userProfile = {} }) => {
+  const candidateName = userProfile?.name || 'Aarav Sharma';
+  const candidateFirstName = candidateName.split(' ')[0];
+
+  // 1. Session Navigation & State
   const [selectedRound, setSelectedRound] = useState(MOCK_INTERVIEW_SESSIONS[0]);
   const [isInterviewActive, setIsInterviewActive] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
-  const [timerSeconds, setTimerSeconds] = useState(1200); // 20 minutes
-  const [isMicListening, setIsMicListening] = useState(false);
+  const [timerSeconds, setTimerSeconds] = useState(1200); // 20 mins default
   const [speechSynthesisEnabled, setSpeechSynthesisEnabled] = useState(true);
 
-  // Settings & hardware test panel
+  // 2. Hardware Pre-Check & Device Settings
   const [showDeviceSettings, setShowDeviceSettings] = useState(false);
   const [isPreCheckActive, setIsPreCheckActive] = useState(false);
 
-  // Transcript state
+  // 3. Conversation & Question Flow
   const [messages, setMessages] = useState([]);
-  const [currentInput, setCurrentInput] = useState('');
   const [turnIndex, setTurnIndex] = useState(0);
+  const [currentAiQuestion, setCurrentAiQuestion] = useState('');
+  const [isAiSpeaking, setIsAiSpeaking] = useState(false);
 
-  // Live Speech Real-Time Analysis state
+  // 4. Live Audio Input & Real-Time Interpretation
+  const [isMicListening, setIsMicListening] = useState(false);
+  const [liveSpokenTranscript, setLiveSpokenTranscript] = useState('');
+  const [liveInterimSnippet, setLiveInterimSnippet] = useState('');
   const [liveSpeechMetrics, setLiveSpeechMetrics] = useState(null);
   const liveRecognizerRef = useRef(null);
+  const speechSecondsRef = useRef(0);
+  const speechTimerIntervalRef = useRef(null);
 
-  // Live metrics simulation
-  const [confidenceScore, setConfidenceScore] = useState(84);
-  const [paceWPM, setPaceWPM] = useState(135);
+  // Accumulated speech telemetry across the entire interview
+  const sessionTranscriptsRef = useRef([]);
+  const sessionFillersRef = useRef({});
+  const sessionPaceSamplesRef = useRef([]);
 
+  // 5. Gaze & Attention Proctoring (3-Strike System)
+  const proctorRef = useRef(null);
+  const [gazeAttentionState, setGazeAttentionState] = useState({
+    status: 'focused',
+    strikes: 0,
+    lookAwaySeconds: 0,
+    attentionPercentage: 100,
+    reason: '',
+  });
+  const [proctorWarning, setProctorWarning] = useState(null); // { level: 1|2, message, infraction, strikes }
+  const [isTerminatedByProctor, setIsTerminatedByProctor] = useState(false);
+  const [terminationInfo, setTerminationInfo] = useState(null);
+  const [proctorInfractions, setProctorInfractions] = useState([]);
+
+  // 6. Real Performance Evaluation Report
+  const [evaluationReport, setEvaluationReport] = useState(null);
+
+  // Refs
   const messagesEndRef = useRef(null);
   const candidateVideoRef = useRef(null);
   const previewVideoRef = useRef(null);
 
-  // WebRTC Media Connectivity Hook
+  // WebRTC Media Connectivity
   const {
     stream,
     isCameraActive,
     isMicActive,
     permissionStatus,
-    errorMessage: mediaError,
-    isLoading: isMediaLoading,
-    isSupported: isMediaSupported,
     audioLevel,
     isSpeaking,
     videoDevices,
@@ -101,12 +139,12 @@ export const MockInterviewer = ({ userProfile }) => {
     retryPermission,
   } = useMediaConnectivity({ autoStart: false });
 
-  // Attach video streams to video elements
+  // Bind WebRTC stream to video elements
   useEffect(() => {
     if (candidateVideoRef.current) {
       if (stream && isCameraActive) {
         candidateVideoRef.current.srcObject = stream;
-        candidateVideoRef.current.play().catch(e => console.warn('Candidate video play error:', e));
+        candidateVideoRef.current.play().catch(e => console.warn('Candidate video play:', e));
       } else {
         candidateVideoRef.current.srcObject = null;
       }
@@ -117,26 +155,35 @@ export const MockInterviewer = ({ userProfile }) => {
     if (previewVideoRef.current) {
       if (stream && isCameraActive) {
         previewVideoRef.current.srcObject = stream;
-        previewVideoRef.current.play().catch(e => console.warn('Preview video play error:', e));
+        previewVideoRef.current.play().catch(e => console.warn('Preview video play:', e));
       } else {
         previewVideoRef.current.srcObject = null;
       }
     }
   }, [stream, isCameraActive, isPreCheckActive]);
 
-  // Clean up media on unmount
+  // Clean up media and speech recognition on unmount
   useEffect(() => {
     return () => {
       stopMedia();
+      if (proctorRef.current) proctorRef.current.stop();
+      if (liveRecognizerRef.current) liveRecognizerRef.current.stop();
+      if (speechTimerIntervalRef.current) clearInterval(speechTimerIntervalRef.current);
     };
   }, [stopMedia]);
 
-  // Timer effect
+  // Session countdown timer
   useEffect(() => {
     let interval = null;
     if (isInterviewActive && !isFinished && timerSeconds > 0) {
       interval = setInterval(() => {
-        setTimerSeconds(prev => prev - 1);
+        setTimerSeconds(prev => {
+          if (prev <= 1) {
+            handleConcludeInterview();
+            return 0;
+          }
+          return prev - 1;
+        });
       }, 1000);
     }
     return () => clearInterval(interval);
@@ -147,39 +194,109 @@ export const MockInterviewer = ({ userProfile }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Dynamic confidence score adjustment based on real audio activity
-  useEffect(() => {
-    if (isInterviewActive && isSpeaking) {
-      setConfidenceScore(prev => Math.min(98, Math.max(75, prev + Math.floor(Math.random() * 2))));
-    }
-  }, [isSpeaking, isInterviewActive]);
+  // Text-to-speech helper
+  const speakText = (text) => {
+    if (!speechSynthesisEnabled) return;
+    setIsAiSpeaking(true);
+    playNaturalTTS(text, {
+      rate: 1.02,
+      pitch: 1.0,
+      onEnd: () => setIsAiSpeaking(false),
+      onError: () => setIsAiSpeaking(false),
+    });
+  };
 
-  // Start interview with video and mic connectivity
+  // ─────────────────────────────────────────────────────────────
+  // START INTERVIEW & ATTACH GAZE PROCTOR
+  // ─────────────────────────────────────────────────────────────
   const handleStartInterview = async (round) => {
     setSelectedRound(round);
     setIsInterviewActive(true);
     setIsFinished(false);
     setTimerSeconds(round.durationMinutes * 60);
     setTurnIndex(0);
+    setProctorWarning(null);
+    setIsTerminatedByProctor(false);
+    setTerminationInfo(null);
+    setProctorInfractions([]);
+    setLiveSpokenTranscript('');
+    setLiveInterimSnippet('');
+    setLiveSpeechMetrics(null);
+    sessionTranscriptsRef.current = [];
+    sessionFillersRef.current = {};
+    sessionPaceSamplesRef.current = [];
+
+    const starterText = round.starterPrompt;
+    setCurrentAiQuestion(starterText);
 
     const initialAiMessage = {
       sender: 'interviewer',
-      text: round.starterPrompt,
+      text: starterText,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
     setMessages([initialAiMessage]);
-    speakText(round.starterPrompt);
+    speakText(starterText);
 
-    // Automatically request & start camera and mic stream
+    // Request webcam and microphone
     try {
       await startMedia({ video: true, audio: true });
     } catch (err) {
       console.warn('Initial media stream start:', err);
     }
+
+    // Initialize Gaze & Attention Proctor
+    if (proctorRef.current) {
+      proctorRef.current.stop();
+    }
+
+    proctorRef.current = new GazeAttentionProctor({
+      videoElementRef: candidateVideoRef,
+      onGazeChange: (info) => {
+        setGazeAttentionState(info);
+      },
+      onWarning: ({ level, message, infraction, strikes }) => {
+        setProctorWarning({ level, message, infraction, strikes });
+        setProctorInfractions(prev => [...prev, infraction]);
+        // Auto-dismiss warning banner 1 after 8 seconds
+        if (level === 1) {
+          setTimeout(() => {
+            setProctorWarning(w => (w?.level === 1 ? null : w));
+          }, 8000);
+        }
+      },
+      onTermination: ({ message, infraction, strikes, infractionsLog }) => {
+        setIsTerminatedByProctor(true);
+        setTerminationInfo({ message, strikes, infractionsLog });
+        setProctorInfractions(infractionsLog);
+
+        // Stop media and audio streams
+        stopMedia();
+        if (liveRecognizerRef.current) liveRecognizerRef.current.stop();
+        setIsMicListening(false);
+
+        // Compile real report with termination audit
+        const allTelemetry = {
+          totalStrikes: 3,
+          maxStrikes: 3,
+          isTerminated: true,
+          attentionPercentage: Math.max(25, 65 - infractionsLog.length * 10),
+          infractionsLog,
+        };
+
+        setTimeout(() => {
+          const report = compileRealScorecard(messages, allTelemetry);
+          setEvaluationReport(report);
+          setIsFinished(true);
+        }, 1800);
+      },
+    });
+
+    // Start proctoring engine
+    proctorRef.current.start();
   };
 
-  // Toggle hardware pre-check
+  // Hardware pre-check toggle
   const handleTogglePreCheck = async () => {
     if (isPreCheckActive) {
       stopMedia();
@@ -190,198 +307,133 @@ export const MockInterviewer = ({ userProfile }) => {
     }
   };
 
-  // Text-to-speech helper with natural voice
-  const speakText = (text) => {
-    if (!speechSynthesisEnabled) return;
-    playNaturalTTS(text, {
-      rate: 1.02,
-      pitch: 1.0,
-      onError: (e) => console.warn('Mock Interviewer TTS warning:', e)
-    });
-  };
-
-  // Web Speech API Voice Input with Live Real-Time Analysis
+  // ─────────────────────────────────────────────────────────────
+  // LIVE AUDIO INPUT & SPEECH INTERPRETATION ENGINE
+  // ─────────────────────────────────────────────────────────────
   const toggleSpeechRecognition = async () => {
     if (isMicListening) {
+      // Pause speech recognition
       if (liveRecognizerRef.current) liveRecognizerRef.current.stop();
+      if (speechTimerIntervalRef.current) clearInterval(speechTimerIntervalRef.current);
       setIsMicListening(false);
       return;
     }
 
-    // Ensure audio track is acquired
+    // Ensure audio track is active
     try {
       await startMedia({ audio: true, video: isCameraActive });
     } catch (e) {
       console.warn('Microphone permission check error:', e);
     }
 
+    speechSecondsRef.current = 0;
+    if (speechTimerIntervalRef.current) clearInterval(speechTimerIntervalRef.current);
+    speechTimerIntervalRef.current = setInterval(() => {
+      speechSecondsRef.current += 1;
+    }, 1000);
+
+    const roundKeywords = selectedRound.keywordsExpected || [];
+
     if (!liveRecognizerRef.current) {
       liveRecognizerRef.current = new LiveSpeechRecognizer({
-        onTranscript: ({ transcript, elapsedSeconds }) => {
-          setCurrentInput(transcript);
-          const metrics = analyzeSpeechInRealTime(transcript, elapsedSeconds, {
-            keywords: ['dsa', 'complexity', 'threads', 'acid', 'star', 'trade-off', 'latency', 'cache', 'system', 'concurrency', 'indexes', 'trees']
-          });
+        onTranscript: ({ transcript, interim }) => {
+          setLiveSpokenTranscript(transcript);
+          setLiveInterimSnippet(interim);
+
+          const metrics = analyzeSpeechInRealTime(
+            transcript,
+            Math.max(1, speechSecondsRef.current),
+            { keywords: roundKeywords }
+          );
           setLiveSpeechMetrics(metrics);
+
+          if (metrics.wpm > 0) {
+            sessionPaceSamplesRef.current.push(metrics.wpm);
+          }
+
+          if (metrics.fillersFound) {
+            metrics.fillersFound.forEach(f => {
+              sessionFillersRef.current[f.word] = Math.max(
+                sessionFillersRef.current[f.word] || 0,
+                f.count
+              );
+            });
+          }
         },
         onStateChange: ({ isListening }) => {
           setIsMicListening(isListening);
-          if (!isListening && !currentInput) {
-            setLiveSpeechMetrics(null);
+          if (!isListening) {
+            setLiveInterimSnippet('');
+            if (speechTimerIntervalRef.current) clearInterval(speechTimerIntervalRef.current);
           }
         },
         onError: (err) => {
-          console.warn('Interviewer speech recognition error:', err);
+          console.warn('Speech recognition error:', err);
           setIsMicListening(false);
-        }
+        },
       });
     }
 
     const started = liveRecognizerRef.current.start({ lang: 'en-IN', continuous: true });
     if (!started) {
-      alert('Microphone speech recognition could not start. Please grant microphone access in your browser.');
+      alert('Microphone speech recognition could not start. Please ensure microphone permissions are granted.');
     }
   };
 
-  // Adaptive Speech Text & Context Analyzer
-  const analyzeCandidateText = (userText, turn, round, candidateName) => {
-    const lower = userText.toLowerCase();
-    const words = userText.trim().split(/\s+/).filter(Boolean).length;
+  // Manual or clear reset of spoken response
+  const handleClearSpeech = () => {
+    setLiveSpokenTranscript('');
+    setLiveInterimSnippet('');
+    setLiveSpeechMetrics(null);
+    speechSecondsRef.current = 0;
+  };
 
-    const hasConcurrency = /thread|process|memory|heap|stack|pcb|context|switch|deadlock|mutex|semaphore|race|atomic|concurrency|critical/.test(lower);
-    const hasDb = /sql|database|dbms|b\+?\s*tree|index|indexing|acid|transaction|sharding|replication|redis|cache|latency/.test(lower);
-    const hasDsa = /array|hashmap|map|tree|graph|dp|dynamic|complexity|o\(|search|sort|hash/.test(lower);
-    const hasBehavioral = /conflict|disagree|team|deadline|timeline|trade-?off|star|situation|priority|mentor|project|fail|customer/.test(lower);
-    const hasTechStack = /react|node|python|java|c\+\+|aws|docker|microservices|api|spring|git/.test(lower);
+  // ─────────────────────────────────────────────────────────────
+  // SUBMIT CANDIDATE SPOKEN RESPONSE & GENERATE AI FOLLOW-UP
+  // ─────────────────────────────────────────────────────────────
+  const handleSubmitCandidateResponse = () => {
+    const responseText = liveSpokenTranscript.trim();
+    if (!responseText) return;
 
-    let followUp = '';
-
-    if (turn === 1) {
-      if (round.type === 'Technical') {
-        if (hasConcurrency) {
-          followUp = `You made a solid point about thread concurrency and shared memory space, ${candidateName}. When multiple threads concurrently access that critical section, what low-level race condition emerges, and how does a binary semaphore differ from an OS mutex lock in terms of thread ownership?`;
-        } else if (hasDsa) {
-          followUp = `Good algorithmic foundation, ${candidateName}. When scaling that approach to millions of inputs where memory is constrained, what is the exact time and space complexity, and how would you optimize data locality?`;
-        } else {
-          followUp = `I see your perspective, ${candidateName}. Delving deeper into Linux systems: how does the OS kernel schedule processes versus threads, and what specific memory structures are swapped during a CPU context switch?`;
-        }
-      } else {
-        if (hasBehavioral) {
-          followUp = `I appreciate your transparency on that project conflict, ${candidateName}. In the STAR framework (Situation, Task, Action, Result), what objective metrics or data did your team rely on to resolve the impasse and keep the delivery milestone on schedule?`;
-        } else {
-          followUp = `Understood. Tell me about a time in your college capstone or internships where a core system component failed under testing or a deadline was at risk. How did you diagnose the issue and communicate with your team?`;
-        }
-      }
-    } else if (turn === 2) {
-      if (round.type === 'Technical') {
-        if (hasDb) {
-          followUp = `Excellent insight into database indexing. In high-concurrency systems (like Amazon or Flipkart handling 20,000 requests/sec), how does a B+ Tree index accelerate range scans, and what is the specific write amplification trade-off on SSDs?`;
-        } else {
-          followUp = `Let us pivot to distributed architecture. If one microservice fails or experiences a slow network partition, how would you design a circuit breaker or fallback mechanism to prevent cascading outages?`;
-        }
-      } else {
-        followUp = `Well handled. Looking back at that experience, if you were mentoring a junior developer today on balancing technical excellence with strict deadlines, what key principle would you emphasize?`;
-      }
-    } else {
-      followUp = `Thank you so much, ${candidateName}! You demonstrated sharp technical awareness and structured articulation throughout our discussion. Let me compile your detailed AI evaluation report and competency scorecard now.`;
+    // Pause mic while AI evaluates and speaks
+    if (isMicListening && liveRecognizerRef.current) {
+      liveRecognizerRef.current.stop();
+      setIsMicListening(false);
     }
 
-    return {
-      followUp,
-      words,
-      hasConcurrency,
-      hasDb,
-      hasDsa,
-      hasBehavioral,
-      hasTechStack,
-    };
-  };
-
-  // Compile Dynamic Performance Scorecard
-  const compileScorecard = (allMessages) => {
-    const candidateMsgs = allMessages.filter(m => m.sender === 'candidate');
-    const totalWords = candidateMsgs.reduce((sum, m) => sum + m.text.trim().split(/\s+/).filter(Boolean).length, 0);
-    const avgWords = Math.round(totalWords / Math.max(1, candidateMsgs.length));
-
-    const combinedText = candidateMsgs.map(m => m.text).join(' ').toLowerCase();
-    const keywordsList = [
-      'process', 'thread', 'memory', 'heap', 'stack', 'pcb', 'mutex', 'semaphore',
-      'deadlock', 'index', 'b+ tree', 'acid', 'cache', 'redis', 'api', 'docker',
-      'complexity', 'star', 'conflict', 'compromise', 'milestone', 'latency'
-    ];
-    const detectedKeywords = keywordsList.filter(k => combinedText.includes(k));
-
-    const technicalDepth = Math.min(96, Math.max(72, 70 + detectedKeywords.length * 4));
-    const problemSolving = Math.min(95, Math.max(74, 75 + (avgWords > 25 ? 12 : 6)));
-    const verbalFluency = Math.min(98, Math.max(78, 80 + Math.min(16, candidateMsgs.length * 5)));
-    const overallReadiness = Math.round((technicalDepth + problemSolving + verbalFluency) / 3);
-
-    const strengths = [
-      `Strong conceptual grasp of ${detectedKeywords.length >= 3 ? 'core architectural trade-offs and domain principles' : 'computer science fundamentals'}.`,
-      `Articulated thought process with steady verbal cadence (averaging ${avgWords} words per response).`,
-      `Clear vocal delivery over microphone with zero audio clipping or dropped phrases.`,
-      `Demonstrated logical problem decomposition when challenged on edge cases.`,
-    ];
-
-    const improvements = [
-      `In product company interviews (Amazon, Microsoft), quantify statements with scale metrics (e.g. QPS, latency in milliseconds, caching hit ratios).`,
-      `In behavioral questions, format answers strictly with the STAR framework (Situation, Task, Action, Result).`,
-      `Elaborate on production failure modes (e.g. deadlock recovery, database write amplification).`,
-    ];
-
-    const turnCritiques = candidateMsgs.map((m, idx) => ({
-      turn: idx + 1,
-      topic: idx === 0 ? 'Core Foundations & Memory Architecture' : idx === 1 ? 'Concurrency & Systems Scaling' : 'Final Engineering Reflection',
-      candidateSnippet: m.text.length > 140 ? m.text.substring(0, 140) + '...' : m.text,
-      score: Math.min(96, 76 + (m.text.split(/\s+/).length > 20 ? 14 : 7)),
-      feedback: m.text.split(/\s+/).length > 20
-        ? `Comprehensive response. You articulated relevant technical terminology with clarity.`
-        : `Good foundational response. Consider adding specific production trade-offs and edge-case handling.`,
-    }));
-
-    const report = {
-      roundId: selectedRound.id,
-      roundTitle: selectedRound.title,
-      overallScore: overallReadiness,
-      metrics: {
-        technicalDepth,
-        problemSolving,
-        verbalFluency,
-        overallReadiness,
-      },
-      strengths,
-      improvements,
-      turnCritiques,
-    };
-
-    recordInterviewEvaluation(report);
-    return report;
-  };
-
-  const [evaluationReport, setEvaluationReport] = useState(null);
-
-  // Candidate sends response
-  const handleSendMessage = () => {
-    if (!currentInput.trim()) return;
-
-    const userMessageText = currentInput.trim();
     const newUserMsg = {
       sender: 'candidate',
-      text: userMessageText,
+      text: responseText,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      metrics: liveSpeechMetrics ? { ...liveSpeechMetrics } : null,
     };
+
+    sessionTranscriptsRef.current.push({
+      turn: turnIndex + 1,
+      question: currentAiQuestion,
+      answer: responseText,
+      metrics: liveSpeechMetrics ? { ...liveSpeechMetrics } : null,
+    });
 
     const nextTurn = turnIndex + 1;
     const updatedMessages = [...messages, newUserMsg];
     setTurnIndex(nextTurn);
     setMessages(updatedMessages);
-    setCurrentInput('');
+    setLiveSpokenTranscript('');
+    setLiveInterimSnippet('');
+    setLiveSpeechMetrics(null);
+    speechSecondsRef.current = 0;
 
     // Dynamic AI follow-up generator
     setTimeout(() => {
-      const candidateFirstName = (userProfile?.name || 'Aarav').split(' ')[0];
-      const analysis = analyzeCandidateText(userMessageText, nextTurn, selectedRound, candidateFirstName);
+      const analysis = analyzeCandidateText(
+        responseText,
+        nextTurn,
+        selectedRound,
+        candidateFirstName
+      );
       const aiFollowUp = analysis.followUp;
+      setCurrentAiQuestion(aiFollowUp);
 
       const aiMsg = {
         sender: 'interviewer',
@@ -393,22 +445,313 @@ export const MockInterviewer = ({ userProfile }) => {
       setMessages(finalMessages);
       speakText(aiFollowUp);
 
+      // Conclude after 3 full turns
       if (nextTurn >= 3) {
         setTimeout(() => {
           stopMedia();
-          const report = compileScorecard(finalMessages);
+          if (proctorRef.current) proctorRef.current.stop();
+          const telemetry = proctorRef.current
+            ? proctorRef.current.getTelemetry()
+            : { totalStrikes: 0, attentionPercentage: 100, infractionsLog: [] };
+          const report = compileRealScorecard(finalMessages, telemetry);
           setEvaluationReport(report);
           setIsFinished(true);
-        }, 3200);
+        }, 3600);
       }
     }, 900);
   };
 
+  // Adaptive Question Generator based on Candidate's Actual Spoken Words
+  const analyzeCandidateText = (userText, turn, round, candidateName) => {
+    const lower = userText.toLowerCase();
+    const words = userText.trim().split(/\s+/).filter(Boolean).length;
+
+    const hasConcurrency = /thread|process|memory|heap|stack|pcb|context|switch|deadlock|mutex|semaphore|race|atomic|concurrency|critical/.test(lower);
+    const hasDb = /sql|database|dbms|b\+?\s*tree|index|indexing|acid|transaction|sharding|replication|redis|cache|latency/.test(lower);
+    const hasDsa = /array|hashmap|map|tree|graph|dp|dynamic|complexity|o\(|search|sort|hash/.test(lower);
+    const hasBehavioral = /conflict|disagree|team|deadline|timeline|trade-?off|star|situation|priority|mentor|project|fail|customer/.test(lower);
+
+    let followUp = '';
+
+    if (turn === 1) {
+      if (round.type === 'Technical') {
+        if (hasConcurrency) {
+          followUp = `You made a solid point about thread concurrency and shared memory, ${candidateName}. When multiple threads concurrently write to that shared structure, what race condition emerges, and how does a binary semaphore differ from a mutex in terms of thread ownership?`;
+        } else if (hasDsa) {
+          followUp = `Good algorithmic foundation, ${candidateName}. When scaling that solution to millions of streaming items with strict memory limits, what is the exact time and space complexity, and how would you optimize memory cache locality?`;
+        } else {
+          followUp = `I see your perspective, ${candidateName}. Delving deeper into Linux systems: how does the OS kernel schedule processes versus threads, and what specific memory registers are swapped during a CPU context switch?`;
+        }
+      } else {
+        if (hasBehavioral) {
+          followUp = `I appreciate your transparency on that project conflict, ${candidateName}. In the STAR framework (Situation, Task, Action, Result), what objective metrics or data did your team rely on to resolve the disagreement and deliver on schedule?`;
+        } else {
+          followUp = `Understood. Tell me about a time in your college capstone or internships where a core system component failed under testing or a deadline was at risk. How did you diagnose the issue and communicate with your team?`;
+        }
+      }
+    } else if (turn === 2) {
+      if (round.type === 'Technical') {
+        if (hasDb) {
+          followUp = `Excellent insight into database indexing. In high-concurrency architectures (like Flipkart or Amazon handling 25,000 requests/sec), how does a B+ Tree index accelerate range scans, and what is the specific write amplification trade-off on storage?`;
+        } else {
+          followUp = `Let us pivot to distributed systems. If one microservice experiences a slow network partition or crashes, how would you design a circuit breaker or fallback mechanism to prevent cascading outages across the cluster?`;
+        }
+      } else {
+        followUp = `Well handled. Looking back at that experience, if you were mentoring a junior developer today on balancing code quality with strict product delivery deadlines, what key principle would you emphasize?`;
+      }
+    } else {
+      followUp = `Thank you so much, ${candidateName}! You demonstrated sharp technical awareness and structured articulation throughout our session. Let me compile your detailed AI evaluation report and competency scorecard now.`;
+    }
+
+    return { followUp, words };
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // SIMULATE LOOKAWAY TEST BUTTON (FOR DEMO & TESTING)
+  // ─────────────────────────────────────────────────────────────
+  const simulateLookawayTest = () => {
+    if (!proctorRef.current) return;
+    const currentStrikes = gazeAttentionState.strikes || 0;
+    if (currentStrikes === 0) {
+      proctorRef.current.triggerStrike('Simulated Alert: Student diverted gaze off-screen for >3.0s');
+    } else if (currentStrikes === 1) {
+      proctorRef.current.triggerStrike('Simulated Alert: Off-screen gaze / window unfocused');
+    } else {
+      proctorRef.current.triggerStrike('Simulated Alert: Third consecutive gaze deviation violation');
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // CONCLUDE INTERVIEW MANUALLY
+  // ─────────────────────────────────────────────────────────────
   const handleConcludeInterview = () => {
     stopMedia();
-    const report = compileScorecard(messages);
+    if (proctorRef.current) proctorRef.current.stop();
+    if (liveRecognizerRef.current) liveRecognizerRef.current.stop();
+    setIsMicListening(false);
+
+    const telemetry = proctorRef.current
+      ? proctorRef.current.getTelemetry()
+      : {
+          totalStrikes: proctorInfractions.length,
+          maxStrikes: 3,
+          isTerminated: isTerminatedByProctor,
+          attentionPercentage: Math.max(30, 100 - proctorInfractions.length * 15),
+          infractionsLog: proctorInfractions,
+        };
+
+    const report = compileRealScorecard(messages, telemetry);
     setEvaluationReport(report);
     setIsFinished(true);
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // COMPILE REAL REPORT BASED ON SPOKEN RESPONSES & PROCTOR AUDIT
+  // ─────────────────────────────────────────────────────────────
+  const compileRealScorecard = (allMessages, telemetry = null) => {
+    const candidateMsgs = allMessages.filter(m => m.sender === 'candidate');
+    const totalWords = candidateMsgs.reduce(
+      (sum, m) => sum + m.text.trim().split(/\s+/).filter(Boolean).length,
+      0
+    );
+    const avgWords = Math.round(totalWords / Math.max(1, candidateMsgs.length));
+
+    // Calculate real pacing from samples
+    const paceSamples = sessionPaceSamplesRef.current;
+    const realAvgPace = paceSamples.length > 0
+      ? Math.round(paceSamples.reduce((a, b) => a + b, 0) / paceSamples.length)
+      : Math.min(160, Math.max(110, Math.round(totalWords * 3.5)));
+
+    // Calculate real filler words detected across turns
+    const combinedCandidateText = candidateMsgs.map(m => m.text).join(' ').toLowerCase();
+    const fillersDetected = [];
+    let totalFillersCount = 0;
+    const commonFillers = ['um', 'uh', 'like', 'actually', 'basically', 'you know', 'kind of'];
+
+    commonFillers.forEach(filler => {
+      const reg = new RegExp(`\\b${filler}\\b`, 'gi');
+      const matches = combinedCandidateText.match(reg);
+      if (matches && matches.length > 0) {
+        fillersDetected.push({ word: filler, count: matches.length });
+        totalFillersCount += matches.length;
+      }
+    });
+
+    // Check actual keywords matched against the round requirements
+    const expectedKeywords = selectedRound.keywordsExpected || [];
+    const matchedDomainKeywords = expectedKeywords.filter(kw =>
+      combinedCandidateText.includes(kw.toLowerCase())
+    );
+
+    // Dynamic competency scores based on REAL telemetry
+    const keywordBonus = Math.min(25, matchedDomainKeywords.length * 6);
+    const lengthBonus = avgWords >= 35 ? 15 : avgWords >= 20 ? 10 : 4;
+    const fillerPenalty = Math.min(20, totalFillersCount * 3);
+
+    let technicalDepth = Math.min(98, Math.max(45, 68 + keywordBonus + lengthBonus - fillerPenalty));
+    let problemSolving = Math.min(96, Math.max(50, 72 + lengthBonus + (avgWords > 30 ? 10 : 0)));
+    let verbalFluency = Math.min(98, Math.max(40, 85 - fillerPenalty + (realAvgPace >= 115 && realAvgPace <= 160 ? 10 : -8)));
+
+    // Proctor telemetry audit & penalty
+    const proctorAudit = telemetry || {
+      totalStrikes: proctorInfractions.length,
+      maxStrikes: 3,
+      isTerminated: isTerminatedByProctor,
+      attentionPercentage: 98,
+      infractionsLog: [...proctorInfractions],
+    };
+
+    const isTerminated = proctorAudit.isTerminated || isTerminatedByProctor;
+    const strikes = proctorAudit.totalStrikes || proctorInfractions.length;
+
+    let integrityStatus = 'Verified (Exemplary Screen Focus)';
+    let integrityScore = 100;
+
+    if (isTerminated || strikes >= 3) {
+      integrityStatus = 'Disqualified (3/3 Gaze Infractions — Session Terminated)';
+      integrityScore = 30;
+      // Cap scores due to academic/interview integrity violation
+      technicalDepth = Math.min(50, technicalDepth);
+      problemSolving = Math.min(50, problemSolving);
+      verbalFluency = Math.min(50, verbalFluency);
+    } else if (strikes === 2) {
+      integrityStatus = 'Caution Flagged (2 Gaze Warnings)';
+      integrityScore = 70;
+    } else if (strikes === 1) {
+      integrityStatus = 'Minor Warning (1 Gaze Warning)';
+      integrityScore = 88;
+    }
+
+    let overallReadiness = Math.round(
+      (technicalDepth * 0.35 + problemSolving * 0.35 + verbalFluency * 0.2 + integrityScore * 0.1)
+    );
+
+    if (isTerminated) {
+      overallReadiness = Math.min(42, overallReadiness);
+    }
+
+    // Dynamic, truthful strengths derived from real data
+    const strengths = [];
+    if (matchedDomainKeywords.length > 0) {
+      strengths.push(
+        `Applied relevant technical terminology (${matchedDomainKeywords.slice(0, 3).join(', ')}) directly to the problem scope.`
+      );
+    } else {
+      strengths.push('Demonstrated willingness to communicate and tackle engineering questions.');
+    }
+
+    if (totalFillersCount <= 2 && totalWords > 20) {
+      strengths.push(
+        `Clear verbal delivery with low crutch word frequency (${totalFillersCount} fillers detected across entire interview).`
+      );
+    } else {
+      strengths.push(`Spoke with steady pacing (averaging ~${realAvgPace} words per minute).`);
+    }
+
+    if (avgWords >= 25) {
+      strengths.push(
+        `Thorough elaboration: averaged ${avgWords} words per response, providing descriptive answers rather than one-word replies.`
+      );
+    }
+
+    if (strikes === 0) {
+      strengths.push('100% Screen Attention: maintained focused eye contact with interviewer throughout.');
+    }
+
+    // Dynamic actionable improvements
+    const improvements = [];
+    if (totalFillersCount > 2) {
+      improvements.push(
+        `Reduce filler words (${fillersDetected.map(f => `"${f.word}" (${f.count})`).join(', ')}). Practice pausing silently instead of using verbal fillers.`
+      );
+    }
+
+    if (matchedDomainKeywords.length < expectedKeywords.length) {
+      const missing = expectedKeywords.filter(k => !matchedDomainKeywords.includes(k));
+      if (missing.length > 0) {
+        improvements.push(
+          `Incorporate deeper systems terminology such as ${missing.slice(0, 2).map(m => `"${m}"`).join(' and ')} to showcase senior architectural awareness.`
+        );
+      }
+    }
+
+    if (avgWords < 25) {
+      improvements.push(
+        'Elaborate more deeply on answers. Aim for at least 3-4 structured sentences detailing the context, decision, and technical trade-offs.'
+      );
+    }
+
+    if (strikes > 0) {
+      improvements.push(
+        `Screen Focus: Recorded ${strikes} gaze distraction alert${strikes > 1 ? 's' : ''}. In formal campus placement drives, recruiters penalize looking away from the camera.`
+      );
+    }
+
+    // Real turn-by-turn critiques
+    const turnCritiques = candidateMsgs.map((m, idx) => {
+      const wordsCount = m.text.trim().split(/\s+/).filter(Boolean).length;
+      const snippet = m.text.length > 150 ? m.text.substring(0, 150) + '...' : m.text;
+      const score = Math.min(
+        98,
+        Math.max(50, 70 + (wordsCount >= 30 ? 16 : wordsCount >= 15 ? 8 : 0) - (isTerminated ? 25 : 0))
+      );
+
+      let feedback = '';
+      if (wordsCount >= 30) {
+        feedback = `Comprehensive answer. You clearly articulated relevant domain logic with solid verbal depth.`;
+      } else if (wordsCount >= 15) {
+        feedback = `Good foundational answer. Consider supplementing your response with concrete scale numbers (latency, throughput, edge cases).`;
+      } else {
+        feedback = `Brief response. Expand your thought process out loud to show the recruiter your architectural reasoning.`;
+      }
+
+      return {
+        turn: idx + 1,
+        topic:
+          idx === 0
+            ? 'Core Principles & Domain Fundamentals'
+            : idx === 1
+            ? 'Deep-Dive Scaling & Concurrency'
+            : 'Engineering Reflection & Synthesis',
+        candidateSnippet: snippet,
+        fullAnswer: m.text,
+        wordCount: wordsCount,
+        score,
+        feedback,
+      };
+    });
+
+    const report = {
+      roundId: selectedRound.id,
+      roundTitle: selectedRound.title,
+      overallScore: overallReadiness,
+      metrics: {
+        technicalDepth,
+        problemSolving,
+        verbalFluency,
+        overallReadiness,
+      },
+      speechTelemetry: {
+        totalWords,
+        avgWordsPerTurn: avgWords,
+        avgPaceWpm: realAvgPace,
+        fillerCount: totalFillersCount,
+        fillersDetected,
+        matchedKeywords: matchedDomainKeywords,
+      },
+      proctorAudit: {
+        ...proctorAudit,
+        integrityStatus,
+        integrityScore,
+      },
+      strengths,
+      improvements,
+      turnCritiques,
+    };
+
+    // Save to local database
+    recordInterviewEvaluation(report);
+    return report;
   };
 
   const formatTimer = (sec) => {
@@ -417,38 +760,39 @@ export const MockInterviewer = ({ userProfile }) => {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
+  // ─────────────────────────────────────────────────────────────
+  // RENDER INTERVIEW HUB
+  // ─────────────────────────────────────────────────────────────
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       {/* ═════════════════════════════════════════════════════════════
-          1. PRE-INTERVIEW ROUND SELECTOR & HARDWARE CONNECTIVITY HUB
+          1. PRE-INTERVIEW SETUP & HARDWARE DIAGNOSTIC
           ═════════════════════════════════════════════════════════════ */}
       {!isInterviewActive && !isFinished && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* Main Hero Card */}
           <div className="card">
             <div className="card-header">
               <div>
                 <h2 style={{ fontSize: '1.5rem', marginBottom: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Mic color="var(--primary)" />
-                  AI Adaptive Mock Interviewer
+                  AI Live Mock Interviewer & Proctor
                 </h2>
                 <p style={{ fontSize: '0.85rem' }}>
-                  Experience realistic Technical, HR, and Leadership rounds. Full WebRTC Video & Microphone connectivity with real-time speech analysis and dynamic follow-up questioning.
+                  Real-time microphone interpretation, WebRTC video streaming, and automated gaze proctoring with a strict 3-strike alert policy.
                 </p>
               </div>
 
-              {/* Hardware Pre-Check Quick Button */}
               <button
                 onClick={handleTogglePreCheck}
                 className={`btn ${isPreCheckActive ? 'btn-accent' : 'btn-outline'} btn-sm`}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
               >
                 <Camera size={15} />
-                {isPreCheckActive ? 'Close Hardware Diagnostic' : 'Test Video & Mic'}
+                {isPreCheckActive ? 'Close Hardware Diagnostic' : 'Test Camera & Mic'}
               </button>
             </div>
 
-            {/* Hardware Diagnostic Pre-Check Drawer */}
+            {/* Hardware Pre-Check Drawer */}
             {isPreCheckActive && (
               <div
                 style={{
@@ -463,7 +807,6 @@ export const MockInterviewer = ({ userProfile }) => {
                   alignItems: 'center',
                 }}
               >
-                {/* Left: Video Preview Window */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                   <div
                     style={{
@@ -489,35 +832,28 @@ export const MockInterviewer = ({ userProfile }) => {
                     ) : (
                       <div className="media-video-placeholder">
                         <VideoOff size={28} color="#94a3b8" />
-                        <span style={{ fontSize: '0.82rem', color: '#ffffff', fontWeight: 600 }}>Camera Preview Paused</span>
+                        <span style={{ fontSize: '0.82rem', color: '#ffffff', fontWeight: 600 }}>Webcam Inactive</span>
                         <button onClick={() => toggleCamera(true)} className="btn btn-outline btn-sm" style={{ marginTop: '0.35rem', color: '#ffffff', borderColor: 'rgba(255, 255, 255, 0.3)' }}>
                           Enable Camera
                         </button>
                       </div>
                     )}
 
-                    {/* Live overlay badge */}
                     <div className="media-hud-top">
                       <span className="media-hud-badge">
                         <span className="pulse-dot" style={{ width: '6px', height: '6px', background: stream ? '#22c55e' : '#ef4444' }}></span>
                         {stream ? 'Hardware Connected' : 'Camera Off'}
                       </span>
-                      {stream && (
-                        <span className="media-hud-badge">
-                          {videoDiagnostics.width || 1280}x{videoDiagnostics.height || 720}
-                        </span>
-                      )}
                     </div>
                   </div>
 
-                  {/* Quick video/mic toggle controls */}
                   <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
                     <button
                       onClick={() => toggleCamera()}
                       className={`media-control-pill ${isCameraActive ? 'active' : 'muted'}`}
                     >
                       {isCameraActive ? <Video size={14} /> : <VideoOff size={14} />}
-                      {isCameraActive ? 'Webcam Active' : 'Webcam Muted'}
+                      {isCameraActive ? 'Camera On' : 'Camera Off'}
                     </button>
                     <button
                       onClick={() => toggleMic()}
@@ -529,122 +865,37 @@ export const MockInterviewer = ({ userProfile }) => {
                   </div>
                 </div>
 
-                {/* Right: Audio Level Meter & Device Settings */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h4 style={{ fontSize: '0.95rem', color: 'var(--text-white)', display: 'flex', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
-                      <Activity size={16} color="var(--primary)" />
-                      Live Audio Sensitivity & Device Routing
-                    </h4>
-                    <span style={{ fontSize: '0.75rem', color: isSpeaking ? '#4ade80' : 'var(--text-dim)', fontWeight: 600 }}>
-                      {isSpeaking ? '🎙️ Voice Detected!' : 'Speak to test mic...'}
-                    </span>
-                  </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <h4 style={{ fontSize: '0.9rem', color: 'var(--text-white)' }}>Proctoring & Audio Diagnostics</h4>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    Make sure your face is well-lit and centered. The proctor monitors attention: looking away from the screen for &gt;3 seconds triggers Warning 1, then Warning 2, and ends the session on the 3rd infraction.
+                  </p>
 
-                  {/* 12-segment Dynamic VU Audio Meter */}
-                  <div style={{ background: 'rgba(9, 9, 11, 0.6)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.4rem', color: 'var(--text-muted)' }}>
-                      <span>Input Volume Level: <strong>{audioLevel}%</strong></span>
-                      <span>Noise Floor: <strong>-42 dB</strong></span>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '4px', height: '14px', alignItems: 'center' }}>
-                      {[...Array(16)].map((_, i) => {
-                        const threshold = (i + 1) * 6.25;
-                        const isLit = audioLevel >= threshold;
-                        let barColor = 'rgba(255, 255, 255, 0.08)';
-                        if (isLit) {
-                          if (i < 10) barColor = '#22c55e'; // green
-                          else if (i < 13) barColor = '#eab308'; // yellow
-                          else barColor = '#ef4444'; // red peak
-                        }
-                        return (
-                          <div
-                            key={i}
-                            style={{
-                              flex: 1,
-                              height: '100%',
-                              borderRadius: '2px',
-                              background: barColor,
-                              transition: 'background-color 0.08s ease, transform 0.08s ease',
-                              transform: isLit ? 'scaleY(1)' : 'scaleY(0.7)',
-                            }}
-                          />
-                        );
-                      })}
+                  <div style={{ padding: '0.65rem 0.85rem', background: 'rgba(0, 0, 0, 0.4)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>Live Mic Level:</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <LiveAudioBarMeter level={audioLevel} active={isSpeaking || isMicActive} />
+                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: audioLevel > 20 ? '#4ade80' : 'var(--text-muted)' }}>
+                        {audioLevel}%
+                      </span>
                     </div>
                   </div>
-
-                  {/* Device Selectors */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
-                    <div>
-                      <label style={{ fontSize: '0.72rem', color: 'var(--text-dim)', display: 'block', marginBottom: '0.25rem' }}>
-                        Camera Device
-                      </label>
-                      <select
-                        className="input"
-                        style={{ fontSize: '0.78rem', padding: '0.4rem 0.6rem', height: 'auto', background: 'var(--bg-card)', color: 'var(--text-main)' }}
-                        value={selectedVideoDeviceId}
-                        onChange={(e) => switchCamera(e.target.value)}
-                      >
-                        {videoDevices.length > 0 ? (
-                          videoDevices.map(d => (
-                            <option key={d.deviceId} value={d.deviceId} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>{d.label}</option>
-                          ))
-                        ) : (
-                          <option value="" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Default Integrated Camera</option>
-                        )}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '0.72rem', color: 'var(--text-dim)', display: 'block', marginBottom: '0.25rem' }}>
-                        Microphone Device
-                      </label>
-                      <select
-                        className="input"
-                        style={{ fontSize: '0.78rem', padding: '0.4rem 0.6rem', height: 'auto', background: 'var(--bg-card)', color: 'var(--text-main)' }}
-                        value={selectedAudioDeviceId}
-                        onChange={(e) => switchMic(e.target.value)}
-                      >
-                        {audioDevices.length > 0 ? (
-                          audioDevices.map(d => (
-                            <option key={d.deviceId} value={d.deviceId} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>{d.label}</option>
-                          ))
-                        ) : (
-                          <option value="" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Default Microphone</option>
-                        )}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Permissions error banner if needed */}
-                  {permissionStatus === 'denied' && (
-                    <div style={{ padding: '0.5rem 0.75rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: 'var(--radius-sm)', fontSize: '0.75rem', color: '#f87171', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>⚠️ Access blocked. Please allow Camera & Mic in your browser address bar.</span>
-                      <button onClick={retryPermission} className="btn btn-primary btn-sm" style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}>
-                        Retry
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
 
-            {/* Rounds Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem', marginTop: '1.25rem' }}>
+            {/* Rounds Selector Grid */}
+            <div className="grid-3" style={{ marginTop: '1.25rem' }}>
               {MOCK_INTERVIEW_SESSIONS.map((round) => (
                 <div
                   key={round.id}
+                  className="card"
                   style={{
-                    padding: '1.35rem',
-                    borderRadius: 'var(--radius-lg)',
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    border: '1px solid var(--border-subtle)',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
-                    gap: '1rem',
+                    padding: '1.25rem',
+                    border: '1px solid var(--border-subtle)',
                   }}
                 >
                   <div>
@@ -665,7 +916,7 @@ export const MockInterviewer = ({ userProfile }) => {
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)' }}>
                     <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                      ⏱️ {round.durationMinutes} Minutes • 🎥 Live Video
+                      ⏱️ {round.durationMinutes} Mins • 🎥 Proctor Active
                     </span>
                     <button
                       onClick={() => handleStartInterview(round)}
@@ -682,478 +933,582 @@ export const MockInterviewer = ({ userProfile }) => {
       )}
 
       {/* ═════════════════════════════════════════════════════════════
-          2. LIVE INTERVIEW SESSION SCREEN (WITH WEBRTC VIDEO & MIC)
+          2. ACTIVE INTERVIEW SESSION SCREEN
           ═════════════════════════════════════════════════════════════ */}
       {isInterviewActive && !isFinished && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(330px, 1fr) minmax(460px, 1.8fr)', gap: '1.5rem' }}>
-          {/* Left Column: Interviewer Video Avatar & Candidate Live Feed */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {/* Interviewer Display Card */}
-            <div className="card" style={{ textAlign: 'center', padding: '1.35rem' }}>
-              <div
-                style={{
-                  width: '84px',
-                  height: '84px',
-                  borderRadius: '50%',
-                  background: 'var(--accent-gradient)',
-                  margin: '0 auto 0.85rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '2.8rem',
-                  boxShadow: 'var(--shadow-glow)',
-                }}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* PROCTOR WARNING BANNERS (WARNING 1 & WARNING 2) */}
+          {proctorWarning && proctorWarning.level === 1 && (
+            <div className="proctor-alert-banner warning-1">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <AlertTriangle size={18} />
+                <span>
+                  <strong>⚠️ Proctor Warning (1/2):</strong> Please keep your eyes focused on the screen! Lookaway gaze deviation was detected.
+                </span>
+              </div>
+              <button
+                onClick={() => setProctorWarning(null)}
+                className="btn btn-ghost btn-sm"
+                style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
               >
-                {selectedRound.avatar}
-              </div>
-              <h3 style={{ fontSize: '1.15rem', color: 'var(--text-white)', marginBottom: '0.2rem' }}>
-                {selectedRound.interviewerName}
-              </h3>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginBottom: '0.65rem' }}>
-                {selectedRound.type} Round • {selectedRound.title}
-              </p>
-
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
-                <span className="badge badge-success">
-                  <span className="pulse-dot" style={{ display: 'inline-block', marginRight: '4px' }}></span>
-                  AI Voice Stream Active
-                </span>
-                <span className="badge badge-info">
-                  Turn: {turnIndex + 1}
-                </span>
-              </div>
+                Acknowledge
+              </button>
             </div>
+          )}
 
-            {/* Candidate Live WebRTC Video Feed & Proctor HUD */}
-            <div className="card" style={{ position: 'relative', overflow: 'hidden', padding: '1rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
-                <h4 style={{ fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}>
-                  <Video size={16} color="var(--primary)" />
-                  Candidate Feed & Live Proctor
-                </h4>
-
-                {/* Video / Mic Toggle Bar */}
-                <div style={{ display: 'flex', gap: '0.35rem' }}>
-                  <button
-                    onClick={() => toggleCamera()}
-                    className={`btn btn-ghost btn-sm ${!isCameraActive ? 'text-danger' : ''}`}
-                    style={{ padding: '0.25rem 0.5rem' }}
-                    title={isCameraActive ? 'Mute Webcam' : 'Turn on Webcam'}
-                  >
-                    {isCameraActive ? <Video size={15} color="#22c55e" /> : <VideoOff size={15} color="#f87171" />}
-                  </button>
-                  <button
-                    onClick={() => toggleMic()}
-                    className={`btn btn-ghost btn-sm ${!isMicActive ? 'text-danger' : ''}`}
-                    style={{ padding: '0.25rem 0.5rem' }}
-                    title={isMicActive ? 'Mute Microphone' : 'Unmute Microphone'}
-                  >
-                    {isMicActive ? <Mic size={15} color="#22c55e" /> : <MicOff size={15} color="#f87171" />}
-                  </button>
-                  <button
-                    onClick={() => setShowDeviceSettings(!showDeviceSettings)}
-                    className="btn btn-ghost btn-sm"
-                    style={{ padding: '0.25rem 0.5rem' }}
-                    title="Media Device Settings"
-                  >
-                    <Settings size={15} />
-                  </button>
-                  <button
-                    onClick={() => setSpeechSynthesisEnabled(!speechSynthesisEnabled)}
-                    className="btn btn-ghost btn-sm"
-                    style={{ padding: '0.25rem 0.5rem' }}
-                    title={speechSynthesisEnabled ? 'Mute AI Voice' : 'Enable AI Voice'}
-                  >
-                    {speechSynthesisEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
-                  </button>
-                </div>
+          {proctorWarning && proctorWarning.level === 2 && (
+            <div className="proctor-alert-banner warning-2">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ShieldAlert size={20} />
+                <span>
+                  <strong>⚠️ URGENT FINAL WARNING (2/2):</strong> Off-screen gaze detected! You have 1 strike remaining. A 3rd infraction will IMMEDIATELY terminate this interview and record an integrity breach.
+                </span>
               </div>
+              <button
+                onClick={() => setProctorWarning(null)}
+                className="btn btn-ghost btn-sm"
+                style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', color: '#ffffff' }}
+              >
+                I am looking at screen
+              </button>
+            </div>
+          )}
 
-              {/* In-Interview Device Selector Popover */}
-              {showDeviceSettings && (
+          {/* TWO-COLUMN LAYOUT: VIDEO & INTERVIEWER (LEFT) vs LIVE AUDIO INTERPRETATION (RIGHT) */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(500px, 1.8fr)', gap: '1.25rem' }}>
+            {/* LEFT COLUMN: INTERVIEWER & CANDIDATE VIDEO FEED */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* Interviewer Persona Card */}
+              <div className="card" style={{ padding: '1.1rem', textAlign: 'center' }}>
                 <div
                   style={{
-                    background: 'rgba(18, 18, 22, 0.95)',
-                    border: '1px solid var(--border-glass)',
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '0.75rem',
-                    marginBottom: '0.75rem',
-                    fontSize: '0.75rem',
+                    width: '74px',
+                    height: '74px',
+                    borderRadius: '50%',
+                    background: 'var(--accent-gradient)',
+                    margin: '0 auto 0.65rem',
                     display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '2.4rem',
+                    boxShadow: 'var(--shadow-glow)',
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <strong style={{ color: 'var(--text-white)' }}>Select Input Devices</strong>
-                    <button onClick={() => setShowDeviceSettings(false)} className="btn btn-ghost btn-sm" style={{ padding: '0.1rem 0.3rem', fontSize: '0.7rem' }}>
-                      ✕
+                  {selectedRound.avatar}
+                </div>
+                <h3 style={{ fontSize: '1.05rem', color: 'var(--text-white)', marginBottom: '0.2rem' }}>
+                  {selectedRound.interviewerName}
+                </h3>
+                <p style={{ fontSize: '0.76rem', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>
+                  {selectedRound.type} • Turn {turnIndex + 1} of 3
+                </p>
+
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  <span className={`badge ${isAiSpeaking ? 'badge-primary' : 'badge-success'}`}>
+                    <span className="pulse-dot" style={{ display: 'inline-block', marginRight: '4px' }}></span>
+                    {isAiSpeaking ? 'Interviewer Speaking' : 'Listening to You'}
+                  </span>
+                  <span className="badge badge-info">
+                    Question {turnIndex + 1}/3
+                  </span>
+                </div>
+              </div>
+
+              {/* Candidate Webcam Feed & Proctor Attention HUD */}
+              <div className="card" style={{ padding: '0.85rem', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <h4 style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem', margin: 0 }}>
+                    <Video size={15} color="var(--primary)" />
+                    Candidate Feed & Proctor
+                  </h4>
+
+                  {/* Device toggles */}
+                  <div style={{ display: 'flex', gap: '0.25rem' }}>
+                    <button
+                      onClick={() => toggleCamera()}
+                      className={`btn btn-ghost btn-sm ${!isCameraActive ? 'text-danger' : ''}`}
+                      style={{ padding: '0.2rem 0.4rem' }}
+                      title="Toggle Camera"
+                    >
+                      {isCameraActive ? <Video size={14} color="#22c55e" /> : <VideoOff size={14} color="#f87171" />}
                     </button>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                    <div>
-                      <span style={{ color: 'var(--text-dim)', display: 'block', marginBottom: '2px' }}>Camera</span>
-                      <select
-                        className="input"
-                        style={{ fontSize: '0.72rem', padding: '0.3rem', height: 'auto', background: 'var(--bg-card)', color: 'var(--text-main)' }}
-                        value={selectedVideoDeviceId}
-                        onChange={(e) => switchCamera(e.target.value)}
-                      >
-                        {videoDevices.map(d => (
-                          <option key={d.deviceId} value={d.deviceId} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>{d.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <span style={{ color: 'var(--text-dim)', display: 'block', marginBottom: '2px' }}>Mic</span>
-                      <select
-                        className="input"
-                        style={{ fontSize: '0.72rem', padding: '0.3rem', height: 'auto', background: 'var(--bg-card)', color: 'var(--text-main)' }}
-                        value={selectedAudioDeviceId}
-                        onChange={(e) => switchMic(e.target.value)}
-                      >
-                        {audioDevices.map(d => (
-                          <option key={d.deviceId} value={d.deviceId} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>{d.label}</option>
-                        ))}
-                      </select>
-                    </div>
+                    <button
+                      onClick={() => toggleMic()}
+                      className={`btn btn-ghost btn-sm ${!isMicActive ? 'text-danger' : ''}`}
+                      style={{ padding: '0.2rem 0.4rem' }}
+                      title="Toggle Mic"
+                    >
+                      {isMicActive ? <Mic size={14} color="#22c55e" /> : <MicOff size={14} color="#f87171" />}
+                    </button>
+                    <button
+                      onClick={() => setShowDeviceSettings(!showDeviceSettings)}
+                      className="btn btn-ghost btn-sm"
+                      style={{ padding: '0.2rem 0.4rem' }}
+                      title="Settings"
+                    >
+                      <Settings size={14} />
+                    </button>
+                    <button
+                      onClick={() => setSpeechSynthesisEnabled(!speechSynthesisEnabled)}
+                      className="btn btn-ghost btn-sm"
+                      style={{ padding: '0.2rem 0.4rem' }}
+                      title="Toggle AI Voice"
+                    >
+                      {speechSynthesisEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+                    </button>
                   </div>
                 </div>
-              )}
 
-              {/* Video Element Viewport */}
-              <div
-                style={{
-                  height: '210px',
-                  background: '#09090b',
-                  borderRadius: 'var(--radius-md)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                }}
-              >
-                {isCameraActive && stream ? (
-                  <video
-                    ref={candidateVideoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="media-video-feed"
-                  />
-                ) : (
-                  <div className="media-video-placeholder">
-                    <div style={{ fontSize: '2.4rem' }}>🎓</div>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#ffffff' }}>
-                      {userProfile.name}
+                {/* Device settings drawer */}
+                {showDeviceSettings && (
+                  <div
+                    style={{
+                      background: 'rgba(18, 18, 22, 0.95)',
+                      border: '1px solid var(--border-glass)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '0.65rem',
+                      marginBottom: '0.5rem',
+                      fontSize: '0.72rem',
+                    }}
+                  >
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
+                      <div>
+                        <span style={{ color: 'var(--text-dim)', display: 'block', marginBottom: '2px' }}>Camera</span>
+                        <select
+                          className="input"
+                          style={{ fontSize: '0.7rem', padding: '0.25rem', height: 'auto', background: 'var(--bg-card)', color: 'var(--text-main)' }}
+                          value={selectedVideoDeviceId}
+                          onChange={(e) => switchCamera(e.target.value)}
+                        >
+                          {videoDevices.map(d => (
+                            <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--text-dim)', display: 'block', marginBottom: '2px' }}>Mic</span>
+                        <select
+                          className="input"
+                          style={{ fontSize: '0.7rem', padding: '0.25rem', height: 'auto', background: 'var(--bg-card)', color: 'var(--text-main)' }}
+                          value={selectedAudioDeviceId}
+                          onChange={(e) => switchMic(e.target.value)}
+                        >
+                          {audioDevices.map(d => (
+                            <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
-                    <div style={{ fontSize: '0.74rem', color: '#93c5fd', fontWeight: 600 }}>
-                      {permissionStatus === 'denied'
-                        ? 'Camera blocked by browser'
-                        : 'Webcam feed paused'}
-                    </div>
-                    <button
-                      onClick={() => toggleCamera(true)}
-                      className="btn btn-outline btn-sm"
-                      style={{ marginTop: '0.3rem', padding: '0.25rem 0.65rem', fontSize: '0.72rem', color: '#ffffff', borderColor: 'rgba(255, 255, 255, 0.3)' }}
-                    >
-                      {permissionStatus === 'denied' ? 'Retry Permissions' : 'Turn On Camera'}
-                    </button>
                   </div>
                 )}
 
-                {/* Top Overlay Badges */}
-                <div className="media-hud-top">
-                  <span className="media-hud-badge">
-                    <span className="pulse-dot" style={{ width: '6px', height: '6px', background: stream ? '#22c55e' : '#f59e0b' }}></span>
-                    {stream ? 'HD 720p • 30 FPS' : 'Virtual Mode'}
-                  </span>
-                  <span className="media-hud-badge">
-                    <ShieldCheck size={12} color="#22c55e" /> Gaze Centered
-                  </span>
-                </div>
-
-                {/* Bottom Overlay Proctor HUD + Live Audio VU Meter */}
-                <div className="media-hud-overlay">
-                  {/* Left: Audio VU meter */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <div className="audio-level-meter-bar">
-                      {[...Array(6)].map((_, i) => {
-                        const threshold = (i + 1) * 16;
-                        const isLit = audioLevel >= threshold;
-                        return (
-                          <div
-                            key={i}
-                            className={`audio-meter-bar-segment ${
-                              isLit ? (i < 4 ? 'active' : i < 5 ? 'active-warning' : 'active-peak') : ''
-                            }`}
-                          />
-                        );
-                      })}
+                {/* Video Feed Screen */}
+                <div
+                  style={{
+                    height: '210px',
+                    background: '#09090b',
+                    borderRadius: 'var(--radius-md)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                  }}
+                >
+                  {isCameraActive && stream ? (
+                    <video
+                      ref={candidateVideoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="media-video-feed"
+                    />
+                  ) : (
+                    <div className="media-video-placeholder">
+                      <div style={{ fontSize: '2rem' }}>🎓</div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ffffff' }}>
+                        {candidateName}
+                      </div>
+                      <button
+                        onClick={() => toggleCamera(true)}
+                        className="btn btn-outline btn-sm"
+                        style={{ marginTop: '0.3rem', padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
+                      >
+                        Start Camera
+                      </button>
                     </div>
-                    <span style={{ color: isSpeaking ? '#4ade80' : isMicActive ? 'var(--text-muted)' : '#f87171', fontWeight: 600 }}>
-                      {isSpeaking ? 'Speaking' : isMicActive ? `${audioLevel}%` : 'Muted'}
-                    </span>
-                  </div>
+                  )}
 
-                  <span style={{ color: '#60a5fa' }}>Pace: {paceWPM} WPM</span>
-                  <span style={{ color: '#34d399' }}>Confidence: {confidenceScore}%</span>
-                </div>
-              </div>
+                  {/* Top Overlay Badges: Attention State & Strikes */}
+                  <div className="media-hud-top">
+                    {gazeAttentionState.status === 'looking_away' ? (
+                      <span className="media-hud-badge" style={{ background: 'rgba(239, 68, 68, 0.85)', color: '#ffffff' }}>
+                        <EyeOff size={12} /> Diverted: {gazeAttentionState.lookAwaySeconds || '1.0'}s
+                      </span>
+                    ) : (
+                      <span className="media-hud-badge" style={{ background: 'rgba(34, 197, 94, 0.25)', color: '#4ade80' }}>
+                        <Eye size={12} /> Screen Focused ({gazeAttentionState.attentionPercentage || 100}%)
+                      </span>
+                    )}
 
-              {/* Permission Alert if denied */}
-              {permissionStatus === 'denied' && (
-                <div style={{ marginTop: '0.5rem', padding: '0.4rem 0.6rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: 'var(--radius-sm)', fontSize: '0.72rem', color: '#f87171', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>Camera/Mic access blocked. Click address bar to allow.</span>
-                  <button onClick={retryPermission} className="btn btn-outline btn-sm" style={{ padding: '0.15rem 0.4rem', fontSize: '0.7rem' }}>
-                    Retry
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Conclude Interview Button */}
-            <button
-              onClick={handleConcludeInterview}
-              className="btn btn-outline"
-              style={{ borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171' }}
-            >
-              Conclude Interview & Generate Report
-            </button>
-          </div>
-
-          {/* Right Column: Live Chat & Audio Conversation Stream */}
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '620px', padding: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Clock size={16} color="var(--warning)" />
-                <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                  Session Timer: {formatTimer(timerSeconds)}
-                </span>
-              </div>
-              <span className="badge badge-primary">AI Adaptive Engine Active</span>
-            </div>
-
-            {/* Conversation Messages */}
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', paddingRight: '0.5rem' }}>
-              {messages.map((msg, i) => {
-                const isAi = msg.sender === 'interviewer';
-                return (
-                  <div
-                    key={i}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: isAi ? 'flex-start' : 'flex-end',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.25rem', fontSize: '0.72rem', color: 'var(--text-dim)' }}>
-                      <span>{isAi ? selectedRound.interviewerName : 'You'}</span>
-                      <span>•</span>
-                      <span>{msg.time}</span>
-                    </div>
-
-                    <div
+                    <span
+                      className="media-hud-badge"
                       style={{
-                        maxWidth: '85%',
-                        padding: '0.85rem 1.15rem',
-                        borderRadius: isAi ? '4px 16px 16px 16px' : '16px 4px 16px 16px',
-                        background: isAi ? 'rgba(255, 255, 255, 0.05)' : 'var(--primary)',
-                        border: isAi ? '1px solid var(--border-subtle)' : 'none',
-                        color: isAi ? 'var(--text-main)' : '#09090b',
-                        fontWeight: isAi ? 400 : 600,
-                        fontSize: '0.88rem',
-                        lineHeight: '1.5',
+                        background:
+                          proctorInfractions.length >= 2
+                            ? 'rgba(239, 68, 68, 0.4)'
+                            : proctorInfractions.length === 1
+                            ? 'rgba(245, 158, 11, 0.4)'
+                            : 'rgba(0, 0, 0, 0.6)',
+                        color:
+                          proctorInfractions.length >= 2
+                            ? '#f87171'
+                            : proctorInfractions.length === 1
+                            ? '#fbbf24'
+                            : '#fafafa',
                       }}
                     >
-                      {msg.text}
-                    </div>
+                      <ShieldCheck size={12} /> Strikes: {proctorInfractions.length}/3
+                    </span>
                   </div>
-                );
-              })}
-              <div ref={messagesEndRef} />
-            </div>
 
-            {/* Live Speech Diagnostic Stream Overlay */}
-            {(isMicListening || currentInput.length > 0) && liveSpeechMetrics && (
-              <div className="live-speech-hud" style={{ marginTop: '0.75rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span className="pulse-dot" style={{ background: '#22c55e' }} />
-                    <strong style={{ fontSize: '0.78rem', color: '#ffffff' }}>
-                      Live Response Speech Analysis
-                    </strong>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <LiveAudioBarMeter level={audioLevel} active={isSpeaking || isMicListening} />
-                    <span style={{ fontSize: '0.68rem', color: '#a1a1aa' }}>
-                      {audioLevel}% Mic Vol
+                  {/* Bottom Proctor Overlay: Mic Meter & Audio Level */}
+                  <div className="media-hud-overlay">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <LiveAudioBarMeter level={audioLevel} active={isSpeaking || isMicListening} />
+                      <span style={{ fontSize: '0.7rem', color: isSpeaking ? '#4ade80' : 'var(--text-muted)' }}>
+                        {isSpeaking ? 'Speaking' : `${audioLevel}% Mic`}
+                      </span>
+                    </div>
+
+                    <span style={{ fontSize: '0.7rem', color: '#38bdf8' }}>
+                      Pace: {liveSpeechMetrics?.wpm || 135} WPM
                     </span>
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
-                  <div style={{ padding: '0.45rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.64rem', color: '#a1a1aa' }}>Pace</div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: liveSpeechMetrics.wpmStatus === 'optimal' ? '#4ade80' : '#facc15' }}>
-                      {liveSpeechMetrics.wpm} WPM
-                    </div>
+                {/* Simulate Lookaway Button for instant verification */}
+                <div style={{ marginTop: '0.65rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <button
+                    onClick={simulateLookawayTest}
+                    className="btn btn-outline btn-sm"
+                    style={{
+                      fontSize: '0.72rem',
+                      padding: '0.25rem 0.65rem',
+                      borderColor: 'rgba(245, 158, 11, 0.4)',
+                      color: '#fbbf24',
+                    }}
+                    title="Simulate looking away to test Alert 1, Alert 2, and Strike 3 termination"
+                  >
+                    🧪 Test Lookaway Alert ({proctorInfractions.length}/3)
+                  </button>
+
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+                    Auto-proctor active (3.0s debounce)
+                  </span>
+                </div>
+              </div>
+
+              {/* Conclude Session Button */}
+              <button
+                onClick={handleConcludeInterview}
+                className="btn btn-outline"
+                style={{ borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171', fontSize: '0.82rem' }}
+              >
+                Conclude Interview & Generate Report
+              </button>
+            </div>
+
+            {/* RIGHT COLUMN: LIVE AUDIO INTERPRETATION AS TEXT NEXT TO VIDEO */}
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '640px', padding: '1.15rem' }}>
+              {/* Header: Session Timer & Status */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.65rem', marginBottom: '0.85rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <Clock size={16} color="var(--warning)" />
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                    Time Remaining: {formatTimer(timerSeconds)}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span className="badge badge-primary">
+                    Live Audio Interpretation
+                  </span>
+                  <span className={`badge ${proctorInfractions.length >= 2 ? 'badge-danger' : 'badge-success'}`}>
+                    Proctor: {3 - proctorInfractions.length} Strikes Left
+                  </span>
+                </div>
+              </div>
+
+              {/* Current Question Box */}
+              <div
+                style={{
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.9rem 1.1rem',
+                  marginBottom: '0.85rem',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                  <strong style={{ fontSize: '0.82rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Sparkles size={14} />
+                    {selectedRound.interviewerName} asks:
+                  </strong>
+                  <button
+                    onClick={() => speakText(currentAiQuestion)}
+                    className="btn btn-ghost btn-sm"
+                    style={{ padding: '0.15rem 0.4rem', fontSize: '0.7rem' }}
+                    title="Replay Voice"
+                  >
+                    <Volume1 size={13} /> Replay
+                  </button>
+                </div>
+                <div style={{ fontSize: '0.9rem', lineHeight: '1.5', color: '#fafafa', fontWeight: 500 }}>
+                  {currentAiQuestion}
+                </div>
+
+                {selectedRound.keywordsExpected && (
+                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', alignSelf: 'center' }}>Expected Focus:</span>
+                    {selectedRound.keywordsExpected.map((kw, i) => (
+                      <span key={i} className="badge" style={{ fontSize: '0.66rem', background: 'rgba(255, 255, 255, 0.06)' }}>
+                        {kw}
+                      </span>
+                    ))}
                   </div>
-                  <div style={{ padding: '0.45rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.64rem', color: '#a1a1aa' }}>Fillers</div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: liveSpeechMetrics.fillerCount === 0 ? '#4ade80' : '#f87171' }}>
-                      {liveSpeechMetrics.fillerCount} found
-                    </div>
+                )}
+              </div>
+
+              {/* LIVE CANDIDATE AUDIO INTERPRETATION CONSOLE */}
+              <div className="live-interpretation-console" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                {/* Status Bar */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <span
+                      className="pulse-dot"
+                      style={{
+                        background: isMicListening ? '#22c55e' : '#71717a',
+                        boxShadow: isMicListening ? '0 0 8px #22c55e' : 'none',
+                      }}
+                    />
+                    <strong style={{ fontSize: '0.8rem', color: '#ffffff' }}>
+                      {isMicListening ? '🎙️ Live Audio Input Active — Transcribing Speech' : '🎙️ Microphone Ready — Click Speak to Answer'}
+                    </strong>
                   </div>
-                  <div style={{ padding: '0.45rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.64rem', color: '#a1a1aa' }}>STAR Signals</div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#38bdf8' }}>
-                      {liveSpeechMetrics.starSignals?.length || 0} hits
-                    </div>
-                  </div>
-                  <div style={{ padding: '0.45rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.64rem', color: '#a1a1aa' }}>Confidence</div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: liveSpeechMetrics.confidenceScore >= 80 ? '#4ade80' : '#eab308' }}>
-                      {liveSpeechMetrics.confidenceScore}%
-                    </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <LiveAudioBarMeter level={audioLevel} active={isSpeaking || isMicListening} />
+                    <span style={{ fontSize: '0.7rem', color: isSpeaking ? '#4ade80' : '#a1a1aa' }}>
+                      {audioLevel}% Vol
+                    </span>
                   </div>
                 </div>
 
-                {liveSpeechMetrics.liveTip && (
-                  <div style={{ fontSize: '0.72rem', color: '#e4e4e7', background: 'rgba(255, 255, 255, 0.03)', padding: '0.35rem 0.65rem', borderRadius: '4px', borderLeft: '3px solid #38bdf8' }}>
-                    💡 <strong>Live Tip:</strong> {liveSpeechMetrics.liveTip}
+                {/* Real-Time Live Interpretation Text Window */}
+                <div className={`live-interpretation-box ${isMicListening ? 'listening' : ''}`} style={{ flex: 1 }}>
+                  {liveSpokenTranscript || liveInterimSnippet ? (
+                    <div>
+                      <span>{liveSpokenTranscript}</span>
+                      {liveInterimSnippet && (
+                        <span className="live-interim-text"> {liveInterimSnippet}</span>
+                      )}
+                      {isMicListening && <span className="live-typing-cursor" />}
+                    </div>
+                  ) : (
+                    <div style={{ color: 'var(--text-dim)', fontSize: '0.85rem', fontStyle: 'italic', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '0.5rem' }}>
+                      <Mic size={24} color="#71717a" />
+                      <span>Click <strong>"Start Speaking"</strong> below to answer out loud. Your voice will be transcribed and evaluated here in real time.</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Real-time Telemetry Strip (Pace, Fillers, Keywords, Confidence) */}
+                {liveSpeechMetrics && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.4rem' }}>
+                    <div style={{ padding: '0.35rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.62rem', color: '#a1a1aa' }}>Pace</div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: liveSpeechMetrics.wpmStatus === 'optimal' ? '#4ade80' : '#facc15' }}>
+                        {liveSpeechMetrics.wpm} WPM
+                      </div>
+                    </div>
+                    <div style={{ padding: '0.35rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.62rem', color: '#a1a1aa' }}>Fillers</div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: liveSpeechMetrics.fillerCount === 0 ? '#4ade80' : '#f87171' }}>
+                        {liveSpeechMetrics.fillerCount} found
+                      </div>
+                    </div>
+                    <div style={{ padding: '0.35rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.62rem', color: '#a1a1aa' }}>Keywords</div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#38bdf8' }}>
+                        {liveSpeechMetrics.matchedKeywords?.length || 0} hits
+                      </div>
+                    </div>
+                    <div style={{ padding: '0.35rem', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.04)', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.62rem', color: '#a1a1aa' }}>Confidence</div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: liveSpeechMetrics.confidenceScore >= 80 ? '#4ade80' : '#eab308' }}>
+                        {liveSpeechMetrics.confidenceScore}%
+                      </div>
+                    </div>
                   </div>
                 )}
-              </div>
-            )}
 
-            {/* Candidate Voice/Text Input Bar */}
-            <div style={{ display: 'flex', gap: '0.65rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)', alignItems: 'center' }}>
-              <button
-                onClick={toggleSpeechRecognition}
-                className={`btn ${isMicListening ? 'btn-accent audio-pulse-ring' : 'btn-outline'}`}
-                title="Speak Answer (Live Speech Analysis Enabled)"
-                style={{
-                  padding: '0.65rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: isMicListening ? '#22c55e' : 'transparent',
-                  color: isMicListening ? '#09090b' : 'inherit',
-                }}
-              >
-                {isMicListening ? <Mic className="pulse-dot" size={18} /> : <Mic size={18} />}
-              </button>
+                {/* Live Coach Guidance Tip */}
+                {liveSpeechMetrics?.liveTip && (
+                  <div style={{ fontSize: '0.72rem', color: '#e4e4e7', background: 'rgba(255, 255, 255, 0.03)', padding: '0.3rem 0.6rem', borderRadius: '4px', borderLeft: '3px solid #38bdf8' }}>
+                    💡 <strong>Coaching:</strong> {liveSpeechMetrics.liveTip}
+                  </div>
+                )}
 
-              <div style={{ position: 'relative', flex: 1 }}>
-                <input
-                  type="text"
-                  className="input"
-                  style={{ width: '100%', paddingRight: isSpeaking ? '85px' : '1rem' }}
-                  placeholder={
-                    isMicListening
-                      ? '🎙️ Listening to your microphone... Speak now'
-                      : 'Type your answer or click mic to speak...'
-                  }
-                  value={currentInput}
-                  onChange={(e) => setCurrentInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSendMessage();
-                  }}
-                />
-                {/* Live audio indicator badge inside input when speaking */}
-                {isSpeaking && (
-                  <span
+                {/* Candidate Action Buttons */}
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.25rem' }}>
+                  <button
+                    onClick={toggleSpeechRecognition}
+                    className={`btn ${isMicListening ? 'btn-accent audio-pulse-ring' : 'btn-outline'}`}
                     style={{
-                      position: 'absolute',
-                      right: '10px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      fontSize: '0.7rem',
-                      color: '#4ade80',
+                      flex: 1,
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '4px',
-                      background: 'rgba(34, 197, 94, 0.12)',
-                      padding: '2px 6px',
-                      borderRadius: '4px',
+                      justifyContent: 'center',
+                      gap: '0.45rem',
+                      background: isMicListening ? '#22c55e' : 'transparent',
+                      color: isMicListening ? '#09090b' : 'inherit',
+                      fontWeight: 600,
                     }}
                   >
-                    <span className="pulse-dot" style={{ width: '5px', height: '5px', background: '#4ade80' }}></span>
-                    Active
-                  </span>
-                )}
+                    {isMicListening ? <Mic className="pulse-dot" size={16} /> : <Mic size={16} />}
+                    {isMicListening ? 'Listening (Click to Pause)' : '🎙️ Start Speaking'}
+                  </button>
+
+                  <button
+                    onClick={handleSubmitCandidateResponse}
+                    className="btn btn-primary"
+                    disabled={!liveSpokenTranscript.trim()}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <Send size={15} />
+                    Submit Answer
+                  </button>
+
+                  {liveSpokenTranscript && (
+                    <button
+                      onClick={handleClearSpeech}
+                      className="btn btn-ghost btn-sm"
+                      style={{ padding: '0.5rem', color: 'var(--text-dim)' }}
+                      title="Clear Transcript"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <button
-                onClick={handleSendMessage}
-                className="btn btn-primary"
-                disabled={!currentInput.trim()}
-              >
-                <Send size={16} />
-              </button>
+              {/* Compact Conversation History Timeline */}
+              {messages.length > 1 && (
+                <div style={{ marginTop: '0.65rem', maxHeight: '110px', overflowY: 'auto', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Turn History:</span>
+                  {messages.slice(0, -1).map((m, idx) => (
+                    <div key={idx} style={{ fontSize: '0.74rem', color: m.sender === 'candidate' ? '#4ade80' : 'var(--text-muted)' }}>
+                      <strong>{m.sender === 'candidate' ? 'You' : 'Interviewer'}:</strong> {m.text.length > 90 ? m.text.substring(0, 90) + '...' : m.text}
+                    </div>
+                  ))}
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
 
       {/* ═════════════════════════════════════════════════════════════
-          3. POST-INTERVIEW COMPREHENSIVE PERFORMANCE REPORT
+          3. POST-INTERVIEW REAL EVALUATION REPORT
           ═════════════════════════════════════════════════════════════ */}
       {isFinished && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Main Assessment Header Card */}
           <div
             className="card"
             style={{
-              background: 'linear-gradient(135deg, rgba(39, 39, 42, 0.6) 0%, rgba(9, 9, 11, 0.9) 100%)',
-              borderColor: 'var(--border-glass)',
-              padding: '2rem',
+              background: 'linear-gradient(135deg, rgba(24, 24, 28, 0.9) 0%, rgba(9, 9, 11, 0.98) 100%)',
+              borderColor: isTerminatedByProctor ? 'rgba(239, 68, 68, 0.6)' : 'var(--border-glass)',
+              padding: '1.75rem',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
-                <span className="badge badge-success" style={{ marginBottom: '0.5rem' }}>
-                  Assessment Complete
+                <span className={`badge ${isTerminatedByProctor ? 'badge-danger' : 'badge-success'}`} style={{ marginBottom: '0.4rem' }}>
+                  {isTerminatedByProctor ? '❌ Session Terminated by Proctor' : '✓ Assessment Completed'}
                 </span>
-                <h2 style={{ fontSize: '1.8rem', color: 'var(--text-bright)', marginBottom: '0.35rem' }}>
-                  AI Interview Performance Evaluation
+                <h2 style={{ fontSize: '1.7rem', color: 'var(--text-bright)', marginBottom: '0.3rem' }}>
+                  Real Candidate Interview Performance Evaluation
                 </h2>
-                <p style={{ fontSize: '0.9rem' }}>
-                  Candidate: <strong>{userProfile.name}</strong> • Evaluated for: <strong>{selectedRound.title}</strong>
+                <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)' }}>
+                  Candidate: <strong>{candidateName}</strong> • Evaluated for: <strong>{selectedRound.title}</strong>
                 </p>
               </div>
 
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', gap: '0.65rem' }}>
                 <button
                   onClick={() => {
                     setIsFinished(false);
                     setIsInterviewActive(false);
                   }}
-                  className="btn btn-outline"
+                  className="btn btn-outline btn-sm"
                 >
-                  <RotateCcw size={15} /> Practice Another Round
+                  <RotateCcw size={14} /> Practice Another Round
                 </button>
                 <button
                   onClick={() => window.print()}
-                  className="btn btn-primary"
+                  className="btn btn-primary btn-sm"
                 >
-                  Export Feedback Report
+                  <FileText size={14} /> Export Feedback Report
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Competency Scores Grid */}
+          {/* DISQUALIFICATION / TERMINATION BANNER IF APPLICABLE */}
+          {isTerminatedByProctor && (
+            <div
+              style={{
+                background: 'rgba(239, 68, 68, 0.12)',
+                border: '1.5px solid rgba(239, 68, 68, 0.5)',
+                borderRadius: 'var(--radius-md)',
+                padding: '1.25rem',
+                display: 'flex',
+                gap: '1rem',
+                alignItems: 'flex-start',
+              }}
+            >
+              <div style={{ color: '#ef4444', marginTop: '2px' }}>
+                <XCircle size={28} />
+              </div>
+              <div>
+                <h3 style={{ color: '#f87171', fontSize: '1.05rem', marginBottom: '0.25rem' }}>
+                  Integrity Disqualification Notice: 3/3 Gaze Infractions
+                </h3>
+                <p style={{ color: '#fca5a5', fontSize: '0.82rem', lineHeight: '1.5', margin: 0 }}>
+                  This mock interview was terminated automatically because the candidate diverted their gaze away from the screen for &gt;3.0 seconds three separate times. In campus placement drives and enterprise recruitment (Amazon, TCS, Infosys), persistent off-screen eye contact flags potential malpractice.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* REAL COMPETENCY SCORES GRID */}
           <div className="grid-4">
             <div className="stat-card">
               <div className="stat-icon" style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#fafafa' }}>
-                <BarChart2 size={24} />
+                <BarChart2 size={22} />
               </div>
               <div>
                 <div className="stat-val" style={{ color: 'var(--text-white)' }}>
-                  {evaluationReport?.metrics?.technicalDepth || 88}/100
+                  {evaluationReport?.metrics?.technicalDepth || 75}/100
                 </div>
                 <div className="stat-label">Technical Depth</div>
               </div>
@@ -1161,11 +1516,11 @@ export const MockInterviewer = ({ userProfile }) => {
 
             <div className="stat-card">
               <div className="stat-icon" style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#fafafa' }}>
-                <TrendingUp size={24} />
+                <TrendingUp size={22} />
               </div>
               <div>
                 <div className="stat-val" style={{ color: 'var(--text-white)' }}>
-                  {evaluationReport?.metrics?.problemSolving || 84}/100
+                  {evaluationReport?.metrics?.problemSolving || 72}/100
                 </div>
                 <div className="stat-label">Problem Solving</div>
               </div>
@@ -1173,11 +1528,11 @@ export const MockInterviewer = ({ userProfile }) => {
 
             <div className="stat-card">
               <div className="stat-icon" style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#fafafa' }}>
-                <UserCheck size={24} />
+                <UserCheck size={22} />
               </div>
               <div>
                 <div className="stat-val" style={{ color: 'var(--text-white)' }}>
-                  {evaluationReport?.metrics?.verbalFluency || 86}/100
+                  {evaluationReport?.metrics?.verbalFluency || 70}/100
                 </div>
                 <div className="stat-label">Verbal Fluency & Mic</div>
               </div>
@@ -1185,33 +1540,152 @@ export const MockInterviewer = ({ userProfile }) => {
 
             <div className="stat-card">
               <div className="stat-icon" style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#fafafa' }}>
-                <Award size={24} />
+                <Award size={22} />
               </div>
               <div>
-                <div className="stat-val" style={{ color: 'var(--text-white)' }}>
-                  {evaluationReport?.metrics?.overallReadiness || 87}/100
+                <div
+                  className="stat-val"
+                  style={{
+                    color: isTerminatedByProctor ? '#f87171' : 'var(--text-white)',
+                  }}
+                >
+                  {evaluationReport?.metrics?.overallReadiness || 72}/100
                 </div>
-                <div className="stat-label">Overall Readiness</div>
+                <div className="stat-label">Placement Readiness</div>
               </div>
             </div>
           </div>
 
-          {/* Strengths & Weaknesses Breakdown */}
+          {/* REAL SPEECH TELEMETRY & PROCTOR INTEGRITY AUDIT CARDS */}
+          <div className="grid-2">
+            {/* Real Speech Telemetry Breakdown */}
+            <div className="card">
+              <div className="card-header">
+                <h3 className="card-title">
+                  <Activity size={18} color="var(--primary)" />
+                  Real Speech Telemetry Audit
+                </h3>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem', marginBottom: '1rem' }}>
+                <div style={{ padding: '0.65rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-sm)', textAlign: 'center', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Total Spoken Words</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fafafa' }}>
+                    {evaluationReport?.speechTelemetry?.totalWords || 0}
+                  </div>
+                </div>
+                <div style={{ padding: '0.65rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-sm)', textAlign: 'center', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Speaking Pace</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#38bdf8' }}>
+                    {evaluationReport?.speechTelemetry?.avgPaceWpm || 135} WPM
+                  </div>
+                </div>
+                <div style={{ padding: '0.65rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-sm)', textAlign: 'center', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Filler Words Used</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 700, color: (evaluationReport?.speechTelemetry?.fillerCount || 0) === 0 ? '#4ade80' : '#f87171' }}>
+                    {evaluationReport?.speechTelemetry?.fillerCount || 0}
+                  </div>
+                </div>
+              </div>
+
+              {/* Detected Fillers List */}
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                <strong>Filler Word Breakdown: </strong>
+                {evaluationReport?.speechTelemetry?.fillersDetected?.length > 0 ? (
+                  <span>
+                    {evaluationReport.speechTelemetry.fillersDetected.map(f => `"${f.word}" (${f.count}x)`).join(', ')}
+                  </span>
+                ) : (
+                  <span style={{ color: '#4ade80' }}>0 verbal fillers detected. Commendable verbal discipline!</span>
+                )}
+              </div>
+
+              {/* Matched Keywords */}
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                <strong>Domain Keywords Articulated: </strong>
+                {evaluationReport?.speechTelemetry?.matchedKeywords?.length > 0 ? (
+                  <div style={{ display: 'inline-flex', gap: '0.3rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                    {evaluationReport.speechTelemetry.matchedKeywords.map((kw, i) => (
+                      <span key={i} className="badge badge-success" style={{ fontSize: '0.68rem' }}>
+                        ✓ {kw}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span style={{ color: '#facc15' }}>None of the expected keywords were spoken.</span>
+                )}
+              </div>
+            </div>
+
+            {/* Proctor Integrity & Gaze Infraction Audit */}
+            <div className="card">
+              <div className="card-header">
+                <h3 className="card-title">
+                  <ShieldCheck size={18} color={isTerminatedByProctor ? '#f87171' : '#22c55e'} />
+                  Proctor Gaze & Attention Audit
+                </h3>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', padding: '0.6rem 0.8rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-sm)' }}>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Integrity Status</div>
+                  <strong style={{ fontSize: '0.88rem', color: isTerminatedByProctor ? '#f87171' : '#4ade80' }}>
+                    {evaluationReport?.proctorAudit?.integrityStatus || 'Verified'}
+                  </strong>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Attention Score</div>
+                  <strong style={{ fontSize: '0.88rem', color: '#fafafa' }}>
+                    {evaluationReport?.proctorAudit?.attentionPercentage || 98}%
+                  </strong>
+                </div>
+              </div>
+
+              {/* Infraction Log Table */}
+              <div>
+                <strong style={{ fontSize: '0.78rem', color: 'var(--text-white)' }}>
+                  Chronological Infraction History ({evaluationReport?.proctorAudit?.infractionsLog?.length || 0} strikes recorded):
+                </strong>
+                {evaluationReport?.proctorAudit?.infractionsLog?.length > 0 ? (
+                  <table className="proctor-infractions-table">
+                    <thead>
+                      <tr>
+                        <th>Strike</th>
+                        <th>Time</th>
+                        <th>Violation Reason</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {evaluationReport.proctorAudit.infractionsLog.map((item, idx) => (
+                        <tr key={idx}>
+                          <td style={{ color: item.strike >= 3 ? '#ef4444' : '#fbbf24', fontWeight: 700 }}>
+                            Strike {item.strike}/3
+                          </td>
+                          <td style={{ color: 'var(--text-dim)' }}>{item.timestamp}</td>
+                          <td style={{ color: 'var(--text-muted)' }}>{item.reason}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div style={{ fontSize: '0.8rem', color: '#4ade80', marginTop: '0.4rem', padding: '0.5rem', background: 'rgba(34, 197, 94, 0.08)', borderRadius: 'var(--radius-sm)' }}>
+                    ✓ Flawless focus. No lookaway infractions or tab switches recorded.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* STRENGTHS & IMPROVEMENTS BREAKDOWN */}
           <div className="grid-2">
             <div className="card">
               <div className="card-header">
                 <h3 className="card-title">
                   <CheckCircle2 size={18} color="#22c55e" />
-                  Key Strengths Observed (Real Speech Telemetry)
+                  Key Strengths Observed (Real Telemetry)
                 </h3>
               </div>
-              <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', paddingLeft: '1.25rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                {(evaluationReport?.strengths || [
-                  'Strong conceptual grasp of OS memory virtualization, process PCB structures, and thread concurrency.',
-                  'Clear verbal articulation without excessive filler words (Pace: 135 words/minute is optimal).',
-                  'Microphone audio was crisp with solid speech cadence and zero clipping.',
-                  'Structured approach when breaking down multi-threaded synchronization edge cases.'
-                ]).map((s, idx) => (
+              <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', paddingLeft: '1.2rem', fontSize: '0.84rem', color: 'var(--text-muted)' }}>
+                {evaluationReport?.strengths?.map((s, idx) => (
                   <li key={idx}>{s}</li>
                 ))}
               </ul>
@@ -1221,59 +1695,53 @@ export const MockInterviewer = ({ userProfile }) => {
               <div className="card-header">
                 <h3 className="card-title">
                   <AlertCircle size={18} color="#eab308" />
-                  Actionable Areas for Improvement (AI Critique)
+                  Actionable Areas for Improvement
                 </h3>
               </div>
-              <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', paddingLeft: '1.25rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                {(evaluationReport?.improvements || [
-                  'When asked about mutexes vs semaphores, emphasize kernel-level ownership.',
-                  'In behavioral questions, format answers strictly with the STAR framework (Situation, Task, Action, Result).',
-                  'Elaborate more on production scale metrics (QPS, database indexing performance) when discussing projects.'
-                ]).map((imp, idx) => (
+              <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', paddingLeft: '1.2rem', fontSize: '0.84rem', color: 'var(--text-muted)' }}>
+                {evaluationReport?.improvements?.map((imp, idx) => (
                   <li key={idx}>{imp}</li>
                 ))}
               </ul>
             </div>
           </div>
 
-          {/* Answer-Level Critique & Model Exemplar */}
+          {/* TURN-BY-TURN REAL ANSWER CRITIQUE */}
           <div className="card">
             <div className="card-header">
               <h3 className="card-title">
                 <Sparkles size={18} color="var(--primary)" />
-                Turn-by-Turn Dynamic Answer Critique
+                Turn-by-Turn Spoken Response Critique
               </h3>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {(evaluationReport?.turnCritiques || [
-                {
-                  turn: 1,
-                  topic: 'Process vs Thread & Scheduling in Linux',
-                  candidateSnippet: 'Processes have independent address spaces while threads share heap and memory.',
-                  score: 88,
-                  feedback: 'You correctly identified that threads share address space and heaps while maintaining their own stack and registers.'
-                }
-              ]).map((c, idx) => (
-                <div key={idx} style={{ padding: '1rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-main)' }}>
-                      Turn #{c.turn}: {c.topic}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              {evaluationReport?.turnCritiques?.length > 0 ? (
+                evaluationReport.turnCritiques.map((c, idx) => (
+                  <div key={idx} style={{ padding: '0.9rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.86rem', color: 'var(--text-main)' }}>
+                        Turn #{c.turn}: {c.topic}
+                      </div>
+                      <span className="badge badge-success" style={{ fontSize: '0.72rem' }}>
+                        Score: {c.score}/100 • {c.wordCount} words
+                      </span>
                     </div>
-                    <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>
-                      Score: {c.score}/100
-                    </span>
-                  </div>
-                  {c.candidateSnippet && (
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginBottom: '0.5rem', fontStyle: 'italic' }}>
+
+                    <div style={{ fontSize: '0.78rem', color: '#93c5fd', marginBottom: '0.45rem', fontStyle: 'italic', background: 'rgba(0, 0, 0, 0.25)', padding: '0.45rem 0.65rem', borderRadius: '4px' }}>
                       "{c.candidateSnippet}"
                     </div>
-                  )}
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.5', background: 'rgba(255, 255, 255, 0.03)', padding: '0.75rem', borderRadius: 'var(--radius-sm)' }}>
-                    <strong>AI Recruiter Feedback:</strong> {c.feedback}
+
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+                      <strong>AI Recruiter Feedback:</strong> {c.feedback}
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-dim)', textAlign: 'center', padding: '1rem' }}>
+                  No candidate spoken responses were submitted prior to session conclusion.
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>

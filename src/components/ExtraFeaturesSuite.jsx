@@ -82,10 +82,13 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
   const fluencyRecognizerRef = useRef(null);
 
   // Fluency Analyzer state
-  const [speechText, setSpeechText] = useState('Actually, um, in our college project we, like, implemented a microservice that, you know, handled database transactions. It was basically very fast.');
+  const [speechText, setSpeechText] = useState('');
   const [isFluencyRecording, setIsFluencyRecording] = useState(false);
   const [fluencyReport, setFluencyReport] = useState(null);
   const [liveFluencyMetrics, setLiveFluencyMetrics] = useState(null);
+  const [fluencyError, setFluencyError] = useState('');
+  const fluencyTranscriptRef = useRef('');
+  const fluencyElapsedRef = useRef(0);
 
   // Flashcards state
   const [currentCardIdx, setCurrentCardIdx] = useState(0);
@@ -105,7 +108,6 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
     isMicActive,
     audioLevel,
     isSpeaking,
-    permissionStatus,
     startMedia,
     stopMedia,
     toggleCamera,
@@ -281,23 +283,47 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
   const toggleFluencyRecording = async () => {
     if (isFluencyRecording) {
       if (fluencyRecognizerRef.current) fluencyRecognizerRef.current.stop();
-      setIsFluencyRecording(false);
-      handleAnalyzeFluency();
       return;
     }
 
-    try {
-      await startMedia({ audio: true, video: false });
-    } catch (e) {
-      console.warn('Fluency mic permission check:', e);
+    setFluencyError('');
+    if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+      setFluencyError('Microphone access requires a secure page. Open this app on localhost or over HTTPS.');
+      return;
     }
-
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setFluencyError('This browser does not provide microphone access. Use a current version of Chrome, Edge, or Firefox.');
+      return;
+    }
+    try {
+      const mediaStream = await startMedia({ audio: true, video: false, throwOnError: true });
+      if (!mediaStream) {
+        setFluencyError('Could not access your microphone. Check browser permissions, or paste a transcript below.');
+        return;
+      }
+    } catch (err) {
+      const mediaMessages = {
+        NotAllowedError: 'Microphone permission is blocked. Allow microphone access for this site in your browser settings, then retry.',
+        PermissionDeniedError: 'Microphone permission is blocked. Allow microphone access for this site in your browser settings, then retry.',
+        NotFoundError: 'No microphone was found. Connect or enable a microphone, then retry.',
+        DevicesNotFoundError: 'No microphone was found. Connect or enable a microphone, then retry.',
+        NotReadableError: 'The microphone is busy or unavailable. Close other apps using it, then retry.',
+        TrackStartError: 'The microphone is busy or unavailable. Close other apps using it, then retry.'
+      };
+      setFluencyError(mediaMessages[err.name] || err.message || 'Could not access your microphone. Check browser permissions, or paste a transcript below.');
+      return;
+    }
     setSpeechText('');
+    fluencyTranscriptRef.current = '';
+    fluencyElapsedRef.current = 0;
+    setFluencyReport(null);
     setLiveFluencyMetrics(null);
 
     if (!fluencyRecognizerRef.current) {
       fluencyRecognizerRef.current = new LiveSpeechRecognizer({
         onTranscript: ({ transcript, elapsedSeconds }) => {
+          fluencyTranscriptRef.current = transcript;
+          fluencyElapsedRef.current = elapsedSeconds;
           setSpeechText(transcript);
           const metrics = analyzeSpeechInRealTime(transcript, elapsedSeconds);
           setLiveFluencyMetrics(metrics);
@@ -305,41 +331,63 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
         onStateChange: ({ isListening }) => {
           setIsFluencyRecording(isListening);
           if (!isListening) {
-            handleAnalyzeFluency();
+            if (fluencyTranscriptRef.current.trim()) handleAnalyzeFluency(fluencyTranscriptRef.current, fluencyElapsedRef.current);
+            stopMedia();
           }
         },
         onError: (err) => {
           console.warn('Fluency mic error:', err);
           setIsFluencyRecording(false);
+          const messages = {
+            'not-allowed': 'Microphone access was blocked. Allow microphone access in your browser settings and try again.',
+            'permission-denied': 'Microphone access was blocked. Allow microphone access in your browser settings and try again.',
+            'service-not-allowed': 'Speech recognition is unavailable for this page. Try Chrome or Edge, or paste a transcript below.',
+            'audio-capture': 'No microphone was found. Connect a microphone or paste a transcript below.',
+            'network': 'The browser speech recognition service could not connect. Check your connection or paste a transcript below.',
+            'aborted': 'Speech recognition was interrupted. Start recording again or paste a transcript below.'
+          };
+          setFluencyError(messages[err.error] || err.message || 'Speech recognition could not start. You can still analyze a pasted transcript.');
         }
       });
     }
 
-    fluencyRecognizerRef.current.start({ lang: 'en-IN', continuous: true });
+    const started = fluencyRecognizerRef.current.start({ lang: 'en-IN', continuous: true });
+    if (!started) {
+      stopMedia();
+      setFluencyError('Live speech recognition is not supported in this browser. Try Chrome or Edge, or paste a transcript below.');
+      return;
+    }
+    setIsFluencyRecording(true);
   };
 
   // Analyze Fluency
-  const handleAnalyzeFluency = () => {
-    const textLower = speechText.toLowerCase();
-    const fillers = ['um', 'uh', 'like', 'you know', 'actually', 'basically'];
-    let count = 0;
-    fillers.forEach(f => {
-      const regex = new RegExp(`\\b${f}\\b`, 'g');
-      const matches = textLower.match(regex);
-      if (matches) count += matches.length;
-    });
-
+  const handleAnalyzeFluency = (text = speechText, elapsedSeconds = 0) => {
+    const cleanText = text.trim();
+    if (!cleanText) {
+      setFluencyError('Add or record a few sentences before analyzing your speech.');
+      setFluencyReport(null);
+      return;
+    }
+    const estimatedSeconds = Math.max(2, cleanText.split(/\s+/).length / 2);
+    const metrics = analyzeSpeechInRealTime(cleanText, elapsedSeconds || estimatedSeconds);
+    const suggestions = [];
+    if (metrics.fillerCount) suggestions.push(`Replace filler words (${metrics.fillersFound.map(item => `“${item.word}”`).join(', ')}) with a brief pause.`);
+    if (elapsedSeconds && metrics.wpmStatus === 'fast') suggestions.push('Slow down slightly and leave a short pause between key ideas.');
+    if (elapsedSeconds && metrics.wpmStatus === 'slow' && metrics.wordCount > 6) suggestions.push('Build a steadier pace with complete, connected sentences.');
+    if (!metrics.assertiveSignals.length) suggestions.push('Use specific action verbs and evidence to make your points sound more confident.');
+    if (metrics.wordCount < 30) suggestions.push('Try a 30–60 second response for a more reliable pace estimate.');
+    if (!suggestions.length) suggestions.push('Strong delivery signals. Keep this pace and support your points with specific examples.');
     setFluencyReport({
-      fillerCount: count,
-      wordsCount: speechText.split(/\s+/).filter(Boolean).length,
-      clarityScore: count > 3 ? 68 : count > 1 ? 82 : 94,
-      vocabularyDiversity: 'Good Technical Lexicon (B+)',
-      suggestions: [
-        'Replace "basically" with concise direct statements.',
-        'Pause for 1 second instead of saying "um" to gather your thoughts.',
-        'Use transition phrases like "Furthermore" or "In particular".',
-      ]
+      fillerCount: metrics.fillerCount,
+      fillersFound: metrics.fillersFound,
+      wordsCount: metrics.wordCount,
+      clarityScore: metrics.clarityScore,
+      wpm: elapsedSeconds ? metrics.wpm : null,
+      wpmStatus: elapsedSeconds ? metrics.wpmStatus : 'unmeasured',
+      confidenceScore: metrics.confidenceScore,
+      suggestions
     });
+    setFluencyError('');
   };
 
   // End-to-End Mock Drive Progression
@@ -397,17 +445,8 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
           <button className={`tab-btn ${activeTool === 'fluency' ? 'active' : ''}`} onClick={() => setActiveTool('fluency')}>
             <Mic size={15} /> Fluency & Speech Analyzer
           </button>
-          <button className={`tab-btn ${activeTool === 'mock_drive' ? 'active' : ''}`} onClick={() => setActiveTool('mock_drive')}>
-            <Award size={15} /> End-to-End Drive & Offer Letter
-          </button>
-          <button className={`tab-btn ${activeTool === 'flashcards' ? 'active' : ''}`} onClick={() => setActiveTool('flashcards')}>
-            <CreditCard size={15} /> Aptitude Flashcards
-          </button>
           <button className={`tab-btn ${activeTool === 'plan' ? 'active' : ''}`} onClick={() => setActiveTool('plan')}>
             <Calendar size={15} /> 30-Day Weak Area Plan
-          </button>
-          <button className={`tab-btn ${activeTool === 'alumni' ? 'active' : ''}`} onClick={() => setActiveTool('alumni')}>
-            <MessageCircle size={15} /> Alumni Mentors
           </button>
         </div>
       </div>
@@ -787,7 +826,7 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
           Tool 2: Communication & Fluency Analyzer with Live Mic
           ═════════════════════════════════════════════════════════════ */}
       {activeTool === 'fluency' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 420px), 1fr))', gap: '1.25rem' }}>
           <div className="card">
             <div className="card-header">
               <h3 className="card-title">
@@ -801,20 +840,26 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
                 className={`btn ${isFluencyRecording ? 'btn-accent audio-pulse-ring' : 'btn-outline'} btn-sm`}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               >
-                <Mic size={14} />
-                {isFluencyRecording ? 'Stop & Evaluate Mic Speech' : 'Record Live Speech via Mic'}
+                {isFluencyRecording ? <MicOff size={14} /> : <Mic size={14} />}
+                {isFluencyRecording ? 'Stop recording' : 'Start recording'}
               </button>
             </div>
             <p style={{ fontSize: '0.85rem', marginBottom: '1rem' }}>
-              Speak naturally into your microphone or paste your interview transcription to detect speech cadence, filler words ("um", "like", "basically"), and clarity bottlenecks.
+              Record a short answer or paste a transcript. Review your speaking pace, filler words, clarity, and confidence cues.
             </p>
+
+            {fluencyError && (
+              <div role="alert" style={{ marginBottom: '1rem', padding: '0.75rem 0.9rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(248, 113, 113, 0.35)', background: 'rgba(127, 29, 29, 0.18)', color: '#fecaca', fontSize: '0.82rem' }}>
+                {fluencyError}
+              </div>
+            )}
 
             {/* Live Audio Visualizer when recording */}
             {isFluencyRecording && (
               <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'rgba(9, 9, 11, 0.85)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '0.75rem', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}>
                   <span className="pulse-dot" style={{ background: '#4ade80' }}></span>
-                  Microphone Active • Live Stream Analysing...
+                  Recording • Speak naturally, then stop when finished
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <LiveAudioBarMeter level={audioLevel} active={true} />
@@ -860,15 +905,18 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
 
             <textarea
               className="textarea"
-              rows={6}
+              rows={8}
               value={speechText}
               onChange={(e) => setSpeechText(e.target.value)}
-              placeholder="Speak using the mic or paste speech transcript..."
+              placeholder="Paste or type a response here, or start recording to transcribe your speech…"
+              aria-label="Speech transcript to analyze"
+              disabled={isFluencyRecording}
             />
 
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
-              <button onClick={handleAnalyzeFluency} className="btn btn-primary">
-                Analyze Communication Quality
+              <span style={{ alignSelf: 'center', color: 'var(--text-dim)', fontSize: '0.75rem' }}>{speechText.trim() ? `${speechText.trim().split(/\s+/).length} words` : 'No transcript yet'}</span>
+              <button onClick={() => handleAnalyzeFluency()} className="btn btn-primary" disabled={!speechText.trim() || isFluencyRecording}>
+                Analyze speech
               </button>
             </div>
           </div>
@@ -883,7 +931,7 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
 
             {fluencyReport ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div className="grid-3">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '0.65rem' }}>
                   <div className="stat-card" style={{ padding: '0.75rem' }}>
                     <div>
                       <div className="stat-val" style={{ color: '#22c55e', fontSize: '1.5rem' }}>{fluencyReport.clarityScore}%</div>
@@ -902,6 +950,19 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
                       <div className="stat-label">Total Words</div>
                     </div>
                   </div>
+                  <div className="stat-card" style={{ padding: '0.75rem' }}>
+                    <div>
+                      <div className="stat-val" style={{ color: '#38bdf8', fontSize: '1.5rem' }}>{fluencyReport.wpm ?? '—'}</div>
+                      <div className="stat-label">Words / min</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <span className="badge badge-success">Confidence {fluencyReport.confidenceScore}%</span>
+                  <span className="badge">Pace: {fluencyReport.wpmStatus === 'optimal' ? 'steady' : fluencyReport.wpmStatus === 'fast' ? 'fast' : fluencyReport.wpmStatus === 'slow' ? 'slow' : 'not measured'}</span>
+                  {fluencyReport.fillersFound.map(item => <span key={item.word} className="badge">“{item.word}” × {item.count}</span>)}
+                  {!fluencyReport.fillersFound.length && <span className="badge badge-success">No filler words detected</span>}
                 </div>
 
                 <div style={{ padding: '0.75rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-sm)' }}>
@@ -917,7 +978,7 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
               </div>
             ) : (
               <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-dim)', fontSize: '0.82rem' }}>
-                Record via microphone or click "Analyze Communication Quality" to view clarity score and filler word frequency.
+                Your analysis will appear here with delivery metrics and tailored practice tips.
               </div>
             )}
           </div>

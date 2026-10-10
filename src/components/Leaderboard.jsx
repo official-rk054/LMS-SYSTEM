@@ -51,18 +51,12 @@ export const Leaderboard = ({ userProfile }) => {
         {BATCH_LEADERBOARD.slice(0, 3).map((item, idx) => (
           <div
             key={item.rank}
-            className="card"
-            style={{
-              textAlign: 'center',
-              padding: '1.75rem',
-              borderColor: idx === 0 ? 'rgba(245, 158, 11, 0.5)' : idx === 1 ? 'rgba(148, 163, 184, 0.5)' : 'rgba(180, 83, 9, 0.5)',
-              background: idx === 0 ? 'linear-gradient(180deg, rgba(245, 158, 11, 0.1) 0%, rgba(22, 22, 26, 0.95) 100%)' : 'var(--bg-card)',
-            }}
+            className={`card leaderboard-podium-card rank-${idx}`}
           >
             <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>
               {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}
             </div>
-            <h3 style={{ fontSize: '1.2rem', color: 'var(--text-white)', marginBottom: '0.2rem' }}>
+            <h3 style={{ fontSize: '1.2rem', color: 'var(--text-bright)', marginBottom: '0.2rem' }}>
               {item.name}
             </h3>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: '0.75rem' }}>

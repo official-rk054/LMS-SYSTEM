@@ -158,14 +158,11 @@ export const JobBoard = ({ userProfile, onApplyDrive }) => {
             >
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span style={{ fontSize: '2.2rem' }}>{drive.logo}</span>
-                    <div>
-                      <h3 style={{ fontSize: '1.15rem', color: 'var(--text-white)', margin: 0 }}>
-                        {drive.company}
-                      </h3>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>{drive.tier}</span>
-                    </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.15rem', color: 'var(--text-bright)', margin: 0 }}>
+                      {drive.company}
+                    </h3>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>{drive.tier}</span>
                   </div>
 
                   <span className="badge badge-success" style={{ fontWeight: 700, fontSize: '0.85rem' }}>
@@ -178,9 +175,9 @@ export const JobBoard = ({ userProfile, onApplyDrive }) => {
                 </h4>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  <div>📍 <strong>Location:</strong> {drive.location}</div>
+                  <div><strong>Location:</strong> {drive.location}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    🎓 <strong>Cutoff:</strong> Min CGPA {drive.minCGPA}
+                    <strong>Cutoff:</strong> Min CGPA {drive.minCGPA}
                     {isCgpaEligible ? (
                       <span className="badge badge-success" style={{ fontSize: '0.65rem', padding: '0.05rem 0.35rem' }}>
                         Eligible (You: {studentCgpa.toFixed(2)})
@@ -191,8 +188,8 @@ export const JobBoard = ({ userProfile, onApplyDrive }) => {
                       </span>
                     )}
                   </div>
-                  <div>📅 <strong>Drive Date:</strong> {drive.date}</div>
-                  <div>🏢 <strong>Eligible:</strong> {drive.eligibleBranches.join(', ')}</div>
+                  <div><strong>Drive Date:</strong> {drive.date}</div>
+                  <div><strong>Eligible:</strong> {drive.eligibleBranches.join(', ')}</div>
                 </div>
 
                 <div style={{ marginTop: '0.85rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)' }}>

@@ -793,6 +793,9 @@ export const recordInterviewEvaluation = ({
   metrics,
   strengths,
   improvements,
+  turnCritiques,
+  proctorAudit,
+  speechTelemetry,
 }) => {
   return updateActiveUserProfile(prev => {
     const history = prev.interviewHistory || [];
@@ -803,11 +806,17 @@ export const recordInterviewEvaluation = ({
       metrics,
       strengths,
       improvements,
+      turnCritiques,
+      proctorAudit,
+      speechTelemetry,
       completedAt: new Date().toISOString(),
     };
 
+    const isDisqualified = proctorAudit?.isTerminated;
+    const effectiveScore = isDisqualified ? Math.min(45, overallScore) : overallScore;
+
     const prevInterview = prev.readinessBreakdown?.interviewHR || 78;
-    const newInterview = Math.min(98, Math.round(prevInterview * 0.6 + overallScore * 0.4));
+    const newInterview = Math.min(98, Math.max(30, Math.round(prevInterview * 0.5 + effectiveScore * 0.5)));
 
     const updatedBreakdown = {
       ...(prev.readinessBreakdown || {}),
@@ -820,9 +829,9 @@ export const recordInterviewEvaluation = ({
     return {
       ...prev,
       interviewHistory: [record, ...history],
-      xpPoints: (prev.xpPoints || 3420) + 200,
+      xpPoints: (prev.xpPoints || 3420) + (isDisqualified ? 50 : 200),
       readinessBreakdown: updatedBreakdown,
-      placementReadinessScore: Math.max(prev.placementReadinessScore || 84, newReadiness),
+      placementReadinessScore: Math.max(40, newReadiness),
     };
   });
 };
