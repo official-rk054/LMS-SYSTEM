@@ -21,7 +21,9 @@ import {
   ArrowRight,
   UserCheck,
   TrendingUp,
-  MessageSquare
+  MessageSquare,
+  Youtube,
+  Video
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { LEARNING_MODULES } from '../data/mockData';

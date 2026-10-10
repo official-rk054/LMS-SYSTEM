@@ -206,7 +206,7 @@ export function App() {
                 />
               )}
 
-              {activeTab === 'learning_modules' && (
+              {(activeTab === 'learning_modules' || activeTab === 'learning_model' || activeTab === 'learning') && (
                 <LearningModules
                   userProfile={currentUser}
                   onNavigateToArena={handleNavigateToArena}
@@ -263,9 +263,12 @@ export function App() {
                 />
               )}
 
-              {activeTab === 'trainer_curriculum' && (
+              {(activeTab === 'trainer_curriculum' || activeTab === 'learning_modules' || activeTab === 'learning_model' || activeTab === 'learning') && (
                 <LearningModules
                   userProfile={currentUser}
+                  onNavigateToArena={handleNavigateToArena}
+                  onUpdateUserProfile={setCurrentUser}
+                  setActiveTab={setActiveTab}
                 />
               )}
 
@@ -309,6 +312,15 @@ export function App() {
               {activeTab === 'tpo_leaderboard' && (
                 <Leaderboard
                   userProfile={currentUser}
+                />
+              )}
+
+              {(activeTab === 'learning_modules' || activeTab === 'learning_model' || activeTab === 'learning') && (
+                <LearningModules
+                  userProfile={currentUser}
+                  onNavigateToArena={handleNavigateToArena}
+                  onUpdateUserProfile={setCurrentUser}
+                  setActiveTab={setActiveTab}
                 />
               )}
             </>
