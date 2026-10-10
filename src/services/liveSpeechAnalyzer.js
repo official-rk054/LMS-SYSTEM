@@ -160,6 +160,8 @@ export class LiveSpeechRecognizer {
     this.finalTranscript = '';
     this.timerInterval = null;
     this.elapsedSeconds = 0;
+    this.isStopping = false;
+    this.lastError = null;
   }
 
   isSupported() {
@@ -188,6 +190,8 @@ export class LiveSpeechRecognizer {
       this.startTime = Date.now();
       this.elapsedSeconds = 0;
       this.finalTranscript = '';
+      this.isStopping = false;
+      this.lastError = null;
 
       this.timerInterval = setInterval(() => {
         if (this.startTime) {
@@ -222,15 +226,17 @@ export class LiveSpeechRecognizer {
 
       this.recognition.onerror = (err) => {
         console.warn('LiveSpeechRecognizer error:', err.error);
-        if (err.error !== 'no-speech') {
-          this.onError(err);
-        }
+        this.lastError = err.error || 'unknown';
+        this.onError(err);
       };
 
       this.recognition.onend = () => {
         this.isListening = false;
-        clearInterval(this.timerInterval);
-        this.onStateChange({ isListening: false });
+        this.isStopping = false;
+        if (this.timerInterval) clearInterval(this.timerInterval);
+        this.timerInterval = null;
+        this.startTime = null;
+        this.onStateChange({ isListening: false, error: this.lastError });
       };
 
       this.recognition.start();
@@ -244,16 +250,15 @@ export class LiveSpeechRecognizer {
   }
 
   stop() {
-    if (this.timerInterval) clearInterval(this.timerInterval);
-    if (this.recognition && this.isListening) {
+    if (this.recognition && !this.isStopping) {
+      this.isStopping = true;
       try {
         this.recognition.stop();
       } catch (e) {
-        // ignore
+        this.isStopping = false;
+        // Browser may already be ending recognition; onend performs cleanup.
       }
     }
-    this.isListening = false;
-    this.onStateChange({ isListening: false });
   }
 }
 

@@ -328,23 +328,29 @@ export const ExtraFeaturesSuite = ({ userProfile, initialTool = 'gd' }) => {
           const metrics = analyzeSpeechInRealTime(transcript, elapsedSeconds);
           setLiveFluencyMetrics(metrics);
         },
-        onStateChange: ({ isListening }) => {
+        onStateChange: ({ isListening, error }) => {
           setIsFluencyRecording(isListening);
           if (!isListening) {
-            if (fluencyTranscriptRef.current.trim()) handleAnalyzeFluency(fluencyTranscriptRef.current, fluencyElapsedRef.current);
+            if (fluencyTranscriptRef.current.trim()) {
+              handleAnalyzeFluency(fluencyTranscriptRef.current, fluencyElapsedRef.current);
+            } else if (error === 'no-speech') {
+              setFluencyError('No speech was transcribed. Check that your microphone is selected and enabled, then try speaking again.');
+            } else if (!error) {
+              setFluencyError('No speech was transcribed. Speak clearly for a few seconds, or paste a transcript below.');
+            }
             stopMedia();
           }
         },
         onError: (err) => {
           console.warn('Fluency mic error:', err);
-          setIsFluencyRecording(false);
           const messages = {
             'not-allowed': 'Microphone access was blocked. Allow microphone access in your browser settings and try again.',
             'permission-denied': 'Microphone access was blocked. Allow microphone access in your browser settings and try again.',
             'service-not-allowed': 'Speech recognition is unavailable for this page. Try Chrome or Edge, or paste a transcript below.',
             'audio-capture': 'No microphone was found. Connect a microphone or paste a transcript below.',
             'network': 'The browser speech recognition service could not connect. Check your connection or paste a transcript below.',
-            'aborted': 'Speech recognition was interrupted. Start recording again or paste a transcript below.'
+            'aborted': 'Speech recognition was interrupted. Start recording again or paste a transcript below.',
+            'no-speech': 'No speech detected yet. Speak clearly for a few seconds; you can also paste a transcript below.'
           };
           setFluencyError(messages[err.error] || err.message || 'Speech recognition could not start. You can still analyze a pasted transcript.');
         }
